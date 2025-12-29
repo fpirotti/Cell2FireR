@@ -1,0 +1,23 @@
+Package: Cell2FireR
+Title: Forest Fire Simulation using Cell2Fire C++ Engine
+Version: 0.1.0
+Authors@R: 
+    person("Francesco", "Pirotti", , "francesco.pirotti@unipd.it", 
+    role = c("aut", "cre"), 
+    comment = c(ORCID = "0000-0002-4796-6406"))
+Description: A native R wrapper for the Cell2Fire C++ wildfire simulator.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+RcppModules: cell2fire_module
+Imports: 
+    R6,
+    terra,
+    Rcpp (>= 1.0.0)
+LinkingTo: 
+    Rcpp,
+    BH,
+    RcppEigen
+URL: https://github.com/fpirotti/cell2fireR
+BugReports: https://github.com/fpirotti/cell2fireR/issues
+SystemRequirements: C++11, GNU make
