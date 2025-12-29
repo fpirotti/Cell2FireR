@@ -1,0 +1,11 @@
+PKG_CPPFLAGS = -Icore -I.
+# Find all .cpp files in the core directory
+SOURCES = Main.cpp $(wildcard Cell2FireC/*.cpp)
+OBJECTS = $(SOURCES:.cpp=.o)
+
+all: $(SHLIB) Cell2Fire
+
+Cell2Fire: $(OBJECTS)
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o Cell2Fire $(OBJECTS) $(PKG_LIBS)
+	@mkdir -p ../inst/bin
+	@cp Cell2Fire ../inst/bin/

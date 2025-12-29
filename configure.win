@@ -1,0 +1,2 @@
+@echo off
+"${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" -e "download.file('https://github.com/cell2fire/Cell2Fire/archive/refs/heads/main.zip', 'temp.zip', mode='wb'); contents <- unzip('temp.zip', list=TRUE)$Name; targets <- contents[grepl('cell2fire/Cell2FireC/.+', contents)]; unzip('temp.zip', files=targets, exdir='src'); file.copy('src/Cell2Fire-main/cell2fire/Cell2FireC', 'src/', recursive = T); unlink('src/Cell2Fire-main', recursive = T, force = T ); unlink('temp.zip')"

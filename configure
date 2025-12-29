@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# 1. Setup local paths
+CORE_DIR="src"
+REPO_URL="https://github.com/cell2fire/Cell2Fire.git"
+TEMP_DIR=".temp_git"
+
+# 2. Clean up
+rm -rf "$CORE_DIR"
+mkdir -p "$CORE_DIR"
+rm -rf "$TEMP_DIR"
+
+# 3. Sparse Checkout logic (The modern replacement for SVN export)
+echo "Fetching C++ source files from $REPO_URL..."
+
+git clone --depth 1 --filter=blob:none --sparse "$REPO_URL" "$TEMP_DIR"
+cd "$TEMP_DIR" || exit 1
+git sparse-checkout set cell2fire/Cell2FireC
+cd ..
+
+# 4. Move files to your R package src directory
+cp -R "$TEMP_DIR/cell2fire/Cell2FireC" "$CORE_DIR/"
+
+# 5. Final Cleanup
+rm -rf "$TEMP_DIR"
+chmod -R 777 $CORE_DIR
+rm -rf "$CORE_DIR/Cell2FireC/parallel_code/Cell2FireParallel/Cell2FirePython_Parallel"
+rm -rf  $CORE_DIR/Cell2FireC/parallel_code/*.txt
+rm -rf  $CORE_DIR/Cell2FireC/parallel_code/*.zip
+echo "Success: C++ core synchronized."
+exit 0
