@@ -1,0 +1,49 @@
+#logbox {
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: monospace;
+  background: #111111dd;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+
+.log-info {
+  color: #9cdcfe;
+}
+.info.legend.rastervals.leaflet-control {
+  all: unset;
+}
+#map > div.leaflet-control-container > div.leaflet-bottom.leaflet-right{
+  border: 1px solid black;
+  background: aliceblue;
+  padding: 5px;
+  display:none;
+}
+
+.log-warn {
+  color: #f9d423;
+}
+
+#showLegendCLS{
+ font-size: large;
+ cursor: pointer;
+}
+
+.log-error {
+  color: #ff6b6b;
+  font-weight: bold;
+}
+
+.log-default {
+  color: #cccccc;
+}
+
+.layers-subtitle {
+  font-weight: 600;
+  font-size: 12px;
+  margin: 6px 0 4px;
+  padding-top: 4px;
+  border-top: 1px solid #ddd;
+  color: #444;
+}
