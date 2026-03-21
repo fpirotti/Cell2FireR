@@ -17,3 +17,5 @@ Imports:
     utils
 Suggests:
     shiny
+URL: https://github.com/fpirotti/Cell2FireR
+BugReports: https://github.com/fpirotti/Cell2FireR/issues
