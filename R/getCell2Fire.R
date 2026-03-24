@@ -1,16 +1,21 @@
-getCell2Fire <- function() {
+#' Title
+#'
+#' @param outdir output directory
+#'
+#' @returns Nothing
+#'
+#' @examples #none
+getCell2Fire <- function(outdir) {
   dest <- file.path(tempdir(), "Cell2FireR")
-
   if (!dir.exists(dest)) {
-    download.file(
+    utils::download.file(
       "https://github.com/fire2a/C2F-W/releases/download/v1.0.1/Cell2FireW_v1.0.1.zip",
       destfile = paste0(dest, ".zip")
     )
-    unzip(paste0(dest, ".zip"), exdir = dest)
+    utils::unzip(paste0(dest, ".zip"), exdir = dest)
   }
 
-  src <- list.dirs(dest, recursive = FALSE, full.names = TRUE)
-  fp <- file.path(dest, "C2F")
+  fp <- file.path(dest, "C2F","Cell2Fire")
   exe.linux <- file.path(fp,"Cell2Fire")
   exe.win <- file.path(fp, "Cell2Fire.exe")
 
@@ -21,7 +26,11 @@ getCell2Fire <- function() {
   if( !file.exists(exe.win)){
     warning("Windows compiled Cell2Fire does not exist")
   }
-  file.access()
-  system(sprintf("cd %s && make", file.path(dest, "C2F", "Cell2Fire") ))
-  system(sprintf("cd %s && ls", file.path(dest, "C2F", "Cell2Fire") ))
+  Sys.chmod(exe.linux, mode = "0777", use_umask = TRUE)
+  Sys.chmod(exe.win, mode = "0777", use_umask = TRUE)
+  file.copy( list.files(fp, pattern="*\\.so$|^Cell2Fire$", full.names = T ) ,
+             to = outdir, overwrite = T )
+  file.copy( list.files(fp, pattern="*\\.dll$|*\\.exe$", full.names = T ) ,
+             to = outdir, overwrite = T )
+  TRUE
 }

@@ -6,7 +6,7 @@ R bindings to the [Cell2Fire](https://github.com/cell2fire/Cell2Fire) software, 
 
 The R bindings try to improve efficiency by adding support for GeoTIFF files holding fuel model types and topographical (height above sea level, slope and aspect) information. It allows users to modify input arguments and run the simulation also providing a vector with a range of argument values, thus pipelining the testing of single-argument on the final results.
 
-# Usage
+## Usage
 
 In order to run the simulator and process the results, the following command can be used:
 
@@ -32,6 +32,18 @@ For the full list of arguments and their explanation use:
 ```         
 cell2fire_run()
 ```
+
+
+## Web app
+
+An embedded web app is available. It allows interactive insertion of 
+ignition points and other input arguments.
+
+```         
+
+
+```
+
 
 ## Acknowledgements
 

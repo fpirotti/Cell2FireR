@@ -7,19 +7,17 @@ ui <-  shinydashboardPlus::dashboardPage(
     right = HTML("<a href='mailto:francesco.pirotti@unipd.it' >MAIL<span style='font-size:22px'>📧</span></a> ")
   ),
   sidebar = shinydashboardPlus::dashboardSidebar(minified = FALSE, collapsed = FALSE,
-
+                                                 shiny::selectInput(
+                                                   "inputfolder",
+                                                   NULL,
+                                                   choices = c("")
+                                                 ),
                                                  shiny::fluidRow(
-                                                   shiny::column(8, style="margin:-6px;",
-                                                                 shiny::selectInput(
-                                                                   "inputfolder",
-                                                                   NULL,
-                                                                   choices = c("")
-                                                                 )
-                                                    ),
-                                                    shiny::column(2, style="margin-left:-24px;", div(
+
+                                                    shiny::column(6, style="margin-left:-24px;", div(
                                                       shinyWidgets::actionBttn("downloadfolder" , style = "material-flat", size="sm",  NULL,
                                                                                icon = icon("download") ),  title="Download dataset") ),
-                                                   shiny::column(2, div(
+                                                   shiny::column(6, div(
                                                      shinyWidgets::actionBttn("deletefolder", NULL, style = "material-flat", size="sm",
                                                                               icon=icon("trash") ), title="Delete dataset") )
                                                   ),
@@ -30,6 +28,7 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                    shinydashboard::menuItem("Process Log", icon = icon("gear"), tabName = "widgets"),
                                                    shinydashboard::menuItem("Inputs", icon = icon("table"),
                                                                             shinydashboard::menuItem("Input Args", icon = icon("sliders-h"), tabName = "inputInstancesInputArgs"),
+                                                                            shinydashboard::menuItem("Input Args2", icon = icon("sliders-h"), tabName = "inputInstancesInputArgs2"),
                                                                             shinydashboard::menuItem("Weather File", icon = icon("cloud-rain"), tabName = "inputInstancesWeather"),
                                                                             shinydashboard::menuItem("Ignitions", icon =tags$i("🔥"), tabName = "inputInstancesIgnitions"),
                                                                             shinydashboard::menuItem("LUT FUEL Model", icon = icon("fire"), tabName = "inputInstancesLUT")
@@ -114,7 +113,12 @@ ui <-  shinydashboardPlus::dashboardPage(
       ),
 
       shinydashboard::tabItem(tabName = "inputInstancesInputArgs",
-          shinydashboardPlus::box(width=12, collapsible=TRUE,title="Cell2Fire Input Arguments",
+                              uiInputsArgs
+      ),
+      shinydashboard::tabItem(tabName = "inputInstancesInputArgs2",
+
+
+                               shinydashboardPlus::box(width=12, collapsible=TRUE,title="Cell2Fire Input Arguments",
                                   solidHeader = TRUE,status = "primary",
                                   uiInputs
                                   )

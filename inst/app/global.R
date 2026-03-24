@@ -105,6 +105,16 @@ fireIcon <- leaflet::makeAwesomeIcon(
   # squareMarker=TRUE,
   text="<span style='font-size:24px'>🔥</span>"
 )
+
+### source parser -----
+source("inputPanels.R")
+
+uiInputsArgs <- lapply(names(PANELS), function(op){
+  shinydashboardPlus::box(width=12, collapsible=TRUE,title=op,
+                          solidHeader = TRUE,status = "primary",
+                          PANELS[[op]] )
+})
+
 source("../../R/ParseInputs.R")
 mp <- make_parser()
 uiInputs <- lapply(mp@options, function(op){

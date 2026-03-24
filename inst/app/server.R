@@ -61,11 +61,13 @@ server <- function(input, output, session) {
       typesh <- type
     }
 
-    shiny::showNotification(
+    if(duration>0) {
+      shiny::showNotification(
                      HTML(text),
                      duration = duration,
                      type = typesh
-    )
+                      )
+    }
 
     logf <- isolate(logfile())
     if(!is.null(logf) && dir.exists(dirname(logf) ) ){
@@ -98,7 +100,7 @@ server <- function(input, output, session) {
       showNotification(
         paste0("Output Directory: <b>", outfolder, "</b> does not exist and will be created"),
         type = "INFO",
-        duration = 5
+        duration = 0
       )
     }
 
@@ -503,7 +505,7 @@ server <- function(input, output, session) {
           sprintf("%.6f", lng)
         ),
         type = "message",
-        duration = 4
+        duration = 0
       )
 
       runjs("Shiny.setInputValue('map_mode', '', {priority: 'event'});")
