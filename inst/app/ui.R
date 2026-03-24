@@ -14,11 +14,14 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                  ),
                                                  shiny::fluidRow(
 
-                                                    shiny::column(6, style="margin-left:-24px;", div(
-                                                      shinyWidgets::actionBttn("downloadfolder" , style = "material-flat", size="sm",  NULL,
+                                                    shiny::column(6,   div(
+                                                      shinyWidgets::actionBttn("downloadfolder" , inline=T, style = "material-flat", size="sm",
+                                                                               # "Download",
                                                                                icon = icon("download") ),  title="Download dataset") ),
                                                    shiny::column(6, div(
-                                                     shinyWidgets::actionBttn("deletefolder", NULL, style = "material-flat", size="sm",
+                                                     shinyWidgets::actionBttn("deletefolder",
+                                                                              # "Delete",
+                                                                              style = "material-flat", size="sm",
                                                                               icon=icon("trash") ), title="Delete dataset") )
                                                   ),
                                                  div(shiny::fileInput("zipfileload", "Upload your dataset"), title="add a zip file with all necessary files - please see documentation on how to prepare it" ),
