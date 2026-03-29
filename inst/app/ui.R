@@ -81,6 +81,7 @@ ui <-  shinydashboardPlus::dashboardPage(
                                     actionButton("save_table_weather", label = NULL, icon = icon("save"), class="btn-sm", title="Save changes to be used in the Cell2Fire process (only valid for this session)"),
                                     downloadButton("download_table_weather", label = NULL, icon = icon("download"), class="btn-sm", title="Download table in CSV file format"),
                                     actionButton("upload_table_weather", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
+                                    actionButton("create_table_weather", label = NULL, icon = icon("cloud"), class="btn-sm", title="This will upload the weather scenario from the current day using online APIs such as JRC's jrc-effis@ec.europa.eu services that provide FWI indices..."),
                                     div(style="display:none;", fileInput("upload_table_weather_input", label = NULL, buttonLabel = NULL, width = 10,  accept = c(".csv", ".xlsx", ".xls")  ) )
                                   ),
                                   status = "primary",
@@ -118,14 +119,14 @@ ui <-  shinydashboardPlus::dashboardPage(
       shinydashboard::tabItem(tabName = "inputInstancesInputArgs",
                               uiInputsArgs
       ),
-      shinydashboard::tabItem(tabName = "inputInstancesInputArgs2",
-
-
-                               shinydashboardPlus::box(width=12, collapsible=TRUE,title="Cell2Fire Input Arguments",
-                                  solidHeader = TRUE,status = "primary",
-                                  uiInputs
-                                  )
-      ),
+      # shinydashboard::tabItem(tabName = "inputInstancesInputArgs2",
+      #
+      #
+      #                          shinydashboardPlus::box(width=12, collapsible=TRUE,title="Cell2Fire Input Arguments",
+      #                             solidHeader = TRUE,status = "primary",
+      #                             uiInputs
+      #                             )
+      # ),
 
       shinydashboard::tabItem(tabName = "inputInstancesIgnitions",
 

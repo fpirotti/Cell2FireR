@@ -1,4 +1,3 @@
-# global.R
 pkgs <- c("terra", "DT", "sf", "shiny", "leaflet", "shinyjs", "optparse",
           "tools", "shinydashboard", "leafem", "cli", "shinydashboardPlus", "fresh",
           "htmlwidgets")
@@ -14,10 +13,12 @@ for (p in pkgs) {
   library(p, character.only = TRUE)
 }
 
+white_tile <- "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
+
 clcpluswms <- "https://image.discomap.eea.europa.eu/arcgis/services/CLC_plus/CLMS_CLCplus_RASTER_2021_010m_eu/ImageServer/WMSServer"
 # Example global data
 default_center <- c(lng = 11.96173904332453, lat = 45.342594242)
-clcLayerName <- "Copernicus CLC+<span id='showLegendCLS'>📰</span>"
+clcLayerName <- "Copernicus CLC+"
 mytheme <- create_theme(
   adminlte_color(
     light_blue = "#570a00"
@@ -47,7 +48,6 @@ popup_text <- function(name, value=NULL) {
   if(!is.null(value)) pp<-paste0("<b>", name, ":</b> ", value)
   pp
 }
-
 
 lut_fbp <- read.csv("templates/fbp_lookup_table.csv")
 lut_sb <- read.csv("templates/scottBurgan_lookup_table.csv")
@@ -89,13 +89,25 @@ base_layers <- list(
 )
 
 fwi_layers <- list(
-  "FWI - Fire Weather Index" = "ecmwf.fwi",
-  "FWI - Initial Spread Index" = "ecmwf.isi",
-  "FWI - Build Up Index" = "ecmwf.bui",
-  "FWI - Fine Fuel Moisture Code" = "ecmwf.ffmc",
-  "FWI - Duff Moisture Code" = "ecmwf.dmc",
-  "FWI - Drought Code" = "ecmwf.dc"
+  "EFFIS - Fire Weather Index" = "ecmwf.fwi",
+  "EFFIS - Initial Spread Index" = "ecmwf.isi",
+  "EFFIS - Build Up Index" = "ecmwf.bui",
+  "EFFIS - Fine Fuel Moisture Code" = "ecmwf.ffmc",
+  "EFFIS - Duff Moisture Code" = "ecmwf.dmc",
+  "EFFIS - Drought Code" = "ecmwf.dc"
 )
+view_settings <- list()
+opacityControl  <- list()
+
+opacityControl[[clcLayerName]] <- list(
+  min = 0,
+  max = 1,
+  step = 0.1,
+  default = 0.7,
+  width = '100%',
+  class = 'opacity-slider'
+)
+print(clcLayerName)
 
 addFWI <- function(m=NULL){
 
@@ -105,7 +117,13 @@ addFWI <- function(m=NULL){
   }
   if (inherits(m, "leaflet_proxy")){
     for (name in names(fwi_layers)) {
-      print("adding")
+
+      opacityControl [[name]] <<- list(    min = 0,
+                                          max = 1,
+                                          step = 0.1,
+                                          default = 0.7,
+                                          width = '100%',
+                                          class = 'opacity-slider'  )
       m %>%
         addWMSTiles(
           baseUrl = "https://maps.effis.emergency.copernicus.eu/gwis",
@@ -122,6 +140,12 @@ addFWI <- function(m=NULL){
     }
   } else {
     for (name in names(fwi_layers)) {
+      opacityControl [[name]] <<- list(    min = 0,
+                                          max = 1,
+                                          step = 0.1,
+                                          default = 1,
+                                          width = '100%',
+                                          class = 'opacity-slider'  )
       m <- m %>%
         addWMSTiles(
           baseUrl = "https://maps.effis.emergency.copernicus.eu/gwis",
@@ -158,7 +182,7 @@ createLeaflet <- function(){
     addWMSTiles(
       baseUrl = clcpluswms,
       layers = "CLMS_CLCplus_RASTER_2021_010m_eu",
-      group = clcLayername,
+      group = clcLayerName,
       options = WMSTileOptions(
         format = "image/png",
         transparent = TRUE,
@@ -226,7 +250,7 @@ createLeaflet <- function(){
         const ctrl = el.querySelector('.leaflet-control-layers');
         if (!ctrl) return;
         console.log('Layers control ready');
-        autoGroupLeafletLayers(\".leaflet-control-layers\");
+        //autoGroupLeafletLayers(\".leaflet-control-layers\");
       }
    ")
 
@@ -239,8 +263,18 @@ createLeaflet <- function(){
       baseGroups = unlist(unname(base_layers)),
       overlayGroups = c(clcLayerName, names(fwi_layers)),
       options = layersControlOptions(collapsed = FALSE)
+    ) |>
+    customizeLayersControl(
+      view_settings =view_settings,
+      opacityControl = opacityControl,
+      home_btns = TRUE,
+      # opacityControl = opacityControl,
+      includelegends = TRUE,
+      layersControlCSS = list("opacity" = 0.6),
+      increaseOpacityOnHover = TRUE
     )
 
+  print(opacityControl)
    m
 }
 
@@ -280,45 +314,44 @@ uiInputsArgs <- lapply(names(PANELS), function(op){
                           PANELS[[op]] )
 })
 
-source("../../R/ParseInputs.R")
-mp <- make_parser()
-uiInputs <- lapply(mp@options, function(op){
-  out<-NULL
- if(op@type=="integer"){
-   out<- div(title= op@help , numericInput(
-     inputId = gsub("-", ".", op@long_flag),
-     label   = op@long_flag,
-     value   = op@default,
-     min     = -1,
-     max     = 10000,
-     step = 1
-   ) )
- }
-  if(op@type=="double"){
-    out<-  div(title= op@help , numericInput(
-      inputId = gsub("-", ".", op@long_flag),
-      label   = op@long_flag,
-      value   = op@default,
-      min     = -1,
-      max     = 10000,
-      step = 0.01
-    ) )
-  }
-  if(op@type=="character"){
-    out<-  div(title= op@help , textInput(
-      inputId = gsub("-", ".", op@long_flag),
-      label   = op@long_flag,
-      value   = op@default
-    ) )
-  }
-  if(is.null(op@type)|| op@type=="logical"){
-    out<-  div(title= op@help , checkboxInput(
-      inputId = gsub("-", ".", op@long_flag),
-      label   =  op@long_flag,
-      value   = op@default
-    ) )
-  }
- out
-})
+# source("../../R/ParseInputs.R")
+# mp <- make_parser()
+# uiInputs <- lapply(mp@options, function(op){
+#   out<-NULL
+#  if(op@type=="integer"){
+#    out<- div(title= op@help , numericInput(
+#      inputId = gsub("-", ".", op@long_flag),
+#      label   = op@long_flag,
+#      value   = op@default,
+#      min     = -1,
+#      max     = 10000,
+#      step = 1
+#    ) )
+#  }
+#   if(op@type=="double"){
+#     out<-  div(title= op@help , numericInput(
+#       inputId = gsub("-", ".", op@long_flag),
+#       label   = op@long_flag,
+#       value   = op@default,
+#       min     = -1,
+#       max     = 10000,
+#       step = 0.01
+#     ) )
+#   }
+#   if(op@type=="character"){
+#     out<-  div(title= op@help , textInput(
+#       inputId = gsub("-", ".", op@long_flag),
+#       label   = op@long_flag,
+#       value   = op@default
+#     ) )
+#   }
+#   if(is.null(op@type)|| op@type=="logical"){
+#     out<-  div(title= op@help , checkboxInput(
+#       inputId = gsub("-", ".", op@long_flag),
+#       label   =  op@long_flag,
+#       value   = op@default
+#     ) )
+#   }
+#  out
+# })
 
-white_tile <- "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="

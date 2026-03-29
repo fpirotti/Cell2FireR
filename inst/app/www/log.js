@@ -2,7 +2,10 @@
 var ignitionButton = null;
 
 $(document).ready(function () {
- autoGroupLeafletLayers(".leaflet-control-layers");
+ $(document).on('change', '.leaflet-control-container', function(e) {
+    console.log("Control interaction:", e.target);
+   // autoGroupLeafletLayers(".leaflet-control-layers");
+});
 });
 
 function autoGroupLeafletLayers(controlSelector) {
@@ -30,7 +33,7 @@ function autoGroupLeafletLayers(controlSelector) {
     if (fullText.includes(" - ")) {
       var parts = fullText.split(" - ");
       var prefix = parts[0].trim();
-      var suffix = parts.slice(1).join(" - ").trim();
+      var suffix = "\u00A0"+parts.slice(1).join(" - ").trim();
 
       // update span to show only the suffix
       $span.text(suffix);

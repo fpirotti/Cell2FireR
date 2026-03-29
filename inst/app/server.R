@@ -155,11 +155,11 @@ server <- function(input, output, session) {
       leaflet::clearControls() |> addFWI()
 
     crs <- NA
-    layerNames <- clcLayername
+    layerNames <- clcLayerName
     rasters <- list()
 
     shinyjs::runjs("$('.info.legend.rastervals.leaflet-control').remove();")
-    shinyjs::runjs("autoGroupLeafletLayers(\".leaflet-control-layers\");")
+
     ### READ RASTERS ----
     withProgress(message = 'Adding layers',  value = 0, {
 
@@ -242,6 +242,20 @@ server <- function(input, output, session) {
           pv2col <- NULL
           # pal2 <- colorNumeric("viridis", terra::values(r2), na.color = "transparent")
         }
+
+
+
+        opacityControl [[toupper(layerName)]] <- list(
+          min = 0,
+          max = 1,
+          step = 0.1,
+          default = 1,
+          width = '100%',
+          class = 'opacity-slider'
+           )
+
+        view_settings[[toupper(layerName)]] <- list(coords = as.numeric(st_transform(st_bbox(r2), 4326))   )
+
         leaflet::leafletProxy("map") |>
           leafem::addGeoRaster( stars::st_as_stars(r2),
                                 colorOptions = copts,
@@ -293,13 +307,25 @@ server <- function(input, output, session) {
         baseGroups = unlist(unname(base_layers)),
         overlayGroups = c(layerNames, names(fwi_layers)),
         options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)
-      )  |> leaflet::fitBounds( lng1 =  xmin(r2),
+      )   |>
+      customizeLayersControl(
+        view_settings =view_settings ,
+        # home_btns = TRUE,
+        opacityControl = opacityControl,
+        includelegends = TRUE,
+        addCollapseButton = TRUE,
+        layersControlCSS = list("opacity" = 0.6),
+        increaseOpacityOnHover = TRUE
+      ) |>
+      leaflet::fitBounds( lng1 =  xmin(r2),
                                 lat1 =  ymin(r2),
                                 lng2 =  xmax(r2),
                                 lat2 =  ymax(r2)
-              )
+      )
 
 
+
+    shinyjs::runjs("autoGroupLeafletLayers(\".leaflet-control-layers\");")
 
     if(is.null(currentRasterStack)){
       showNotification(
