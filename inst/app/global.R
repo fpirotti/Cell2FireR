@@ -80,6 +80,171 @@ raster_info <- function(r) {
   )
 }
 
+## FWI layers ------
+base_layers <- list(
+  osm="BASE - OSM",
+  blank="BASE - Blank",
+  light="BASE - Light",
+  satellite= "BASE - Satellite"
+)
+
+fwi_layers <- list(
+  "FWI - Fire Weather Index" = "ecmwf.fwi",
+  "FWI - Initial Spread Index" = "ecmwf.isi",
+  "FWI - Build Up Index" = "ecmwf.bui",
+  "FWI - Fine Fuel Moisture Code" = "ecmwf.ffmc",
+  "FWI - Duff Moisture Code" = "ecmwf.dmc",
+  "FWI - Drought Code" = "ecmwf.dc"
+)
+
+addFWI <- function(m=NULL){
+
+  if(is.null(m)){
+    stop("should not be here")
+    return(NA)
+  }
+  if (inherits(m, "leaflet_proxy")){
+    for (name in names(fwi_layers)) {
+      print("adding")
+      m %>%
+        addWMSTiles(
+          baseUrl = "https://maps.effis.emergency.copernicus.eu/gwis",
+          layers = fwi_layers[[name]],
+          group = name,
+          options = WMSTileOptions(
+            format = "image/png",
+            transparent = TRUE,
+            opacity = 0.8,
+            time = as.character(Sys.Date())
+          )
+        ) %>%
+        hideGroup(name)  # start hidden
+    }
+  } else {
+    for (name in names(fwi_layers)) {
+      m <- m %>%
+        addWMSTiles(
+          baseUrl = "https://maps.effis.emergency.copernicus.eu/gwis",
+          layers = fwi_layers[[name]],
+          group = name,
+          options = WMSTileOptions(
+            format = "image/png",
+            transparent = TRUE,
+            opacity = 0.8,
+            time = as.character(Sys.Date())
+          )
+        ) %>%
+        hideGroup(name)  # start hidden
+    }
+  }
+
+  m
+}
+
+createLeaflet <- function(){
+
+  m <- leaflet() |>
+    addTiles(
+      urlTemplate = white_tile,
+      options = tileOptions(tileSize = 256),
+      group = base_layers$blank
+    )  |>
+    addProviderTiles("OpenStreetMap", group =  base_layers$osm,
+                     options=providerTileOptions(zIndex = 1) ) |>
+    addProviderTiles("CartoDB.Positron", group =  base_layers$light,
+                     options=providerTileOptions(zIndex = 1)) |>
+    addProviderTiles("Esri.WorldImagery", group =  base_layers$satellite,
+                     options=providerTileOptions(zIndex = 1)) |>
+    addWMSTiles(
+      baseUrl = clcpluswms,
+      layers = "CLMS_CLCplus_RASTER_2021_010m_eu",
+      group = clcLayername,
+      options = WMSTileOptions(
+        format = "image/png",
+        transparent = TRUE,
+        opacity=0.6
+      ),
+      attribution = "Copernicus Land Monitoring Service"
+    ) |>
+    setView(
+      lng = default_center["lng"],
+      lat = default_center["lat"],
+      zoom = 16
+    ) |>
+    leafem::garnishMap(leaflet::addScaleBar, leafem::addMouseCoordinates,
+                       position = "bottomleft") |>
+    addEasyButton(
+      easyButton(
+        icon = htmltools::span(class = "star", htmltools::HTML("🔥")),
+        title = "Add ignition point mode - click on map to add ignition point to table - press esc or press again to exit this mode",
+        onClick = JS("
+            function(btn, map){
+                var el = btn.button;
+                ignitionButton = el;
+                toggleIgnitionButton();
+            }
+          ")
+      )
+    )  |>
+    addEasyButton(
+      easyButton(
+        icon = "fa-question",
+        title = "Toggle info panel",
+        onClick = JS("
+            function(btn, map){
+                var el = btn.button;
+                if (L.DomUtil.hasClass(el, 'pressed')) {
+                  L.DomUtil.removeClass(el, 'pressed');
+                } else {
+                  L.DomUtil.addClass(el, 'pressed');
+                }
+                $('#map > .leaflet-control-container > .leaflet-bottom.leaflet-right').toggle();
+            }
+          ")
+      )
+    ) |> htmlwidgets::onRender("
+      function(el, x) {
+        console.log('Leaflet map rendered');
+        $('[title]').each(function() {
+          $(this).attr('data-tippy-content', $(this).attr('title'));
+          $(this).removeAttr('title');
+        });
+
+        // now initialize tippy
+        tippy('[data-tippy-content]', {
+          theme: 'light',
+          animation: 'scale'
+        });
+        document.addEventListener('keydown', function(e) {
+          // Fallback for older browsers
+          if (e.keyCode === 27) {
+            toggleIgnitionButton(true);
+            document.getElementById('map').style.cursor = null;
+            Shiny.setInputValue('map_mode', '', {priority: 'event'});
+          }
+        });
+        const ctrl = el.querySelector('.leaflet-control-layers');
+        if (!ctrl) return;
+        console.log('Layers control ready');
+        autoGroupLeafletLayers(\".leaflet-control-layers\");
+      }
+   ")
+
+
+  m <- addFWI(m)
+
+  # add layer control
+  m <- m %>%
+    addLayersControl(
+      baseGroups = unlist(unname(base_layers)),
+      overlayGroups = c(clcLayerName, names(fwi_layers)),
+      options = layersControlOptions(collapsed = FALSE)
+    )
+
+   m
+}
+
+mymap <- createLeaflet()
 isScottBurgan <- function(r){
   rs <- terra::unique((r[[1]]))
   if( sum(c(91,

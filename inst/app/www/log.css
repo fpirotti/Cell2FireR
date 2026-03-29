@@ -7,6 +7,13 @@
   border-radius: 6px;
 }
 
+.leaflet-control-layers{
+  min-width: 100px !important;
+}
+.easy-button-button.pressed {
+  background-color: #ccc !important;
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.4) !important;
+}
 
 .log-info {
   color: #9cdcfe;

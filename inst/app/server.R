@@ -152,14 +152,14 @@ server <- function(input, output, session) {
     ## UPDATE LEAFLET ------
     leaflet::leafletProxy("map") |>
       leaflet::clearImages()  |>
-      leaflet::clearControls()
-
+      leaflet::clearControls() |> addFWI()
 
     crs <- NA
     layerNames <- clcLayername
     rasters <- list()
 
     shinyjs::runjs("$('.info.legend.rastervals.leaflet-control').remove();")
+    shinyjs::runjs("autoGroupLeafletLayers(\".leaflet-control-layers\");")
     ### READ RASTERS ----
     withProgress(message = 'Adding layers',  value = 0, {
 
@@ -288,9 +288,10 @@ server <- function(input, output, session) {
 
 
     leafletProxy("map") |>
+
       addLayersControl(
-        baseGroups = c("Blank", "OSM", "Light", "Satellite"),
-        overlayGroups = layerNames,
+        baseGroups = unlist(unname(base_layers)),
+        overlayGroups = c(layerNames, names(fwi_layers)),
         options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)
       )  |> leaflet::fitBounds( lng1 =  xmin(r2),
                                 lat1 =  ymin(r2),
@@ -313,97 +314,7 @@ server <- function(input, output, session) {
 
   ##render leaflet -----
   output$map <- renderLeaflet({
-    leaflet() |>
-      addTiles(
-        urlTemplate = white_tile,
-        options = tileOptions(tileSize = 256),
-        group = "Blank"
-      )  |>
-      addProviderTiles("OpenStreetMap", group = "OSM",
-                       options=providerTileOptions(zIndex = 1) ) |>
-      addProviderTiles("CartoDB.Positron", group = "Light",
-                       options=providerTileOptions(zIndex = 1)) |>
-      addProviderTiles("Esri.WorldImagery", group = "Satellite",
-                       options=providerTileOptions(zIndex = 1)) |>
-      addWMSTiles(
-        baseUrl = clcpluswms,
-        layers = "CLMS_CLCplus_RASTER_2021_010m_eu",
-        group = clcLayername,
-        options = WMSTileOptions(
-          format = "image/png",
-          transparent = TRUE,
-          opacity=0.6
-        ),
-        attribution = "Copernicus Land Monitoring Service"
-      ) |>
-
-      setView(
-        lng = default_center["lng"],
-        lat = default_center["lat"],
-        zoom = 16
-      ) |>
-      addMarkers(
-        lng = default_center["lng"],
-        lat = default_center["lat"],
-        popup = popup_text("@CIRGEO Earth Sensing Lab Team - University of Padova"),
-        options =
-      ) |>
-      addLayersControl(
-        baseGroups = c("Blank", "OSM", "Light",   "Satellite"),
-        overlayGroups = c(clcLayerName),
-        options = layersControlOptions(collapsed = FALSE)
-      ) |>
-      leafem::garnishMap(leaflet::addScaleBar, leafem::addMouseCoordinates,
-                 position = "bottomleft") |>
-      addEasyButton(
-        easyButton(
-          icon = htmltools::span(class = "star", htmltools::HTML("🔥")),
-          title = "Add ignition point mode - click on map to add ignition point to table - press esc to exit this mode",
-          onClick = JS("
-            function(btn, map){
-              document.getElementById('map').style.cursor = 'crosshair';
-              Shiny.setInputValue('map_mode', 'ignitionPoint', {priority: 'event'});
-            }
-          ")
-        )
-      )  |>
-
-      addEasyButton(
-        easyButton(
-          icon = "fa-question",
-          title = "Toggle info panel",
-          onClick = JS("
-            function(btn, map){
-                $('#map > .leaflet-control-container > .leaflet-bottom.leaflet-right').toggle();
-            }
-          ")
-        )
-      ) |> htmlwidgets::onRender("
-      function(el, x) {
-        console.log('Leaflet map rendered');
-        $('[title]').each(function() {
-          $(this).attr('data-tippy-content', $(this).attr('title'));
-          $(this).removeAttr('title');
-        });
-
-        // now initialize tippy
-        tippy('[data-tippy-content]', {
-          theme: 'light',
-          animation: 'scale'
-        });
-        document.addEventListener('keydown', function(e) {
-          // Fallback for older browsers
-          if (e.keyCode === 27) {
-            document.getElementById('map').style.cursor = null;
-            Shiny.setInputValue('map_mode', '', {priority: 'event'});
-          }
-        });
-        const ctrl = el.querySelector('.leaflet-control-layers');
-        if (!ctrl) return;
-        console.log('Layers control ready');
-        updateControl();
-      }
-                                 ")
+    mymap
   })
 
   # CLICK mode ----
@@ -415,7 +326,7 @@ server <- function(input, output, session) {
   })
 
 
-  ## WEATHER table -----
+  ## TABLE WEATHER table -----
   output$weather.table <- renderDT({
     req(input$inputfolder)
     wt <- file.path(input$inputfolder, "Weather.csv")
@@ -431,7 +342,7 @@ server <- function(input, output, session) {
       datatable(df[1:2,], editable = TRUE)
     }
   })
-  ## FBP table ----
+  ## TABLE FBP table ----
   output$FBP.table <- renderDT({
     req(lut_fbp_local())
     datatable( lut_fbp_local() , editable = TRUE)
@@ -442,22 +353,40 @@ server <- function(input, output, session) {
     req(ignitionPointsCoords())
     ip <- ignitionPointsCoords()
     ip$Tools <- ""
-    datatable(
+
+
+
+    DT::datatable(
       ip,
       escape = FALSE,
+      extensions = "Buttons",
       editable = TRUE,
       options = list(
+        dom = "Bfrtip",
+        buttons = list(
+          list(
+            extend = "collection",
+            text = 'Delete Selected 🗑️',
+            action = DT::JS("function ( e, dt, node, config ) {
+                              var rows = dt.rows({ selected: true }).indices().toArray();
+                              Shiny.setInputValue('rows_to_delete', rows, {priority: 'event'});
+                            }")
+          )
+        ),
         columnDefs = list(
           list(
             targets = ncol(ip),
             render = JS(
               "function(data, type, row, meta) {
-             return '<button class=\"deleteBtn\">Delete</button>';
+             return '<button title=\"Zoom in\">🔎</button>';
            }"
             )
           )
         )
       )
+    ) |> formatRound(
+      columns = c('X', 'Y'),
+      digits = 5
     )
     # datatable( ip , editable = TRUE)
   })
@@ -509,7 +438,7 @@ server <- function(input, output, session) {
         duration = 0
       )
 
-      runjs("Shiny.setInputValue('map_mode', '', {priority: 'event'});")
+      # runjs("Shiny.setInputValue('map_mode', '', {priority: 'event'});")
 
       return(NULL)
     }
@@ -523,7 +452,6 @@ server <- function(input, output, session) {
     if ( input$map_mode == "ignitionPoint") {
 
       pt4326 <- terra::vect( matrix(c(lng, lat),ncol = 2), crs="EPSG:4326" )
-
 
       pt <- pt4326 |> terra::project( crr )
       ptmt <- as.matrix( unname(as.data.frame(pt@pntr$coordinates()) ) )
@@ -540,7 +468,7 @@ server <- function(input, output, session) {
 
 
     ## make sure map mode returns to null
-    runjs("Shiny.setInputValue('map_mode', '', {priority: 'event'});")
+    # runjs("Shiny.setInputValue('map_mode', '', {priority: 'event'});")
 
   })
 
