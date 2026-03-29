@@ -107,7 +107,7 @@ opacityControl[[clcLayerName]] <- list(
   width = '100%',
   class = 'opacity-slider'
 )
-print(clcLayerName)
+# print(clcLayerName)
 
 addFWI <- function(m=NULL){
 
@@ -226,9 +226,23 @@ createLeaflet <- function(){
             }
           ")
       )
+    )  |>
+    addEasyButton(
+      easyButton(
+        icon = "fa-cloud-rain",
+        title = "Query EFFIS Fire Weather Indices for the past 7 days and add them to weather table",
+        onClick = JS("
+            function(btn, map){
+                var el = btn.button;
+                WMSQueryButton = el;
+                toggleWMSQueryButton();
+            }
+          ")
+      )
     ) |> htmlwidgets::onRender("
       function(el, x) {
-        console.log('Leaflet map rendered');
+        console.log(el);
+        mymap = el;
         $('[title]').each(function() {
           $(this).attr('data-tippy-content', $(this).attr('title'));
           $(this).removeAttr('title');
@@ -243,6 +257,7 @@ createLeaflet <- function(){
           // Fallback for older browsers
           if (e.keyCode === 27) {
             toggleIgnitionButton(true);
+            toggleWMSQueryButton(true);
             document.getElementById('map').style.cursor = null;
             Shiny.setInputValue('map_mode', '', {priority: 'event'});
           }
@@ -274,7 +289,7 @@ createLeaflet <- function(){
       increaseOpacityOnHover = TRUE
     )
 
-  print(opacityControl)
+  # print(opacityControl)
    m
 }
 

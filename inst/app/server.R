@@ -351,6 +351,18 @@ server <- function(input, output, session) {
     }
   })
 
+  # WMSQueryReturned  ----
+  observeEvent(input$WMSQueryReturned, {
+    print(input$WMSQueryReturned)
+    leafletProxy("map") |>
+      addPopups(
+        lng = input$WMSQueryReturned$coords[[1]],
+        lat = input$WMSQueryReturned$coords[[2]],
+        popup = input$WMSQueryReturned$data,
+        layerId = "my_popup"  # optional, to remove/update later
+      )
+  })
+
 
   ## TABLE WEATHER table -----
   output$weather.table <- renderDT({
@@ -452,6 +464,11 @@ server <- function(input, output, session) {
     lng <- input$map_click$lng
     lat <- input$map_click$lat
 
+    if ( input$map_mode == "WMSQuery") {
+      js <- sprintf("queryWMS(%f, %f, '%s')", lat, lng, paste(fwi_layers, collapse=",")   )
+      # print(js)
+      shinyjs::runjs(js)
+    }
 
     if(is.null(currentRasterStack)){
       showNotification(
