@@ -1,3 +1,4 @@
+## make sure leafem is version 0.2.5 or more!
 pkgs <- c("terra", "DT", "sf", "shiny", "leaflet", "shinyjs", "optparse",
           "tools", "shinydashboard", "leafem", "cli", "shinydashboardPlus", "fresh",
           "htmlwidgets")
