@@ -64,7 +64,7 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                                   tags$div(
                                                                     style = "display:flex; align-items:center; gap:6px;",
                                                                     span("Ignition File"),
-                                                                    div(title="Select an ignition file", shinyWidgets::pickerInput("chooseIgnitionFile", NULL, size = "sm",  choices = c()) ),
+                                                                    div(title="Select an ignition file", shinyWidgets::pickerInput("chooseIgnitionFile", NULL,  inline = T, choices = c()) ),
                                                                     actionButton("save_table_ignition", label = NULL, icon = icon("save"), class="btn-sm", title="Save changes to be used in the Cell2Fire process (only valid for this session)"),
                                                                     downloadButton("download_table_ignition", label = NULL, icon = icon("download"), class="btn-sm", 
                                                                                    title="Download table in CSV file format"),
