@@ -66,6 +66,8 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                                     span("Ignition File"),
                                                                     div(title="Select an ignition file", shinyWidgets::pickerInput("chooseIgnitionFile", NULL,  inline = T, choices = c()) ),
                                                                     actionButton("save_table_ignition", label = NULL, icon = icon("save"), class="btn-sm", title="Save changes to be used in the Cell2Fire process (only valid for this session)"),
+                                                                    actionButton("delete_table_ignition", label = NULL, icon = icon("trash"),
+                                                                                 class="btn-sm", title="Remove file (cannot be undone)"),
                                                                     downloadButton("download_table_ignition", label = NULL, icon = icon("download"), class="btn-sm", 
                                                                                    title="Download table in CSV file format"),
                                                                     actionButton("upload_table_ignition", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),

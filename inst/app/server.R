@@ -132,16 +132,25 @@ server <- function(input, output, session) {
       ignore.case = TRUE
     )
 
-
+    ignitionFiles <- list.files(
+      path = input$inputfolder,
+      pattern = ".*ignition.*\\.(csv)$",
+      full.names = TRUE,
+      ignore.case = TRUE
+    )
+    # bn<-
+    names(ignitionFiles) <- basename(ignitionFiles)
+    shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile",
+                                    choices = c("", ignitionFiles),
+                                    clearOptions = T  )
 
     ## IGNITION FILE ----
-    ignitionFile <-  grep("ignition", basename(tolower(csvfiles)), ignore.case = T )
-    shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile", choices = csvfiles[ignitionFile],clearOptions = T  )
-    if(length(ignitionFile)>0){
-      ip <- read.csv(csvfiles[[ignitionFile[[1]]]] )
+    # ignitionFile <-  grep("ignition", basename(tolower(csvfiles)), ignore.case = T )
+    if(length(ignitionFiles)>0){
+      ip <- read.csv(ignitionFiles[[1]] )
       if(anyNA(ip$Ncell)){
         showNotification(
-          paste0("In file ", csvfiles[[ignitionFile[[1]]]] , " no valid ignition points found, please check file format."),
+          paste0("In file ", ignitionFiles[[1]] , " no valid ignition points found, please check file format."),
           type = "warning",
           duration = 2
         )
@@ -399,7 +408,7 @@ server <- function(input, output, session) {
       ip,
       escape = FALSE,
       extensions = "Buttons",
-      editable = TRUE,
+      editable = FALSE,
       options = list(
         dom = "Bfrtip",
         buttons = list(
@@ -435,11 +444,62 @@ server <- function(input, output, session) {
     df[info$row, info$col] <- info$value
     ignitionPointsCoords(df)
   })
-  observeEvent(input$save_table_ignition, {
-    info <- input$ignitionInfo_cell_edit
+  
+  save_table_ignition_final <- function(overwrite=F){
     df <- isolate(ignitionPointsCoords())
-    df[info$row, info$col] <- info$value
-    ignitionPointsCoords(df)
+    if(overwrite && isTruthy(input$chooseIgnitionFile)) {
+      write.csv(df, input$chooseIgnitionFile, row.names = F)
+    } else {
+      write.csv(df, file.path(input$inputfolder, 
+                              sprintf("ignitionPoints_%s.csv", 
+                                      format(Sys.time(), 
+                                             "%Y-%m-%d_%H-%M-%S" ) )), row.names = F)
+    }
+    
+
+    
+    ignitionFiles <- list.files(
+      path = input$inputfolder,
+      pattern = ".*ignition.*\\.(csv)$",
+      full.names = TRUE,
+      ignore.case = TRUE
+    )
+    
+    names(ignitionFiles) <- basename(ignitionFiles)
+    shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile",
+                                    choices = ignitionFiles,
+                                    clearOptions = T  )
+  }
+  
+  
+  observeEvent(input$delete_table_ignition, {
+    req(input$chooseIgnitionFile)
+    shinyWidgets::ask_confirmation(inputId = "delete_table_ignition_confirm",html = T,
+                                   sprintf("Confirm you want to delete the selected ignition table: <br><u><b>%s</b></u>",
+                                           basename(input$chooseIgnitionFile)  )
+                                   )
+  })
+  
+  observeEvent(input$delete_table_ignition_confirm, {
+    req(input$chooseIgnitionFile)
+    if(input$delete_table_ignition_confirm){
+     file.remove(input$chooseIgnitionFile)
+    } 
+  })  
+  observeEvent(input$save_table_ignition_confirm, {
+    req(input$chooseIgnitionFile)
+    if(input$save_table_ignition_confirm){
+      save_table_ignition_final(T)
+    } 
+  })
+  
+  observeEvent(input$save_table_ignition, {
+    if(!isTruthy(input$chooseIgnitionFile) ) {
+      save_table_ignition_final(F)
+    } else { 
+      shinyWidgets::ask_confirmation(inputId = "save_table_ignition_confirm",
+                                     "Confirm you want to overwrite the selected ignition file")
+    }
   })
 
   ## add ignitionpoints -----
