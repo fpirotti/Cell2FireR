@@ -26,7 +26,7 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                                               icon=icon("trash") ), title="Delete dataset") ) 
                                                   ), 
                                                  shiny::actionButton("run", "Run Cell2Fire", icon=icon("fire") ),
-                                                 div(onclick="$('#inputInstancesIgnitions').toggle()", shiny::actionButton("run", "Ignitions Table", icon=tags$i("🔥") ) ), 
+                                                 shiny::actionButton("ignitionsTable", "Ignitions Table", icon=tags$i("🔥") ), 
                                                  shinydashboard::sidebarMenu(
                                                    shinydashboard::menuItem("Map", tabName = "dashboardMap", icon = icon("dashboard")),
                                                    shinydashboard::menuItem("Process Log", icon = icon("gear"), tabName = "widgets"),

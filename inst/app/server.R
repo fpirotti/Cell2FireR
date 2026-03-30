@@ -492,7 +492,10 @@ server <- function(input, output, session) {
       save_table_ignition_final(T)
     } 
   })
-  
+  ## updates side bar ignition ----
+  observeEvent(input$ignitionsTable, {
+    updateBoxSidebar("ignitionSideBar")
+  })
   observeEvent(input$save_table_ignition, {
     if(!isTruthy(input$chooseIgnitionFile) ) {
       save_table_ignition_final(F)
