@@ -577,9 +577,9 @@ server <- function(input, output, session) {
   ## upload dataset -----
   observeEvent(input$zipfileload, {
     req(input$zipfileload)
-
-    print("File caricato!")
+ 
     print(input$zipfileload$name)
+    browser()
     path <- file.path("data", tools::file_path_sans_ext(input$zipfileload$name) )
     if(dir.exists(path)){
       showNotification(paste("Directory ", input$zipfileload$name, " exists, please delete it first or change the name of the zip file!"),
@@ -592,8 +592,10 @@ server <- function(input, output, session) {
       paste("Unzipping ", fs/1e6 ," MB in data folder to ", input$zipfileload$name)
       )
 
-    unzip(input$zipfileload$datapath, exdir="data")
-
+    unzip(input$zipfileload$datapath, exdir=path )
+    showNotification(
+      paste("Finished unzipping  to ", input$zipfileload$name)
+    )
   })
 
   ## monitor DATA FOLDER -----
