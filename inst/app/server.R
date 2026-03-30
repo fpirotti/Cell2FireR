@@ -136,6 +136,7 @@ server <- function(input, output, session) {
 
     ## IGNITION FILE ----
     ignitionFile <-  grep("ignition", basename(tolower(csvfiles)), ignore.case = T )
+    shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile", choices = csvfiles[ignitionFile],clearOptions = T  )
     if(length(ignitionFile)>0){
       ip <- read.csv(csvfiles[[ignitionFile[[1]]]] )
       if(anyNA(ip$Ncell)){
@@ -579,7 +580,7 @@ server <- function(input, output, session) {
     req(input$zipfileload)
  
     print(input$zipfileload$name)
-    browser()
+   
     path <- file.path("data", tools::file_path_sans_ext(input$zipfileload$name) )
     if(dir.exists(path)){
       showNotification(paste("Directory ", input$zipfileload$name, " exists, please delete it first or change the name of the zip file!"),

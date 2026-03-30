@@ -13,27 +13,28 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                    choices = c("")
                                                  ),
                                                  shiny::fluidRow(
-
-                                                    shiny::column(6,   div(
-                                                      shinyWidgets::actionBttn("downloadfolder" , inline=T, style = "material-flat", size="sm",
-                                                                               # "Download",
+                                                   
+                                                   shiny::column(4,    div(
+                                                     shiny::fileInput("zipfileload", label=NULL, buttonLabel =  icon("upload") ), 
+                                                     title="add a zip file with all necessary files - please see documentation on how to prepare it"
+                                                   ) ), 
+                                                    shiny::column(3,   div(
+                                                     shiny::actionButton("downloadfolder" ,   NULL,
                                                                                icon = icon("download") ),  title="Download dataset") ),
-                                                   shiny::column(6, div(
-                                                     shinyWidgets::actionBttn("deletefolder",
-                                                                              # "Delete",
-                                                                              style = "material-flat", size="sm",
-                                                                              icon=icon("trash") ), title="Delete dataset") )
-                                                  ),
-                                                 div(shiny::fileInput("zipfileload", "Upload your dataset"), title="add a zip file with all necessary files - please see documentation on how to prepare it" ),
+                                                   shiny::column(3, div(
+                                                     shiny::actionButton("deletefolder", NULL,
+                                                                              icon=icon("trash") ), title="Delete dataset") ) 
+                                                  ), 
                                                  shiny::actionButton("run", "Run Cell2Fire", icon=icon("fire") ),
+                                                 div(onclick="$('#inputInstancesIgnitions').toggle()", shiny::actionButton("run", "Ignitions Table", icon=tags$i("🔥") ) ), 
                                                  shinydashboard::sidebarMenu(
-                                                   shinydashboard::menuItem("Map", tabName = "dashboard", icon = icon("dashboard")),
+                                                   shinydashboard::menuItem("Map", tabName = "dashboardMap", icon = icon("dashboard")),
                                                    shinydashboard::menuItem("Process Log", icon = icon("gear"), tabName = "widgets"),
                                                    shinydashboard::menuItem("Inputs", icon = icon("table"),
                                                                             shinydashboard::menuItem("Input Args", icon = icon("sliders-h"), tabName = "inputInstancesInputArgs"),
-                                                                            shinydashboard::menuItem("Input Args2", icon = icon("sliders-h"), tabName = "inputInstancesInputArgs2"),
+                                                                           # shinydashboard::menuItem("Input Args2", icon = icon("sliders-h"), tabName = "inputInstancesInputArgs2"),
                                                                             shinydashboard::menuItem("Weather File", icon = icon("cloud-rain"), tabName = "inputInstancesWeather"),
-                                                                            shinydashboard::menuItem("Ignitions", icon =tags$i("🔥"), tabName = "inputInstancesIgnitions"),
+                                                                            
                                                                             shinydashboard::menuItem("LUT FUEL Model", icon = icon("fire"), tabName = "inputInstancesLUT")
                                                                             ),
                                                    shinydashboard::menuItem("Outputs", icon = icon("table"), tabName = "outputInstances"),
@@ -52,8 +53,29 @@ ui <-  shinydashboardPlus::dashboardPage(
     ),
 
     shinydashboard::tabItems(
-      shinydashboard::tabItem(tabName = "dashboard",
-              shinydashboardPlus::box(  leafletOutput("map", height = 600), collapsible=TRUE, width = 12, title="Map", solidHeader = TRUE,status = "orange" ),
+      shinydashboard::tabItem(tabName = "dashboardMap",
+              shinydashboardPlus::box(  leafletOutput("map", height = 600), 
+                                        collapsible=TRUE, width = 12, 
+                                        title="Map", solidHeader = TRUE,
+                                        status = "black",         sidebar = boxSidebar(icon=tags$div(tags$i("🔥"), title="Ignition table") ,
+                                                                                       background = "white",
+                                          id = "ignitionSideBar",
+                                          # shinydashboardPlus::box(width=12, id = "inputInstancesIgnitions", title = 
+                                                                  tags$div(
+                                                                    style = "display:flex; align-items:center; gap:6px;",
+                                                                    span("Ignition File"),
+                                                                    div(title="Select an ignition file", shinyWidgets::dropdown("chooseIgnitionFile", NULL, size = "sm",  choices = c()) ),
+                                                                    actionButton("save_table_ignition", label = NULL, icon = icon("save"), class="btn-sm", title="Save changes to be used in the Cell2Fire process (only valid for this session)"),
+                                                                    downloadButton("download_table_ignition", label = NULL, icon = icon("download"), class="btn-sm", 
+                                                                                   title="Download table in CSV file format"),
+                                                                    actionButton("upload_table_ignition", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
+                                                                    div(style="display:none;", fileInput("upload_table_ignition_input", label = NULL, buttonLabel = NULL, width = 10,  accept = c(".csv", ".xlsx", ".xls")  ) )
+                                                                  ),
+                                                                  div( style = "overflow-x: auto;",  DTOutput("ignitionInfo")  )
+                                                                  # ,# collapsible=TRUE, collapsed = TRUE,
+                                                                  # solidHeader = TRUE,status = "primary")
+                                        ) ),
+              
               shinydashboardPlus::box( uiOutput("raster_info"),collapsible=TRUE,title="Rasters Info",solidHeader = TRUE )
       ),
 
@@ -118,35 +140,9 @@ ui <-  shinydashboardPlus::dashboardPage(
 
       shinydashboard::tabItem(tabName = "inputInstancesInputArgs",
                               uiInputsArgs
-      ),
-      # shinydashboard::tabItem(tabName = "inputInstancesInputArgs2",
-      #
-      #
-      #                          shinydashboardPlus::box(width=12, collapsible=TRUE,title="Cell2Fire Input Arguments",
-      #                             solidHeader = TRUE,status = "primary",
-      #                             uiInputs
-      #                             )
-      # ),
-
-      shinydashboard::tabItem(tabName = "inputInstancesIgnitions",
-
-
-        shinydashboardPlus::box(width=12,
-          title = tags$div(
-            style = "display:flex; align-items:center; gap:6px;",
-            span("Ignition File"),
-            actionButton("save_table_ignition", label = NULL, icon = icon("save"), class="btn-sm", title="Save changes to be used in the Cell2Fire process (only valid for this session)"),
-            downloadButton("download_table_ignition", label = NULL, icon = icon("download"), class="btn-sm", title="Download table in CSV file format"),
-            actionButton("upload_table_ignition", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
-            div(style="display:none;", fileInput("upload_table_ignition_input", label = NULL, buttonLabel = NULL, width = 10,  accept = c(".csv", ".xlsx", ".xls")  ) )
-          ),
-          div( style = "overflow-x: auto;",  DTOutput("ignitionInfo")  ),
-          collapsible=TRUE,
-
-          solidHeader = TRUE,status = "primary")
-
       )
-    )
+
+     )
 
   ),
   controlbar = shinydashboardPlus::dashboardControlbar(),

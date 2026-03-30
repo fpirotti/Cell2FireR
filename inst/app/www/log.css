@@ -15,6 +15,16 @@
   box-shadow: inset 2px 2px 5px rgba(0,0,0,0.4) !important;
 }
 
+#zipfileload_progress {
+      width: 200px; 
+}
+#zipfileload-label + div {
+   margin-top: -6px;
+ }
+#shiny-tab-dashboardMap .direct-chat-contacts{
+  z-index: 9999 !important;
+  border:1px solid black;
+}
 .log-info {
   color: #9cdcfe;
 }
@@ -23,6 +33,8 @@
   float:right;
   clear:both;
 }
+
+
 #map > div.leaflet-control-container > div.leaflet-bottom.leaflet-right{
   border: 1px solid black;
   background: aliceblue;
@@ -56,3 +68,17 @@
   border-top: 1px solid #ddd;
   color: #444;
 }
+
+.tippy-box {
+  background-color: #d3d3d3 !important; /* light grey background */
+  color: black !important;              /* black text */
+  border: 1px solid black !important;   /* black outline */
+  border-radius: 4px;                   /* optional: rounded corners */
+}
+
+/* Optional: adjust arrow color */
+.tippy-box[data-theme] .tippy-arrow {
+  color: black !important; /* matches background */
+}
+
+
