@@ -435,6 +435,12 @@ server <- function(input, output, session) {
     df[info$row, info$col] <- info$value
     ignitionPointsCoords(df)
   })
+  observeEvent(input$save_table_ignition, {
+    info <- input$ignitionInfo_cell_edit
+    df <- isolate(ignitionPointsCoords())
+    df[info$row, info$col] <- info$value
+    ignitionPointsCoords(df)
+  })
 
   ## add ignitionpoints -----
   observe( {
