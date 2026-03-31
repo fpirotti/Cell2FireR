@@ -1,7 +1,7 @@
 # ui.R
 ui <-  shinydashboardPlus::dashboardPage(
   options = list(sidebarExpandOnHover = TRUE),
-  header = shinydashboardPlus::dashboardHeader(title = "Cell2Fire R bindings App" ),
+  header = shinydashboardPlus::dashboardHeader(title = "Cell2Fire" ),
   footer = shinydashboardPlus::dashboardFooter(
     left =  HTML("<a href='www.cirgeo.unipd.it' >CIRGEO - University of Padova</a> "),
     right = HTML("<a href='mailto:francesco.pirotti@unipd.it' >MAIL<span style='font-size:22px'>📧</span></a> ")
@@ -64,7 +64,12 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                                   tags$div(
                                                                     style = "display:flex; align-items:center; gap:6px;",
                                                                     span("Ignition File"),
-                                                                    div(title="Select an ignition file", shinyWidgets::pickerInput("chooseIgnitionFile", NULL,  inline = T, choices = c()) ),
+                                                                    actionButton("delete_table_ignition_row", label = NULL, icon = icon("cancel"),
+                                                                                 class="btn-sm", title="Delete Row"),
+                                                                    span("|", style="color:black;"),
+                                                                    div(title="Select an ignition file", style="margin-bottom:-15px", 
+                                                                        shinyWidgets::pickerInput("chooseIgnitionFile", NULL,width = "100px", 
+                                                                                                  inline = F, choices = c()) ),
                                                                     actionButton("save_table_ignition", label = NULL, icon = icon("save"), class="btn-sm", title="Save changes to be used in the Cell2Fire process (only valid for this session)"),
                                                                     actionButton("delete_table_ignition", label = NULL, icon = icon("trash"),
                                                                                  class="btn-sm", title="Remove file (cannot be undone)"),

@@ -1,21 +1,17 @@
----
-editor_options: 
-  markdown: 
-    wrap: 72
----
-
-# Cell2FireR: R bindings for Cell2Fire -
+# Cell2FireR: R bindings and platform for Fire Spread Simulations using Cell2Fire
 
 ## Description
 
-R bindings to the [Cell2Fire](https://github.com/fire2a/C2F-W) software,
-a Cell Based Forest Fire Growth Model. It also provides an online
-graphical interface for learning how to use a wildfire behaviour
+Installing this package provides two main elements:
+
+ - R bindings to the [Cell2Fire](https://github.com/fire2a/C2F-W) software,
+a Cell Based Forest Fire Growth Model. 
+ - an online graphical user interface for learning how to use the fire behaviour
 software.
 
 The R bindings allow users to modify input arguments and run the
-simulation inserting arguments pipelining the testing of single-argument
-on the final results.
+simulation inserting arguments and pipelining call to the Cell2Fire executable and
+interpret the outputs converting them to maps and plots.
 
 ## Usage
 
@@ -28,7 +24,7 @@ command can be used:
 Rscript -e "Cell2FireR::cell2fire_run()" --input-instance-folder ../data/Sub40x40/ --output-folder ../Sub40x40 --ignitions 1 --sim-years 1 --nsims 10 --grids --finalGrid --weather rows --nweathers 1 --Fire-Period-Length 1.0 --output-messages --ROS-CV 0.8 --seed 123 --stats --allPlots --IgnitionRad 1
 ```
 
--   via direct
+-   directly
 
 ```         
 library(Cell2FireR)

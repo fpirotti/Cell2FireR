@@ -408,36 +408,36 @@ server <- function(input, output, session) {
       ip,
       escape = FALSE,
       extensions = "Buttons",
-      editable = FALSE,
-      options = list(
-        dom = "Bfrtip",
-        buttons = list(
-          list(
-            extend = "collection",
-            text = 'Delete Selected 🗑️',
-            action = DT::JS("function ( e, dt, node, config ) {
-                              var rows = dt.rows({ selected: true }).indices().toArray();
-                              Shiny.setInputValue('rows_to_delete', rows, {priority: 'event'});
-                            }")
-          )
-        ),
-        columnDefs = list(
-          list(
-            targets = ncol(ip),
-            render = JS(
-              "function(data, type, row, meta) {
-             return '<button title=\"Zoom in\">🔎</button>';
-           }"
-            )
-          )
-        )
-      )
+      editable = FALSE #,
+      # options = list(
+      #   dom = "Bfrtip", 
+      #   columnDefs = list(
+      #     list(
+      #       targets = ncol(ip),
+      #       render = JS(
+      #         "function(data, type, row, meta) {
+      #        return '<button title=\"Zoom in\">🔎</button>';
+      #      }"
+      #       )
+      #     )
+      #   )
+      # )
     ) |> formatRound(
       columns = c('X', 'Y'),
       digits = 5
     )
     # datatable( ip , editable = TRUE)
   })
+  
+  observeEvent(input$ignitionInfo_rows_to_delete, {
+    info <- input$ignitionInfo_cell_edit
+    browser()
+    df <- isolate(ignitionPointsCoords())
+    df[info$row, info$col] <- info$value
+    ignitionPointsCoords(df)
+  })
+
+  
   observeEvent(input$ignitionInfo_cell_edit, {
     info <- input$ignitionInfo_cell_edit
     df <- isolate(ignitionPointsCoords())
@@ -486,16 +486,19 @@ server <- function(input, output, session) {
      file.remove(input$chooseIgnitionFile)
     } 
   })  
+  
   observeEvent(input$save_table_ignition_confirm, {
     req(input$chooseIgnitionFile)
     if(input$save_table_ignition_confirm){
       save_table_ignition_final(T)
     } 
   })
+  
   ## updates side bar ignition ----
   observeEvent(input$ignitionsTable, {
     updateBoxSidebar("ignitionSideBar")
   })
+  
   observeEvent(input$save_table_ignition, {
     if(!isTruthy(input$chooseIgnitionFile) ) {
       save_table_ignition_final(F)
