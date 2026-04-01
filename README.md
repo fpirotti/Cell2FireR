@@ -68,7 +68,7 @@ Map Server](https://www.cirgeo.unipd.it/fire-res/app/) platform for 100
 m resolution maps or try one from the [direct link
 HERE](https://www.cirgeo.unipd.it/FIRE-RES/ITC34/ITC34.zip)
 
-![](images/clipboard-1986611967.png)
+![](man/images/clipboard-1986611967.png)
 
 
 ## Acknowledgements

@@ -1,5 +1,6 @@
 .onLoad <- function(libname, pkgname) {
   if (interactive())  packageStartupMessage("Checking for Cell2Fire executable...")
+
   bindir <- system.file("bin", package = pkgname)
   outdir <- file.path(bindir, "C2F")
   exewinfile <- file.path(outdir, "Cell2Fire.exe")
