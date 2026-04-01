@@ -243,7 +243,8 @@ createLeaflet <- function(){
     ) |> htmlwidgets::onRender("
       function(el, x) {
         console.log(el);
-        mymap = el;
+        
+        mymap = HTMLWidgets.find(\"#map\").getMap();
         $('[title]').each(function() {
           $(this).attr('data-tippy-content', $(this).attr('title'));
           $(this).removeAttr('title');
@@ -371,3 +372,16 @@ uiInputsArgs <- lapply(names(PANELS), function(op){
 #  out
 # })
 
+
+md_overwrite_ignition <- modalDialog(
+  title = "Overwrite",size = "s",
+  "Confirm you want to overwrite the selected file?",
+  
+  footer = tagList(
+    actionButton("overwrite_file_confirm_yes", "Yes"),
+    actionButton("overwrite_file_confirm_newFile", "Create a New file"),
+    modalButton("Cancel")
+  ),
+  
+  easyClose = TRUE
+)

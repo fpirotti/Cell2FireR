@@ -5,7 +5,7 @@ var mymap = null;
 $(document).ready(function () {
  $(document).on('change', '.leaflet-control-container', function(e) {
     console.log("Control interaction:", e.target);
-   // autoGroupLeafletLayers(".leaflet-control-layers");
+    autoGroupLeafletLayers(".leaflet-control-layers");
 });
 });
 
@@ -81,7 +81,13 @@ var autoGroupLeafletLayers = function (controlSelector) {
   $labels.each(function() {
     var $label = $(this);
     var $span = $label.find('span').first(); // get the span containing the name
+    var title = $label.attr("title");
     var fullText = $span.text().trim();
+    if (title != null) {
+      fullText = title;
+    }
+    
+    $label.attr("title", fullText);
 
     if (fullText.includes(" - ")) {
       var parts = fullText.split(" - ");
@@ -103,7 +109,7 @@ var autoGroupLeafletLayers = function (controlSelector) {
 
   // add grouped layers
   Object.keys(groups).forEach(function(prefix) {
-    var $header = $('<div class="leaflet-layer-group-header"><strong>' + prefix + ' ▼</strong></div>');
+    var $header = $('<div class="leaflet-layer-group-header"><strong> ▼ ' + prefix + ' </strong></div>');
     var $container = $('<div class="leaflet-layer-group-container"></div>');
 
     $container.css({ 'padding-left': '10px' });
@@ -117,7 +123,7 @@ var autoGroupLeafletLayers = function (controlSelector) {
     $header.on('click', function() {
       $container.toggle();
       var text = $container.is(':visible') ? '▼' : '►';
-      $(this).find('strong').text(prefix + ' ' + text);
+      $(this).find('strong').text(text + ' ' + prefix);
     });
   });
 

@@ -116,7 +116,8 @@ server <- function(input, output, session) {
     #                        inputId = "..output.folder",
     #                        value =  outfolder)
 
-    ignitionPoints <- NULL
+ 
+    ip <- NULL
     currentRasterStack <<- NULL
 
     rfiles <- list.files(
@@ -141,7 +142,7 @@ server <- function(input, output, session) {
     # bn<-
     names(ignitionFiles) <- basename(ignitionFiles)
     shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile",
-                                    choices = c("", ignitionFiles),
+                                    choices = ignitionFiles,
                                     clearOptions = T  )
 
     ## IGNITION FILE ----
@@ -150,13 +151,12 @@ server <- function(input, output, session) {
       ip <- read.csv(ignitionFiles[[1]] )
       if(anyNA(ip$Ncell)){
         showNotification(
-          paste0("In file ", ignitionFiles[[1]] , " no valid ignition points found, please check file format."),
+          paste0("In file ", ignitionFiles[[1]] , " some invalid ignition points found, please check file format."),
           type = "warning",
           duration = 2
         )
-      } else {
-        ignitionPoints <- ip$Ncell
-      }
+      } 
+ 
     }
 
     ## UPDATE LEAFLET ------
@@ -180,6 +180,9 @@ server <- function(input, output, session) {
 
 
         layerName <- toupper(tools::file_path_sans_ext(basename(fi)))
+        
+        layerName <- paste0(basename(input$inputfolder), " - ", toupper(layerName))
+        
         layerNames <- c(layerNames, layerName)
 
         incProgress( strt/(length(rfiles)+2), detail = sprintf("Layer %s", layerName) )
@@ -226,15 +229,20 @@ server <- function(input, output, session) {
           na.color = "transparent"
           rasterInfo(raster_info(r2))
 
-          if(!is.null(ignitionPoints)){
-            cr <- terra::xyFromCell(r2, ignitionPoints)
-            crv <- terra::vect(cr)
-            terra::crs(crv) <- terra::crs(r2)
-
-            crv2 <- crv |> terra::project("EPSG:4326")
-            crvc <-  as.data.frame(crv2@pntr$coordinates())
-            names(crvc) <- c("X","Y")
-            ignitionPointsCoords(cbind(ip, crvc) )
+          if(!is.null(ip)){
+           
+            if(!is.element("X", names(ip)) ){
+              ncell <- ip$Ncell
+              cr <- terra::xyFromCell(r2, ncell)
+              crv <- terra::vect(cr)
+              terra::crs(crv) <- terra::crs(r2) 
+              crv2 <- crv |> terra::project("EPSG:4326")
+              crvc <-  as.data.frame(crv2@pntr$coordinates())
+              names(crvc) <- c("X","Y")
+              ignitionPointsCoords(cbind(ip, crvc) )
+            } else{
+              ignitionPointsCoords(ip )
+            } 
           }
           rasters[["FUELMAP"]] <- r2
 
@@ -254,8 +262,7 @@ server <- function(input, output, session) {
         }
 
 
-
-        opacityControl [[toupper(layerName)]] <- list(
+        opacityControl [[layerName]] <- list(
           min = 0,
           max = 1,
           step = 0.1,
@@ -264,13 +271,14 @@ server <- function(input, output, session) {
           class = 'opacity-slider'
            )
 
-        view_settings[[toupper(layerName)]] <- list(coords = as.numeric(st_transform(st_bbox(r2), 4326))   )
+        view_settings[[layerName]] <- list(coords = as.numeric(st_transform(st_bbox(r2), 4326))   )
 
         leaflet::leafletProxy("map") |>
           leafem::addGeoRaster( stars::st_as_stars(r2),
                                 colorOptions = copts,
                                 # pixelValuesToColorFn = pv2col,
-                                opacity = 0.85, group = toupper(layerName),
+                                opacity = 0.85, 
+                                group = layerName,
                                 autozoom = F,
                                 options = leafletOptions(pane = "markerPane"),
                                 tileOptions = leaflet::tileOptions(zIndex = 999),
@@ -278,8 +286,8 @@ server <- function(input, output, session) {
                                                                               prefix="",
                                                                               position="bottomright",
                                                                               noData = "NA"),
-                                layerId = toupper(layerName)) |>
-          leaflet::hideGroup( toupper(layerName) )
+                                layerId = layerName) |>
+          leaflet::hideGroup( layerName )
       }
     })
 
@@ -398,30 +406,31 @@ server <- function(input, output, session) {
 
   ## TABLE IGNITION and edits  ----
   output$ignitionInfo <- renderDT({
-    req(ignitionPointsCoords())
+    # req(ignitionPointsCoords())
     ip <- ignitionPointsCoords()
-    ip$Tools <- ""
-
-
-
+    if(is.null(ip)){
+      ip <- data.frame(X=numeric(), Y=numeric(), Tools=character())
+    } else {
+      ip$Tools <- ""
+    }
     DT::datatable(
       ip,
       escape = FALSE,
       extensions = "Buttons",
-      editable = FALSE #,
-      # options = list(
-      #   dom = "Bfrtip", 
-      #   columnDefs = list(
-      #     list(
-      #       targets = ncol(ip),
-      #       render = JS(
-      #         "function(data, type, row, meta) {
-      #        return '<button title=\"Zoom in\">🔎</button>';
-      #      }"
-      #       )
-      #     )
-      #   )
-      # )
+      editable = FALSE ,
+      options = list(
+        dom = "Bfrtip",
+        columnDefs = list(
+          list(
+            targets = ncol(ip),
+            render = JS(
+              "function(data, type, row, meta) {
+                      return '<button onclick=\"mymap.flyTo(['+row[4]+', '+row[3]+'], 10);\">🔎</button>';
+           }"
+            )
+          )
+        )
+      )
     ) |> formatRound(
       columns = c('X', 'Y'),
       digits = 5
@@ -429,11 +438,9 @@ server <- function(input, output, session) {
     # datatable( ip , editable = TRUE)
   })
   
-  observeEvent(input$ignitionInfo_rows_to_delete, {
-    info <- input$ignitionInfo_cell_edit
-    browser()
+  observeEvent(input$delete_table_ignition_row, {  
     df <- isolate(ignitionPointsCoords())
-    df[info$row, info$col] <- info$value
+    df <- df[ -1*input$ignitionInfo_rows_selected, ]   
     ignitionPointsCoords(df)
   })
 
@@ -475,25 +482,28 @@ server <- function(input, output, session) {
   observeEvent(input$delete_table_ignition, {
     req(input$chooseIgnitionFile)
     shinyWidgets::ask_confirmation(inputId = "delete_table_ignition_confirm",html = T,
-                                   sprintf("Confirm you want to delete the selected ignition table: <br><u><b>%s</b></u>",
+                                    sprintf("Confirm you want to delete the selected ignition table: <br><u><b>%s</b></u>",
                                            basename(input$chooseIgnitionFile)  )
                                    )
+
   })
   
   observeEvent(input$delete_table_ignition_confirm, {
     req(input$chooseIgnitionFile)
     if(input$delete_table_ignition_confirm){
      file.remove(input$chooseIgnitionFile)
+     ignitionPointsCoords(NULL)
     } 
   })  
   
-  observeEvent(input$save_table_ignition_confirm, {
-    req(input$chooseIgnitionFile)
-    if(input$save_table_ignition_confirm){
-      save_table_ignition_final(T)
-    } 
+  observeEvent(input$overwrite_file_confirm_yes, {
+    req(input$chooseIgnitionFile) 
+    save_table_ignition_final(T) 
   })
   
+  observeEvent(input$overwrite_file_confirm_newFile, {
+    save_table_ignition_final(F) 
+  })
   ## updates side bar ignition ----
   observeEvent(input$ignitionsTable, {
     updateBoxSidebar("ignitionSideBar")
@@ -503,8 +513,11 @@ server <- function(input, output, session) {
     if(!isTruthy(input$chooseIgnitionFile) ) {
       save_table_ignition_final(F)
     } else { 
-      shinyWidgets::ask_confirmation(inputId = "save_table_ignition_confirm",
-                                     "Confirm you want to overwrite the selected ignition file")
+      
+      showModal(
+        md_overwrite_ignition
+      )
+       
     }
   })
 
@@ -572,10 +585,22 @@ server <- function(input, output, session) {
       pt <- pt4326 |> terra::project( crr )
       ptmt <- as.matrix( unname(as.data.frame(pt@pntr$coordinates()) ) )
       ptmt4326 <- as.matrix( unname(as.data.frame(pt4326@pntr$coordinates()) ) )
+ 
       cr <- terra::cellFromXY( crr , ptmt )
-
+      if(is.na(cr) || is.na(crr[cr][[1]])){
+        sendSweetAlert(
+          session = session,
+          title = "Sorry!", html=T,
+          text = "Ignition point is not over a valid value but over 
+                            an NA value, will not add ignition point.<br> 
+          <b>Please make sure it overlaps data in input rasters.</b>",
+          type = "warning"
+        ) 
+        return(NA)
+      }   
       allig <- isolate(ignitionPointsCoords())
       df <- data.frame(Year=as.integer(1), Ncell=as.integer(cr), X=ptmt4326[1,1],  Y=ptmt4326[1,2])
+       
       nn <- rbind(allig, df )
 
       ignitionPointsCoords( nn )

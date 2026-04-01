@@ -6,6 +6,9 @@
   padding: 10px;
   border-radius: 6px;
 }
+.leaflet-layer-group-header{
+ cursor: pointer;  
+}
 
 .leaflet-control-layers{
   min-width: 100px !important;
