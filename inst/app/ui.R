@@ -53,11 +53,13 @@ ui <-  shinydashboardPlus::dashboardPage(
     ),
 
     shinydashboard::tabItems(
-      shinydashboard::tabItem(tabName = "dashboardMap",
+      shinydashboard::tabItem(tabName = "dashboardMap", 
+                              style="margin:-15px -30px;",
               shinydashboardPlus::box(  leafletOutput("map", height = 600), 
                                         collapsible=TRUE, width = 12, 
                                         title="Map", solidHeader = TRUE,
-                                        status = "black",         sidebar = boxSidebar(icon=tags$div(tags$i("🔥"), title="Ignition table") ,
+                                        status = "black",         
+                                        sidebar = boxSidebar(icon=tags$div(tags$i("🔥"), "Toggle Ignition Table", title="Ignition table") ,
                                                                                        background = "white",
                                           id = "ignitionSideBar",
                                           # shinydashboardPlus::box(width=12, id = "inputInstancesIgnitions", title = 

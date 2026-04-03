@@ -245,6 +245,11 @@ createLeaflet <- function(){
         console.log(el);
         
         mymap = HTMLWidgets.find(\"#map\").getMap();
+        //mymap.on('layeradd', function(e) { 
+        //        console.log('Layer added via control!'); 
+        //        autoGroupLeafletLayers(\".leaflet-control-layers\");
+        //});
+        
         $('[title]').each(function() {
           $(this).attr('data-tippy-content', $(this).attr('title'));
           $(this).removeAttr('title');
@@ -267,7 +272,7 @@ createLeaflet <- function(){
         const ctrl = el.querySelector('.leaflet-control-layers');
         if (!ctrl) return;
         console.log('Layers control ready');
-        //autoGroupLeafletLayers(\".leaflet-control-layers\");
+        autoGroupLeafletLayers(\".leaflet-control-layers\");
       }
    ")
 

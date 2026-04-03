@@ -339,11 +339,10 @@ server <- function(input, output, session) {
                                 lat1 =  ymin(r2),
                                 lng2 =  xmax(r2),
                                 lat2 =  ymax(r2)
-      )
+      )  
 
-
-
-    shinyjs::runjs("autoGroupLeafletLayers(\".leaflet-control-layers\");")
+     session$sendCustomMessage("layersControlReady", list())
+    # shinyjs::runjs("autoGroupLeafletLayers(\".leaflet-control-layers\");")
 
     if(is.null(currentRasterStack)){
       showNotification(

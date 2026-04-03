@@ -3,10 +3,14 @@ var ignitionButton = null;
 var WMSQueryButton = null;
 var mymap = null;
 $(document).ready(function () {
- $(document).on('change', '.leaflet-control-container', function(e) {
-    console.log("Control interaction:", e.target);
-    autoGroupLeafletLayers(".leaflet-control-layers");
+
 });
+
+Shiny.addCustomMessageHandler("layersControlReady", function(message) {
+    setTimeout(function() {
+     autoGroupLeafletLayers(".leaflet-control-layers");
+  }, 500);
+ 
 });
 
 function dateFromToday(back=0){

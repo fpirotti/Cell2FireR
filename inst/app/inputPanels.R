@@ -113,11 +113,13 @@ PANELS[["IGNITION SECTION"]] <- list(
 ## WEATHER & CONFIG ----
 PANELS[["WEATHER & CONFIG"]] <- list(
 
-  shinyWidgets::pickerInput("WEATHER_MODE", "Source mode", choices = NAME$weather_modes),
+  div(title="for Single Weather File you must pick a file, for random choice 
+ from directory it will look into the directory of the selected dataset.",
+      shinyWidgets::pickerInput("WEATHER_MODE", "Source mode", choices = NAME$weather_modes) ),
 
   shinyWidgets::pickerInput("WEAFILE", "Single weather file (.csv)", choices = get_existing_files("\\.csv$")),
 
-  shiny::textInput("WEADIR", "Weather directory path", placeholder = "/path/to/weather/"),
+  # shiny::textInput("WEADIR", "Weather directory path", placeholder = "/path/to/weather/"),
 
   shiny::numericInput("FMC", "Foliar Moisture Content [40-200]", value = 66, min = 40, max = 200),
 
