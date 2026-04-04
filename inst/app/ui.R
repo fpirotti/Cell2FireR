@@ -84,9 +84,9 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                                   div( style = "overflow-x: auto;",  DTOutput("ignitionInfo")  )
                                                                   # ,# collapsible=TRUE, collapsed = TRUE,
                                                                   # solidHeader = TRUE,status = "primary")
-                                        ) ),
+                                        ) ) #,
               
-              shinydashboardPlus::box( uiOutput("raster_info"),collapsible=TRUE,title="Rasters Info",solidHeader = TRUE )
+              # shinydashboardPlus::box( uiOutput("raster_info"),collapsible=TRUE,title="Rasters Info",solidHeader = TRUE )
       ),
 
       shinydashboard::tabItem(tabName = "widgets",

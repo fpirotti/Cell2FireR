@@ -3,7 +3,7 @@
 server <- function(input, output, session) {
 
   options(shiny.maxRequestSize = 100 * 1024^2)  # 100 MB
-  rasterInfo <- reactiveVal(NULL)
+  # rasterInfo <- reactiveVal(NULL)
   ignitionPointsCoords <- reactiveVal(NULL)
   currentRasterStack <- NULL
   lut_fbp_local <- reactiveVal(NULL)
@@ -227,7 +227,7 @@ server <- function(input, output, session) {
 
 
           na.color = "transparent"
-          rasterInfo(raster_info(r2))
+          # rasterInfo(raster_info(r2))
 
           if(!is.null(ip)){
            
@@ -614,7 +614,7 @@ server <- function(input, output, session) {
 
   # pretty raster info ----
   output$raster_info <- renderUI({
-    info <- rasterInfo()
+    # info <- rasterInfo()
     div(
       style = "
         background-color:#f8f9fa;

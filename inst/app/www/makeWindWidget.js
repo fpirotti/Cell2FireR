@@ -90,7 +90,7 @@ var makeWindWidget = function(){
             console.log("Wind:", data.current.wind_speed_10m, "m/s from", data.current.wind_direction_10m, "°");
             speed = Math.round(data.current.wind_speed_10m/3.6);
             dir = data.current.wind_direction_10m;
-        
+            $('#speed').val(speed);
             $('#wspeed').text(speed);
             angle = dir;
             $('#wdir').text(Math.round(dir));
