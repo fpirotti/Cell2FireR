@@ -1,3 +1,7 @@
+var isDragging = false;
+
+
+
 var makeWindWidget = function(){
       var canvas = document.getElementById('windCanvas');
       var ctx = canvas.getContext('2d');
@@ -75,6 +79,30 @@ var makeWindWidget = function(){
         // --- Angle label ---
         //ctx.fillText(angle.toFixed(0) + "°", centerX, centerY);
       }
+      
+      function getFromOpenMeteo(){
+        var center = mymap.getCenter(); 
+        
+        $.ajax({
+          url: "https://api.open-meteo.com/v1/forecast?latitude="+center.lat+"&longitude="+center.lng+"&current=wind_speed_10m,wind_direction_10m",
+          dataType: "json",
+          success: function(data) {
+            console.log("Wind:", data.current.wind_speed_10m, "m/s from", data.current.wind_direction_10m, "°");
+            speed = Math.round(data.current.wind_speed_10m/3.6);
+            dir = data.current.wind_direction_10m;
+        
+            $('#wspeed').text(speed);
+            angle = dir;
+            $('#wdir').text(Math.round(dir));
+            drawCompass(); 
+          },
+          error: function(jqXHR, textStatus, errorThrown) {
+            console.error("API call failed:", textStatus, errorThrown);
+            alert("API Meteo call failed: " +textStatus + ": " + errorThrown);
+          }
+        });
+   
+      }
      
       drawCompass();
 
@@ -84,9 +112,13 @@ var makeWindWidget = function(){
         $('#wspeed').text(speed);
         drawCompass();  
       });
+      
+      
+      $('#getFromOpenMeteo').on('click', function(e){
+        getFromOpenMeteo();
+      });
 
-      // Update angle on canvas click
-      $('#windCanvas').on('mousemove   click', function(e){
+      var updateAngle = function(e){
         var rect = canvas.getBoundingClientRect();
         var x = e.clientX - rect.left - centerX;
         var y = e.clientY - rect.top - centerY;
@@ -97,7 +129,25 @@ var makeWindWidget = function(){
       
         $('#wdir').text(Math.round(angle)); 
         drawCompass(); 
+      }
+
+    
+      
+   $('#windCanvas')
+      .on('mousedown', function(e) {
+        isDragging = true;
+        updateAngle(e);
+      })
+      .on('mousemove', function(e) {
+        if (isDragging) {
+          updateAngle(e);
+        }
+      })
+      .on('mouseleave mouseup', function() {
+        isDragging = false;
       });
+      
+      
     }
     
     
