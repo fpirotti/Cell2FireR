@@ -19,7 +19,7 @@ white_tile <- "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAw
 clcpluswms <- "https://image.discomap.eea.europa.eu/arcgis/services/CLC_plus/CLMS_CLCplus_RASTER_2021_010m_eu/ImageServer/WMSServer"
 # Example global data
 default_center <- c(lng = 11.96173904332453, lat = 45.342594242)
-clcLayerName <- "Copernicus CLC+"
+clcLayerName <- "BASE - Copernicus CLC+"
 mytheme <- create_theme(
   adminlte_color(
     light_blue = "#570a00"
@@ -245,10 +245,23 @@ createLeaflet <- function(){
         console.log(el);
         
         mymap = HTMLWidgets.find(\"#map\").getMap();
-        //mymap.on('layeradd', function(e) { 
-        //        console.log('Layer added via control!'); 
-        //        autoGroupLeafletLayers(\".leaflet-control-layers\");
-        //});
+        var map = this;
+
+          var myDiv = L.Control.extend({
+            onAdd: function(map){
+              var div = L.DomUtil.create('div','windCanvas'); 
+              div.style.background = 'white';
+              div.style.padding = '5px';
+              div.innerHTML = '<b>Wind Speed: <span id=\"wspeed\">0</span> (m/s)</b><br><input type=\"range\" id=\"speed\" name=\"speed\" min=\"0\" value=0 max=\"30\"><br><b>Wind Direction: <span id=\"wdir\">90</span>°</b><br><canvas id=\"windCanvas\" width=\"150\" height=\"150\"></canvas>';
+              div.style.border = '1px solid gray';
+              div.style.borderRadius = '4px';
+              L.DomEvent.disableClickPropagation(div);
+              L.DomEvent.disableScrollPropagation(div);
+              return div;
+            }
+          });
+          map.addControl(new myDiv({position:'bottomleft'}));
+          makeWindWidget();
         
         $('[title]').each(function() {
           $(this).attr('data-tippy-content', $(this).attr('title'));
@@ -268,10 +281,7 @@ createLeaflet <- function(){
             document.getElementById('map').style.cursor = null;
             Shiny.setInputValue('map_mode', '', {priority: 'event'});
           }
-        });
-        const ctrl = el.querySelector('.leaflet-control-layers');
-        if (!ctrl) return;
-        console.log('Layers control ready');
+        }); 
         autoGroupLeafletLayers(\".leaflet-control-layers\");
       }
    ")
