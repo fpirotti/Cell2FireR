@@ -75,17 +75,5 @@
   border-top: 1px solid #ddd;
   color: #444;
 }
-
-.tippy-box {
-  background-color: #d3d3d3 !important; /* light grey background */
-  color: black !important;              /* black text */
-  border: 1px solid black !important;   /* black outline */
-  border-radius: 4px;                   /* optional: rounded corners */
-}
-
-/* Optional: adjust arrow color */
-.tippy-box[data-theme] .tippy-arrow {
-  color: black !important; /* matches background */
-}
-
+ 
 

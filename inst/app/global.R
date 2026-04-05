@@ -253,7 +253,7 @@ createLeaflet <- function(){
               div.style.background = 'white';
               div.style.padding = '5px';
               div.title  ='';
-              div.innerHTML = '<b id=\"getFromOpenMeteo\" style=\"cursor:pointer;\" title=\"Click here to get current values from open meteo (NB this is experimental and not to be used for production envs).\">Wind Speed: <span id=\"wspeed\">0</span> (m/s)</b><input type=\"range\" id=\"speed\" name=\"speed\" min=\"0\" value=0 max=\"30\"><b>Wind Direction: <span id=\"wdir\">90</span>°</b><br><canvas id=\"windCanvas\" width=\"150\" height=\"150\"></canvas>';
+              div.innerHTML = '<b id=\"getFromOpenMeteo\" style=\"cursor:pointer;\" title=\"Click here to get current values from open-meteo (NB this is experimental and not to be used for production envs).\">Wind at 10 m<br>Speed: <span id=\"wspeed\">0</span> (m/s)</b><input type=\"range\" id=\"speed\" name=\"speed\" min=\"0\" value=0 max=\"30\"><b>Direction: <span id=\"wdir\">90</span>°</b><br><canvas id=\"windCanvas\" width=\"150\" height=\"150\"></canvas>';
               div.style.border = '1px solid gray';
               div.style.borderRadius = '4px';
               L.DomEvent.disableClickPropagation(div);
@@ -267,13 +267,8 @@ createLeaflet <- function(){
         $('[title]').each(function() {
           $(this).attr('data-tippy-content', $(this).attr('title'));
           $(this).removeAttr('title');
-        });
-
-        // now initialize tippy
-        tippy('[data-tippy-content]', {
-          theme: 'light',
-          animation: 'scale'
-        });
+        }); 
+        
         document.addEventListener('keydown', function(e) {
           // Fallback for older browsers
           if (e.keyCode === 27) {

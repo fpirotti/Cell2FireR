@@ -2,8 +2,37 @@
 var ignitionButton = null;
 var WMSQueryButton = null;
 var mymap = null;
+ 
 $(document).ready(function () {
 
+   $('[title]').each(function() {
+     $(this).attr('data-tippy-content', $(this).attr('title'));
+     $(this).removeAttr('title');
+   }); 
+       
+  const instances = tippy('[data-tippy-content]', {
+    content(reference) {
+      const title = reference.getAttribute('title');
+      reference.removeAttribute('title');
+      console.log(title);
+      return title;
+    },
+    theme: 'cool',
+    animation: 'scale',
+    placement: 'top',
+    trigger: 'manual' // important
+  });
+
+  setTimeout(() => {
+    instances.forEach(instance => {
+      const rect = instance.reference.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        instance.show();
+        console.log("===");
+      }
+        console.log(instance);
+    });
+  }, 3000);
 });
 
 Shiny.addCustomMessageHandler("layersControlReady", function(message) {

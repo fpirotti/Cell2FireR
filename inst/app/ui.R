@@ -46,6 +46,7 @@ ui <-  shinydashboardPlus::dashboardPage(
     # use_theme(mytheme),
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = sprintf("log.css?%s", Sys.time()) ),
+      tags$link(rel = "stylesheet", type = "text/css", href = sprintf("tippy.css?%s", Sys.time()) ),
       tags$script(src = sprintf("log.js?%s", Sys.time())),
       tags$script(src = sprintf("makeWindWidget.js?%s", Sys.time())),
       tags$link(rel="stylesheet", href="https://unpkg.com/tippy.js@6/dist/tippy.css"),
