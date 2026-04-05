@@ -1,6 +1,22 @@
 var isDragging = false;
 
 
+function getFromOpenMeteo(){
+  var center = mymap.getCenter();  
+  $.ajax({
+    url: "https://api.open-meteo.com/v1/forecast?latitude="+center.lat+"&longitude="+center.lng+"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms",
+    dataType: "json",
+    success: function(data) {
+       Shiny.setInputValue('openmeteoInput', data, {priority: 'event'});
+    },
+    error: function(jqXHR, textStatus, errorThrown) {
+      console.error("API call failed:", textStatus, errorThrown);
+      alert("API Meteo call failed: " +textStatus + ": " + errorThrown);
+    }
+  });
+
+}
+
 
 var makeWindWidget = function(){
       var canvas = document.getElementById('windCanvas');
@@ -81,14 +97,12 @@ var makeWindWidget = function(){
       }
       
       function getFromOpenMeteo(){
-        var center = mymap.getCenter(); 
-        
+        var center = mymap.getCenter();  
         $.ajax({
-          url: "https://api.open-meteo.com/v1/forecast?latitude="+center.lat+"&longitude="+center.lng+"&current=wind_speed_10m,wind_direction_10m",
+          url: "https://api.open-meteo.com/v1/forecast?latitude="+center.lat+"&longitude="+center.lng+"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms",
           dataType: "json",
           success: function(data) {
-            console.log("Wind:", data.current.wind_speed_10m, "m/s from", data.current.wind_direction_10m, "°");
-            speed = Math.round(data.current.wind_speed_10m/3.6);
+            speed = Math.round(data.current.wind_speed_10m);
             dir = data.current.wind_direction_10m;
             $('#speed').val(speed);
             $('#wspeed').text(speed);

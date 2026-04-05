@@ -367,7 +367,24 @@ server <- function(input, output, session) {
       runjs("document.getElementById('map').style.cursor = null;")
     }
   })
-
+  
+  # tooltips  ----
+  observeEvent(input$tooltips, {
+    if(input$tooltips){
+      shinyjs::runjs("makeTooltips(); ttinstances.forEach(i => i.enable());")
+    } else { 
+      print("disable")
+      shinyjs::runjs("  ttinstances.forEach(i => i.disable());")
+    }
+    
+  })
+  # WMSQueryReturned  ----
+  observeEvent(input$openmeteoInput, {
+    print(input$openmeteoInput)
+    
+  })
+  
+  
   # WMSQueryReturned  ----
   observeEvent(input$WMSQueryReturned, {
     print(input$WMSQueryReturned)

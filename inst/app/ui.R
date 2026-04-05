@@ -1,7 +1,17 @@
 # ui.R
 ui <-  shinydashboardPlus::dashboardPage(
   options = list(sidebarExpandOnHover = TRUE),
-  header = shinydashboardPlus::dashboardHeader(title = "Cell2Fire" ),
+  header = shinydashboardPlus::dashboardHeader(title = "Cell2Fire",
+                                               leftUi = tagList( 
+                                                   div(title="Do you want to keep seeing the help tooltips or not?",
+                                                       switchInput(  
+                                                         inputId = "tooltips",  
+                                                         value = FALSE, 
+                                                         label = "Tooltips" 
+                                                      ) 
+                                                   )
+                                               )
+                                               ),
   footer = shinydashboardPlus::dashboardFooter(
     left =  HTML("<a href='www.cirgeo.unipd.it' >CIRGEO - University of Padova</a> "),
     right = HTML("<a href='mailto:francesco.pirotti@unipd.it' >MAIL<span style='font-size:22px'>📧</span></a> ")
@@ -114,7 +124,8 @@ ui <-  shinydashboardPlus::dashboardPage(
                                     actionButton("save_table_weather", label = NULL, icon = icon("save"), class="btn-sm", title="Save changes to be used in the Cell2Fire process (only valid for this session)"),
                                     downloadButton("download_table_weather", label = NULL, icon = icon("download"), class="btn-sm", title="Download table in CSV file format"),
                                     actionButton("upload_table_weather", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
-                                    actionButton("create_table_weather", label = NULL, icon = icon("cloud"), class="btn-sm", title="This will upload the weather scenario from the current day using online APIs such as JRC's jrc-effis@ec.europa.eu services that provide FWI indices..."),
+                                    div( title="Click here to get current values from open-meteo API (NB this is experimental and not to be used for production environments or decision making!).",
+                                         onclick="getFromOpenMeteo()", actionButton("create_table_weather", label = NULL, icon = icon("cloud"), class="btn-sm", title="This will upload the weather scenario from the current day using online APIs such as JRC's jrc-effis@ec.europa.eu services that provide FWI indices...") ),
                                     div(style="display:none;", fileInput("upload_table_weather_input", label = NULL, buttonLabel = NULL, width = 10,  accept = c(".csv", ".xlsx", ".xls")  ) )
                                   ),
                                   status = "primary",

@@ -2,37 +2,26 @@
 var ignitionButton = null;
 var WMSQueryButton = null;
 var mymap = null;
- 
-$(document).ready(function () {
+var ttinstances = null;
 
-   $('[title]').each(function() {
+function makeTooltips(){
+  
+  $('[title]').each(function() {
      $(this).attr('data-tippy-content', $(this).attr('title'));
      $(this).removeAttr('title');
    }); 
-       
-  const instances = tippy('[data-tippy-content]', {
-    content(reference) {
-      const title = reference.getAttribute('title');
-      reference.removeAttribute('title');
-      console.log(title);
-      return title;
-    },
+        
+  ttinstances = tippy('[data-tippy-content]', {
     theme: 'cool',
     animation: 'scale',
     placement: 'top',
-    trigger: 'manual' // important
+    trigger: 'mouseenter focus'
   });
+}
 
-  setTimeout(() => {
-    instances.forEach(instance => {
-      const rect = instance.reference.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        instance.show();
-        console.log("===");
-      }
-        console.log(instance);
-    });
-  }, 3000);
+$(document).ready(function () {
+  makeTooltips();
+  ttinstances.forEach(i => i.disable());
 });
 
 Shiny.addCustomMessageHandler("layersControlReady", function(message) {

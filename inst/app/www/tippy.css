@@ -1,0 +1,20 @@
+/* Smooth modern tooltip */
+.tippy-box[data-theme~='cool'] {
+  background: linear-gradient(135deg, #2c3e50, black);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 13px;
+  border-color:black;
+  padding: 6px 10px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+
+/* Arrow styling */
+.tippy-box[data-theme~='cool'] > .tippy-arrow::before {
+  color: black;
+}
+
+/* Optional: subtle animation */
+.tippy-box[data-theme~='cool'][data-animation='scale'] {
+  transition-timing-function: cubic-bezier(.23,1,.32,1);
+}
