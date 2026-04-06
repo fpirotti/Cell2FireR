@@ -1,7 +1,8 @@
 ## make sure leafem is version 0.2.5 or more!
 pkgs <- c("terra", "DT", "sf", "shiny", "leaflet", "shinyjs", "optparse",
-          "tools", "shinydashboard", "leafem", "cli", "shinydashboardPlus", "fresh",
+          "tools", "shinydashboard", "xml2", "stringr",  "leafem", "cli", "shinydashboardPlus", "fresh",
           "htmlwidgets")
+ 
 if (!requireNamespace("cli", quietly = TRUE)) {
   install.packages("cli")
 }
@@ -218,12 +219,8 @@ createLeaflet <- function(){
         onClick = JS("
             function(btn, map){
                 var el = btn.button;
-                if (L.DomUtil.hasClass(el, 'pressed')) {
-                  L.DomUtil.removeClass(el, 'pressed');
-                } else {
-                  L.DomUtil.addClass(el, 'pressed');
-                }
-                $('#map > .leaflet-control-container > .leaflet-bottom.leaflet-right').toggle();
+                infoPanelButton = el; 
+                toggleInfoPanelButton();
             }
           ")
       )
@@ -270,6 +267,7 @@ createLeaflet <- function(){
           if (e.keyCode === 27) {
             toggleIgnitionButton(true);
             toggleWMSQueryButton(true);
+            toggleInfoPanelButton(true);
             document.getElementById('map').style.cursor = null;
             Shiny.setInputValue('map_mode', '', {priority: 'event'});
           }

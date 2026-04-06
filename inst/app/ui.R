@@ -63,7 +63,10 @@ ui <-  shinydashboardPlus::dashboardPage(
       tags$script(src="https://unpkg.com/@popperjs/core@2"),
       tags$script(src="https://unpkg.com/tippy.js@6")
     ),
-
+    tags$div(
+      id = "page-loader",
+      tags$div(class = "loader-spinner")
+    ),
     shinydashboard::tabItems(
       shinydashboard::tabItem(tabName = "dashboardMap", 
                               style="margin:-15px -30px;",
@@ -124,8 +127,8 @@ ui <-  shinydashboardPlus::dashboardPage(
                                     actionButton("save_table_weather", label = NULL, icon = icon("save"), class="btn-sm", title="Save changes to be used in the Cell2Fire process (only valid for this session)"),
                                     downloadButton("download_table_weather", label = NULL, icon = icon("download"), class="btn-sm", title="Download table in CSV file format"),
                                     actionButton("upload_table_weather", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
-                                    div( title="Click here to get current values from open-meteo API (NB this is experimental and not to be used for production environments or decision making!).",
-                                         onclick="getFromOpenMeteo()", actionButton("create_table_weather", label = NULL, icon = icon("cloud"), class="btn-sm", title="This will upload the weather scenario from the current day using online APIs such as JRC's jrc-effis@ec.europa.eu services that provide FWI indices...") ),
+                                    div( title="Click here to get values at center of map using  <b>open-meteo</b> API and EFFIS Web Services (NB this is experimental and not to be used for production environments or decision making!).",
+                                         onclick="getFromOpenMeteo(); queryWMS(); ", actionButton("create_table_weather", label = NULL, icon = icon("cloud"), class="btn-sm") ),
                                     div(style="display:none;", fileInput("upload_table_weather_input", label = NULL, buttonLabel = NULL, width = 10,  accept = c(".csv", ".xlsx", ".xls")  ) )
                                   ),
                                   status = "primary",

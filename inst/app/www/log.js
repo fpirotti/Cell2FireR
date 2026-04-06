@@ -1,6 +1,7 @@
 // globals
 var ignitionButton = null;
 var WMSQueryButton = null;
+var infoPanelButton = null;
 var mymap = null;
 var ttinstances = null;
 
@@ -13,9 +14,13 @@ function makeTooltips(){
         
   ttinstances = tippy('[data-tippy-content]', {
     theme: 'cool',
+    allowHTML: true,
+    arrow: true,
     animation: 'scale',
     placement: 'top',
-    trigger: 'mouseenter focus'
+    trigger: 'mouseenter focus',
+    interactive: true,
+    interactiveBorder: 10
   });
 }
 
@@ -43,9 +48,34 @@ function dateFromToday(back=0){
   return(dateStr);
 }
 
-var   queryWMS = function(lat, lon, layer,  back=0)  {
-    const time = dateFromToday(back);
 
+
+var getFromOpenMeteo = function(){
+  var center = mymap.getCenter();  
+  $.ajax({
+    url: "https://api.open-meteo.com/v1/forecast?latitude="+center.lat+"&longitude="+center.lng+"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms",
+    dataType: "json",
+    success: function(data) {
+       Shiny.setInputValue('openmeteoInput', data, {priority: 'event'});
+    },
+    error: function(jqXHR, textStatus, errorThrown) {
+      console.error("API call failed:", textStatus, errorThrown);
+      alert("API Meteo call failed: " +textStatus + ": " + errorThrown);
+    },
+    complete: function() { 
+      loader.hide();
+    }
+  });
+
+}
+
+var   queryWMS = function(lat=null, lon=null,   pop=false)  {
+    if(lat===null){
+      var center = mymap.getCenter();
+      lat =center.lat;
+      lon =center.lng;
+    }
+    const time = dateFromToday(0); 
     const buffer = 0.00001;
     var latlng = L.latLng(lat, lon);
       const bbox = [
@@ -55,7 +85,8 @@ var   queryWMS = function(lat, lon, layer,  back=0)  {
         lat + buffer
     ].join(',');
 
-
+ 
+    var outputf = 'text/html';
     const url = "https://maps.effis.emergency.copernicus.eu/gwis" +
         L.Util.getParamString({
             service: 'WMS',
@@ -65,11 +96,11 @@ var   queryWMS = function(lat, lon, layer,  back=0)  {
             query_layers: 'ecmwf.query',
             styles: '',
             bbox: bbox,
-            FEATURE_COUNT: 2,
+            FEATURE_COUNT: 1,
             height: 3,
             width: 3,
             srs: 'EPSG:4326',
-            info_format: 'text/html',   // JSON often NOT supported here
+            info_format: outputf,   // JSON often NOT supported here
             x: 2,
             y: 2,
             time: time                 // 🔥 critical for EFFIS
@@ -78,7 +109,13 @@ var   queryWMS = function(lat, lon, layer,  back=0)  {
     $.ajax({
         url: url,
         success: function (data) {
-            Shiny.setInputValue('WMSQueryReturned', {coords:[lon, lat], datast:data}, {priority: 'event'});
+          console.log("wms effis ")
+          console.log( pop)
+            if(pop) {
+              Shiny.setInputValue('WMSQueryReturnedPop', {coords:[lon, lat], datast:data}, {priority: 'event'});
+            } else {
+              Shiny.setInputValue('WMSQueryReturned', {coords:[lon, lat], datast:data}, {priority: 'event'});
+            }
         }
     });
 }
@@ -172,6 +209,16 @@ var toggleWMSQueryButton = function(force=false){
   }
 }
 
+var toggleInfoPanelButton = function(force=false){ 
+  var el = infoPanelButton;
+  if (force || L.DomUtil.hasClass(el, 'pressed')) {
+    L.DomUtil.removeClass(el, 'pressed'); 
+  } else {
+    L.DomUtil.addClass(el, 'pressed'); 
+  }
+  $('#map > .leaflet-control-container > .leaflet-bottom.leaflet-right').toggle();
+}
+
 var toggleIgnitionButton = function(force=false){
   var el = ignitionButton;
   if(WMSQueryButton !== null) L.DomUtil.removeClass(WMSQueryButton, 'pressed');
@@ -210,9 +257,6 @@ $("#showLegendCLS").on("click", function(e) {
   e.stopPropagation();
 });
 
-
-
-
 var updateControl = function() {
 
     const overlays = $('.leaflet-control-layers-overlays');
@@ -232,3 +276,19 @@ var updateControl = function() {
       console.log(overlays);
     }
 };
+
+// Simple global loader object
+window.loader = {
+  show: function() {
+    document.getElementById('page-loader').classList.add('show');
+  },
+  hide: function() {
+    document.getElementById('page-loader').classList.remove('show');
+  }
+};
+
+// Example: automatically show loader on all AJAX calls (optional)
+if (window.jQuery) {
+  $(document).ajaxStart(() => loader.show());
+  $(document).ajaxStop(() => loader.hide());
+}

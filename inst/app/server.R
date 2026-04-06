@@ -5,6 +5,23 @@ server <- function(input, output, session) {
   options(shiny.maxRequestSize = 100 * 1024^2)  # 100 MB
   # rasterInfo <- reactiveVal(NULL)
   ignitionPointsCoords <- reactiveVal(NULL)
+  weatherDataTable <- reactiveVal( 
+    data.frame(
+      Instance ="",
+      datetime = "",
+      TMP = NA_real_,
+      WS = NA_real_,
+      WD =  NA_real_,
+      RH =  NA_real_,
+      FFMC =  NA_real_,
+      DMC =  NA_real_,
+      DC =  NA_real_,
+      ISI =  NA_real_,
+      BUI =  NA_real_,
+      FWI =  NA_real_,
+      FireScenario =""
+    )  
+  )
   currentRasterStack <- NULL
   lut_fbp_local <- reactiveVal(NULL)
   logfile <- reactiveVal(NULL)
@@ -103,19 +120,7 @@ server <- function(input, output, session) {
         duration = 0
       )
     }
-
-    # shiny::updateTextInput(session = session,
-    #                        inputId = "..input.instance.folder",
-    #                        value =  input$inputfolder)
-    #
-    # shiny::updateTextInput(session = session,
-    #                        inputId = "..output.folder",
-    #                        value =  outfolder)
-
-    # shiny::updateTextInput(session = session,
-    #                        inputId = "..output.folder",
-    #                        value =  outfolder)
-
+ 
  
     ip <- NULL
     currentRasterStack <<- NULL
@@ -139,6 +144,30 @@ server <- function(input, output, session) {
       full.names = TRUE,
       ignore.case = TRUE
     )
+    
+    weatherFiles <- list.files(
+      path = input$inputfolder,
+      pattern = ".*weather.*\\.(csv)$",
+      full.names = TRUE,
+      ignore.case = TRUE
+    )
+    
+    if(length(weatherFiles)!=0) {
+      df <-  read.csv(weatherFiles[[1]]) 
+      weatherDataTable(df)
+      names(weatherFiles) <- basename(weatherFiles)
+      shinyWidgets::updatePickerInput(inputId = "chooseWeatherFile",
+                                      choices = weatherFiles,
+                                      clearOptions = T  )
+      
+    } else {
+      showNotification(
+        paste0("NO WEATHER FILE! I LOADED A TEMPLATE..."),
+        type = "warning",
+        duration = 8 )
+      df <- read.csv("templates/Weather.csv") 
+      weatherDataTable(df)
+    }
     # bn<-
     names(ignitionFiles) <- basename(ignitionFiles)
     shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile",
@@ -378,41 +407,77 @@ server <- function(input, output, session) {
     }
     
   })
-  # WMSQueryReturned  ----
-  observeEvent(input$openmeteoInput, {
-    print(input$openmeteoInput)
-    
-  })
   
-  
-  # WMSQueryReturned  ----
-  observeEvent(input$WMSQueryReturned, {
-    print(input$WMSQueryReturned)
+  # WMSQueryReturned Popup ----
+  observeEvent(input$WMSQueryReturnedPop, {
+    req(input$WMSQueryReturnedPop)
     leafletProxy("map") |>
       addPopups(
-        lng = input$WMSQueryReturned$coords[[1]],
-        lat = input$WMSQueryReturned$coords[[2]],
-        popup = input$WMSQueryReturned$data,
+        lng = input$WMSQueryReturnedPop$coords[[1]],
+        lat = input$WMSQueryReturnedPop$coords[[2]],
+        popup = input$WMSQueryReturnedPop$data,
         layerId = "my_popup"  # optional, to remove/update later
       )
   })
-
-
+  
+  # EFFIS AND open meteo for weather file ----
+  observeEvent( list(input$openmeteoInput, 
+                     input$WMSQueryReturned ), 
+                {
+                  
+        if(! (shiny::isTruthy(input$openmeteoInput)||
+              shiny::isTruthy(input$WMSQueryReturned) ) ){
+          return(invisible(NULL))
+        } 
+                  
+       # df <- isolate(weatherDataTable())
+       dfl <- isolate( as.list(weatherDataTable()) )
+      
+       
+       if( shiny::isTruthy(input$openmeteoInput  ) ){ 
+         outp <- "OM"
+         dflt <-   list(
+           Instance = "SB",
+           datetime = gsub("T", " ", input$openmeteoInput$current$time),
+           TMP = input$openmeteoInput$current$temperature_2m,
+           WS = input$openmeteoInput$current$wind_speed_10m,
+           WD = input$openmeteoInput$current$wind_direction_10m,
+           RH = input$openmeteoInput$current$relative_humidity_2m,
+           FireScenario = "open meteo + EFFIS"
+         )
+         
+         dfl[ na.omit(names(dflt)) ] <- dflt[ na.omit(names(dflt)) ]
+       }
+       
+       if( shiny::isTruthy(input$WMSQueryReturned  ) ){  
+         
+         outp <- "EFFIS"
+         doc <- xml2::read_html(input$WMSQueryReturned$datast)  
+         rows <- xml2::xml_find_all(doc, ".//tr") 
+         kv_list <- lapply(rows, function(row) {
+           cols <- xml_find_all(row, ".//td")
+           if(length(cols) >= 2) {
+             key <- xml_text(cols[[1]])
+             value <- as.numeric(xml_text(cols[[2]]))
+             setNames(list(value), key)  # named list
+           } else {
+             NULL
+           }
+         })
+         dflt <-   do.call(c, kv_list)  
+         inside <- str_extract(names(dflt), "\\(([^)]+)\\)")
+           
+         inside_text <- str_remove_all(inside, "[()]")
+         names(dflt)<- inside_text
+         dfl[ na.omit(names(dflt)) ] <- dflt[ na.omit(names(dflt)) ]
+       }
+        
+       weatherDataTable( as.data.frame(dfl) )
+  })
+  
   ## TABLE WEATHER table -----
   output$weather.table <- renderDT({
-    req(input$inputfolder)
-    wt <- file.path(input$inputfolder, "Weather.csv")
-    if(file.exists(wt)){
-      datatable(read.csv(wt), editable = TRUE)
-    } else {
-      showNotification(
-        paste0("NO WEATHER FILE! I LOADED A TEMPLATE..."),
-        type = "warning",
-        duration = 8
-      )
-      df <- read.csv("templates/Weather.csv")
-      datatable(df[1:2,], editable = TRUE)
-    }
+    datatable(weatherDataTable() , editable = TRUE)
   })
   ## TABLE FBP table ----
   output$FBP.table <- renderDT({
