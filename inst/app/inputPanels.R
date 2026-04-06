@@ -126,7 +126,7 @@ PANELS[["WEATHER & CONFIG"]] <- list(
   shiny::sliderInput("LDFMCS", "Fuel Moisture Scenario [1-4]", min = 1, max = 4, value = 2),
 
   shiny::hr(),
-  shiny::numericInput("SIM_THREADS", "CPU Threads", value = 4, min = 1),
+  shiny::numericInput("SIM_THREADS", sprintf("CPU Threads (%d available)", detectCores()), value = ceiling(detectCores()/4), min = 1, max=detectCores()),
   shiny::numericInput("RNG_SEED", "Random Seed", value = 123)
 
 )
@@ -141,12 +141,12 @@ PANELS[["OUTPUTS & DIRECTORIES"]] <- list(
     label = "Select desired outputs:",
     choices = sapply(SIM_OUTPUTS, function(x) paste0(x$name, x$suffix)),
     selected = c("Final Fire Scar", "Ignition Points")
-  ),
+  ) #,
 
-  shinyWidgets::materialSwitch("INSTANCE_IN_PROJECT", "Override instance directory", value = FALSE, status = "primary"),
+  # shinyWidgets::materialSwitch("INSTANCE_IN_PROJECT", "Override instance directory", value = FALSE, status = "primary"),
+  # 
+  # shinyWidgets::materialSwitch("RESULTS_IN_INSTANCE", "Results in instance folder", value = TRUE, status = "primary") 
 
-  shinyWidgets::materialSwitch("RESULTS_IN_INSTANCE", "Results in instance folder", value = TRUE, status = "primary"),
-
-  shiny::textInput("RESULTS_DIR", "Custom Results Directory", placeholder = "Leave empty for default...")
+  # shiny::textInput("RESULTS_DIR", "Custom Results Directory", placeholder = "Leave empty for default...")
 
 )

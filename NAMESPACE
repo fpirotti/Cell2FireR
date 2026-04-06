@@ -3,6 +3,7 @@
 export(Cell2FireR)
 export(GenDataFile)
 export(cell2fire_run)
+export(detectCores)
 import(optparse)
 importFrom(R6,R6Class)
 importFrom(terra,ncell)

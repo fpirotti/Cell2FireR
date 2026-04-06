@@ -4,6 +4,8 @@ server <- function(input, output, session) {
 
   options(shiny.maxRequestSize = 100 * 1024^2)  # 100 MB
   # rasterInfo <- reactiveVal(NULL)
+  ignitionFiles <- NULL
+  weatherFiles <- NULL
   ignitionPointsCoords <- reactiveVal(NULL)
   weatherDataTable <- reactiveVal( 
     data.frame(
@@ -138,38 +140,45 @@ server <- function(input, output, session) {
       ignore.case = TRUE
     )
 
-    ignitionFiles <- list.files(
+    ignitionFiles <<- list.files(
       path = input$inputfolder,
       pattern = ".*ignition.*\\.(csv)$",
       full.names = TRUE,
       ignore.case = TRUE
     )
-    
-    weatherFiles <- list.files(
+
+    weatherFiles <<- list.files(
       path = input$inputfolder,
       pattern = ".*weather.*\\.(csv)$",
       full.names = TRUE,
       ignore.case = TRUE
-    )
+    ) 
     
-    if(length(weatherFiles)!=0) {
-      df <-  read.csv(weatherFiles[[1]]) 
-      weatherDataTable(df)
-      names(weatherFiles) <- basename(weatherFiles)
-      shinyWidgets::updatePickerInput(inputId = "chooseWeatherFile",
-                                      choices = weatherFiles,
-                                      clearOptions = T  )
-      
+    if(length(weatherFiles)!=0) { 
+      df <-  read.csv(weatherFiles[[1]] ) 
+      weatherDataTable(df) 
     } else {
       showNotification(
         paste0("NO WEATHER FILE! I LOADED A TEMPLATE..."),
         type = "warning",
         duration = 8 )
-      df <- read.csv("templates/Weather.csv") 
+      weatherFiles <- file.path(input$inputfolder, "Weather.csv")
+      df <- read.csv("templates/Weather.csv", nrows = 1)
+      write.csv(df,   weatherFiles, row.names = FALSE )
       weatherDataTable(df)
     }
-    # bn<-
-    names(ignitionFiles) <- basename(ignitionFiles)
+    names(weatherFiles) <- basename(weatherFiles)
+    shinyWidgets::updatePickerInput(inputId = "chooseWeatherFile",
+                                    choices = weatherFiles,
+                                    clearOptions = T  )
+    
+    shinyWidgets::updatePickerInput(inputId = "WEAFILE",
+                                    choices = weatherFiles,
+                                    clearOptions = T, 
+                                    selected = weatherFiles[[1]]  )
+    
+ 
+    names(ignitionFiles) <<- basename(ignitionFiles)
     shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile",
                                     choices = ignitionFiles,
                                     clearOptions = T  )
@@ -177,6 +186,12 @@ server <- function(input, output, session) {
     ## IGNITION FILE ----
     # ignitionFile <-  grep("ignition", basename(tolower(csvfiles)), ignore.case = T )
     if(length(ignitionFiles)>0){
+      
+      shinyWidgets::updatePickerInput(inputId = "IGNIPOINT",
+                                      choices = ignitionFiles,
+                                      clearOptions = T, 
+                                      selected = ignitionFiles[[1]]  )
+      
       ip <- read.csv(ignitionFiles[[1]] )
       if(anyNA(ip$Ncell)){
         showNotification(
@@ -315,7 +330,7 @@ server <- function(input, output, session) {
                                                                               prefix="",
                                                                               position="bottomright",
                                                                               noData = "NA"),
-                                layerId = layerName) |>
+                                layerId = gsub(" ", "", layerName)) |>
           leaflet::hideGroup( layerName )
       }
     })
@@ -430,8 +445,8 @@ server <- function(input, output, session) {
           return(invisible(NULL))
         } 
                   
-       # df <- isolate(weatherDataTable())
-       dfl <- isolate( as.list(weatherDataTable()) )
+        df <- isolate(weatherDataTable())
+       dfl <- isolate( as.list(df[1,]) )
       
        
        if( shiny::isTruthy(input$openmeteoInput  ) ){ 
@@ -477,7 +492,18 @@ server <- function(input, output, session) {
   
   ## TABLE WEATHER table -----
   output$weather.table <- renderDT({
-    datatable(weatherDataTable() , editable = TRUE)
+    datatable(weatherDataTable() , editable = TRUE)|> formatRound(
+      columns = c('DC', 'FWI', 'DMC', 'ISI', 'BUI', 'FFMC'),
+      digits = 2
+    )
+  })
+  observeEvent(input$chooseWeatherFile, {   
+    df <- read.csv(input$chooseWeatherFile) 
+    weatherDataTable(df)
+    shinyWidgets::updatePickerInput(inputId = "WEAFILE",
+                                    # choices = weatherFiles,
+                                    clearOptions = T, 
+                                    selected = input$chooseWeatherFile  )
   })
   ## TABLE FBP table ----
   output$FBP.table <- renderDT({
@@ -546,17 +572,20 @@ server <- function(input, output, session) {
     
 
     
-    ignitionFiles <- list.files(
+    ignitionFiles <<- list.files(
       path = input$inputfolder,
       pattern = ".*ignition.*\\.(csv)$",
       full.names = TRUE,
       ignore.case = TRUE
-    )
-    
-    names(ignitionFiles) <- basename(ignitionFiles)
+    ) 
+    names(ignitionFiles) <<- basename(ignitionFiles)
     shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile",
                                     choices = ignitionFiles,
                                     clearOptions = T  )
+    shinyWidgets::updatePickerInput(inputId = "IGNIPOINT",
+                                    choices = ignitionFiles,
+                                    clearOptions = T, 
+                                    selected = ignitionFiles[[1]]  )
   }
   
   
@@ -572,7 +601,22 @@ server <- function(input, output, session) {
   observeEvent(input$delete_table_ignition_confirm, {
     req(input$chooseIgnitionFile)
     if(input$delete_table_ignition_confirm){
-     file.remove(input$chooseIgnitionFile)
+     file.remove(input$chooseIgnitionFile) 
+      
+      ignitionFiles <<- list.files(
+        path = input$inputfolder,
+        pattern = ".*ignition.*\\.(csv)$",
+        full.names = TRUE,
+        ignore.case = TRUE
+      ) 
+      names(ignitionFiles) <<- basename(ignitionFiles)
+      shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile",
+                                      choices = ignitionFiles,
+                                      clearOptions = T  )
+      shinyWidgets::updatePickerInput(inputId = "IGNIPOINT",
+                                      choices = ignitionFiles,
+                                      clearOptions = T, 
+                                      selected = ignitionFiles[[1]]  )
      ignitionPointsCoords(NULL)
     } 
   })  
@@ -593,8 +637,7 @@ server <- function(input, output, session) {
   observeEvent(input$save_table_ignition, {
     if(!isTruthy(input$chooseIgnitionFile) ) {
       save_table_ignition_final(F)
-    } else { 
-      
+    } else {  
       showModal(
         md_overwrite_ignition
       )
@@ -797,10 +840,22 @@ server <- function(input, output, session) {
       dirs
     }
   )
+  
+  
+  # RUN CELL2FIRE ------
+  observeEvent(input$runC2F, {
+    Cell2FireR::cell2fire_run(input)
+    # cell2fire_run(c("--input-instance-folder", input$inputfolder,
+    #                 "--output-folder", "../Sub40x40", 
+    #                 "--ignitions", "1",
+    #                 "--sim-years", "1") )             
+  })
+  
+  ## data folder observe -----
   observeEvent(folders(), {
 
     current <- input$inputfolder
-
+    
     updateSelectInput(
       session,
       "inputfolder",

@@ -17,6 +17,7 @@ The R bindings allow users to modify input arguments and run the
 simulation inserting arguments and pipelining call to the Cell2Fire executable and
 interpret the outputs converting them to maps and plots.
 
+
 ## Usage
 
 In order to run the simulator and process the results, the following
@@ -35,7 +36,7 @@ library(Cell2FireR)
 
 cell2fire_run(c("--input-instance-folder", "../data/Sub40x40/",
                 "--output-folder", "../Sub40x40", 
-                "--ignitions", "1"
+                "--ignitions", "1",
                 "--sim-years", "1"))
 ```
 
@@ -76,4 +77,8 @@ HERE](https://www.cirgeo.unipd.it/FIRE-RES/ITC34/ITC34.zip)
 This work was supported by the [Wildfire CE project "Fighting wildfires
 better together across borders" Interreg Central
 Europe](https://www.interreg-central.eu/projects/wildfire-ce/).
-[![](https://www.interreg-central.eu/wp-content/uploads/2024/08/WildfireCE_Logo_Standard_medium.png){width="400"}](https://www.interreg-central.eu/projects/wildfire-ce/)
+[![](man/images/wildfireLogo.png)](https://www.interreg-central.eu/projects/wildfire-ce/)
+
+==> Many parts were taken from the excellent development and implementation of the QGIS plugin from the
+[Fire Management & Advanced Analytics group](https://github.com/fire2a).
+
