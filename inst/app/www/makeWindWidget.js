@@ -54,20 +54,26 @@ var makeWindWidget = function(){
     
         // arrow head
         ctx.beginPath();
-        ctx.moveTo( radius - 5, 0);
-        ctx.lineTo(  radius - 15, -5);
-        ctx.lineTo(  radius - 15, 5);
+        ctx.moveTo( radius - 15, 0);
+        ctx.lineTo(  radius - 5, -5);
+        ctx.lineTo(  radius - 5, 5);
         ctx.closePath();
         ctx.fillStyle = "red";
         ctx.fill();
           
-    
+        var speedr = parseInt(speed)+5; 
         ctx.beginPath(); 
         ctx.moveTo(0,0);
-        ctx.lineTo(speed*2,0); // arrow length proportional to speed
-        ctx.lineTo(speed*2-5,-5);
-        ctx.moveTo(speed*2,0);
-        ctx.lineTo(speed*2-5,5); 
+        ctx.lineTo(-speedr*2,0); // arrow length proportional to speed
+        ctx.moveTo(-speedr,0);
+        ctx.lineTo(-speedr+5,5);
+        ctx.moveTo(-speedr,0);
+        ctx.lineTo(-speedr+5,-5); 
+        
+        ctx.moveTo(-speedr*1.5,0);
+        ctx.lineTo(-speedr*1.5+5,5);
+        ctx.moveTo(-speedr*1.5,0);
+        ctx.lineTo(-speedr*1.5+5,-5); 
         ctx.strokeStyle = "red";
         ctx.lineWidth = 2;
         ctx.stroke();
@@ -106,6 +112,7 @@ var makeWindWidget = function(){
       // Update speed
       $('#speed').on('input', function(e){
         speed = $(this).val();
+        
         $('#wspeed').text(speed);
         drawCompass();  
       });

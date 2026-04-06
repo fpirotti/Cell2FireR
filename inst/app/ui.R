@@ -1,10 +1,12 @@
 # ui.R
 ui <-  shinydashboardPlus::dashboardPage(
   options = list(sidebarExpandOnHover = TRUE),
-  header = shinydashboardPlus::dashboardHeader(title = "Cell2Fire",
+  header = shinydashboardPlus::dashboardHeader(title = "Wildfire-Sim",
                                                leftUi = tagList( 
-                                                   div(title="Do you want to keep seeing the help tooltips or not?",
+                                                   div(style="margin-bottom:-15px;", 
+                                                       title="Do you want to keep seeing the help tooltips or not?",
                                                        switchInput(  
+                                                         # size = "sm",
                                                          inputId = "tooltips",  
                                                          value = FALSE, 
                                                          label = "Tooltips" 
@@ -35,7 +37,7 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                      shiny::actionButton("deletefolder", NULL,
                                                                               icon=icon("trash") ), title="Delete dataset") ) 
                                                   ), 
-                                                 shiny::actionButton("run", "Run Cell2Fire", icon=icon("fire") ),
+                                                 shiny::actionButton("runC2F", "Run Cell2Fire", icon=icon("fire") ),
                                                  shiny::actionButton("ignitionsTable", "Ignitions Table", icon=tags$i("🔥") ), 
                                                  shinydashboard::sidebarMenu(
                                                    shinydashboard::menuItem("Map", tabName = "dashboardMap", icon = icon("dashboard")),
@@ -51,7 +53,7 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                    shinydashboard::menuItem("Information", icon = icon("info"), tabName = "infoBox")
                                                  )
                                               ),
-  body = dashboardBody(
+  body = dashboardBody( 
     useShinyjs(),
     # use_theme(mytheme),
     tags$head(
@@ -124,10 +126,13 @@ ui <-  shinydashboardPlus::dashboardPage(
                                   title = tags$div(
                                     style = "display:flex; align-items:center; gap:6px;",
                                     span("Weather CSV File"),
+                                    div(title="Select an ignition file", style="margin-bottom:-15px", 
+                                        shinyWidgets::pickerInput("chooseWeatherFile", NULL,width = "100px", 
+                                                                  inline = F, choices = c()) ),
                                     actionButton("save_table_weather", label = NULL, icon = icon("save"), class="btn-sm", title="Save changes to be used in the Cell2Fire process (only valid for this session)"),
                                     downloadButton("download_table_weather", label = NULL, icon = icon("download"), class="btn-sm", title="Download table in CSV file format"),
                                     actionButton("upload_table_weather", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
-                                    div( title="Click here to get values at center of map using  <b>open-meteo</b> API and EFFIS Web Services (NB this is experimental and not to be used for production environments or decision making!).",
+                                    div( title="Click here to get values at center of map using  <b>open-meteo</b> API and EFFIS Web Services (NB this is experimental and not to be used for production environments or decision making!). <br><a href='https://forest-fire.emergency.copernicus.eu/' target=_blank>👉 Learn more about EFFIS, the European Forest Fire Information System from Copernicus</a><br><a href=https://open-meteo.com/ target=_blank>👉 Learn more about meteo data and fire behaviour</a>",
                                          onclick="getFromOpenMeteo(); queryWMS(); ", actionButton("create_table_weather", label = NULL, icon = icon("cloud"), class="btn-sm") ),
                                     div(style="display:none;", fileInput("upload_table_weather_input", label = NULL, buttonLabel = NULL, width = 10,  accept = c(".csv", ".xlsx", ".xls")  ) )
                                   ),

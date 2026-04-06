@@ -4,20 +4,17 @@
 \alias{cell2fire_run}
 \title{Main Entry Point for Cell2FireR}
 \usage{
-cell2fire_run(input_args = commandArgs(trailingOnly = TRUE))
+cell2fire_run(input)
 }
 \arguments{
-\item{input_args}{A character vector of arguments.}
+\item{input}{The input list/reactive values from Shiny}
+}
+\value{
+The path to the results directory
 }
 \description{
 Main Entry Point for Cell2FireR
 }
 \examples{
 ## get help.
-cell2fire_run("-h")
-## run demo data
-cell2fire_run(c("--input-instance-folder", "../../data/Sub40x40/",
-"--output-folder", "output/Sub40x40/",
-"--ignitions", "1",
-"--sim-years", "1"))
 }
