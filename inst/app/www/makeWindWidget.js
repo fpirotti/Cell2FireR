@@ -90,6 +90,7 @@ var makeWindWidget = function(){
         $.ajax({
           url: "https://api.open-meteo.com/v1/forecast?latitude="+center.lat+"&longitude="+center.lng+"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms",
           dataType: "json",
+          timeout: 3000, // milliseconds, e.g., 5000 = 5 seconds
           success: function(data) {
             speed = Math.round(data.current.wind_speed_10m);
             dir = data.current.wind_direction_10m;
@@ -100,8 +101,8 @@ var makeWindWidget = function(){
             drawCompass(); 
           },
           error: function(jqXHR, textStatus, errorThrown) {
-            console.error("API call failed:", textStatus, errorThrown);
-            alert("API Meteo call failed: " +textStatus + ": " + errorThrown);
+            console.error("API call failed:", textStatus, errorThrown); 
+       Shiny.setInputValue('openmeteoInput', "Open Meteo API call failed: " + textStatus + " - " + errorThrown, {priority: 'event'});
           }
         });
    

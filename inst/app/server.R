@@ -2,6 +2,7 @@
 
 server <- function(input, output, session) {
 
+  
   options(shiny.maxRequestSize = 100 * 1024^2)  # 100 MB
   # rasterInfo <- reactiveVal(NULL)
   ignitionFiles <- NULL
@@ -102,6 +103,7 @@ server <- function(input, output, session) {
 
   }
 
+  
   # change dataset folder ----
   observeEvent(input$inputfolder, {
     req(input$inputfolder)
@@ -450,6 +452,11 @@ server <- function(input, output, session) {
       
        
        if( shiny::isTruthy(input$openmeteoInput  ) ){ 
+         if(!is.list(input$openmeteoInput)){ 
+           msg <- paste("❌ API error:", input$openmeteoInput  ) 
+           showNotification(msg, type = "error")
+           return(invisible(NULL))
+         }
          outp <- "OM"
          dflt <-   list(
            Instance = "SB",
@@ -865,4 +872,14 @@ server <- function(input, output, session) {
 
   }, ignoreNULL = FALSE)
 
+  ## END SESSION ----
+  observe({
+    session$onSessionEnded(function(inp=input) { 
+      state <- isolate(reactiveValuesToList(input))
+      cat("Session ended\n")
+      # cleanup qui
+    })
+  })
+
+  
 }

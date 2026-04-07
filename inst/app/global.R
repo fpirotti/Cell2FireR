@@ -1,11 +1,9 @@
 ## make sure leafem is version 0.2.5 or more!
-pkgs <- c("terra", "DT", "sf", "shiny", "leaflet", "shinyjs", "optparse",
-          "tools", "shinydashboard", "xml2", "stringr",  "leafem", "cli", "shinydashboardPlus", "fresh",
+pkgs <- c("terra", "DT", "remotes", "sf", "httr", "shiny", "leaflet", "shinyjs", "optparse",
+          "tools", "shinydashboard", "xml2", "future", "promises", "stringr",  "leafem", "cli", "shinydashboardPlus", "fresh",
           "htmlwidgets")
  
-if (!requireNamespace("cli", quietly = TRUE)) {
-  install.packages("cli")
-}
+
 warn <- cli::combine_ansi_styles("magenta", "italic")
 for (p in pkgs) {
   if (!requireNamespace(p, quietly = TRUE)) {
@@ -13,7 +11,13 @@ for (p in pkgs) {
     install.packages(p)
   }
   library(p, character.only = TRUE)
-} 
+}
+
+if (!requireNamespace("Cell2FireR", quietly = TRUE)) {
+  remotes::install_github("fpirotti/Cell2FireR")
+}
+
+source("helperFunctions.R")
 library(Cell2FireR)
 
 
@@ -23,45 +27,16 @@ clcpluswms <- "https://image.discomap.eea.europa.eu/arcgis/services/CLC_plus/CLM
 # Example global data
 default_center <- c(lng = 11.96173904332453, lat = 45.342594242)
 clcLayerName <- "BASE - Copernicus CLC+"
-mytheme <- create_theme(
-  adminlte_color(
-    light_blue = "#570a00"
-  ),
-  adminlte_sidebar(
-    width = "300px",
-    dark_bg = "#D8DEE9",
-    dark_hover_bg = "#81A1C1",
-    dark_color = "#000000",
-    light_color = "#000000",
-    light_submenu_color =  "#000000"
-  ),
-  adminlte_global(
-    content_bg = "#FFF",
-    box_bg = "#eaeaea",
-    info_box_bg = "#eaeaea"
-  )
-)
+ 
 
 default_zoom <- 16
 
 base_path <- "data"
 
-# Example helper
-popup_text <- function(name, value=NULL) {
-  pp<-paste0("<b>", name, "</b>")
-  if(!is.null(value)) pp<-paste0("<b>", name, ":</b> ", value)
-  pp
-}
-
+ 
 lut_fbp <- read.csv("templates/fbp_lookup_table.csv")
 lut_sb <- read.csv("templates/scottBurgan_lookup_table.csv")
-center <- function(r){
-  e <- terra::ext(r)
-  list(
-  lng = (e$xmin + e$xmax) / 2,
-  lat = (e$ymin + e$ymax) / 2
-  )
-}
+
 
 
 

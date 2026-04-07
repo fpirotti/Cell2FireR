@@ -55,12 +55,14 @@ var getFromOpenMeteo = function(){
   $.ajax({
     url: "https://api.open-meteo.com/v1/forecast?latitude="+center.lat+"&longitude="+center.lng+"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms",
     dataType: "json",
+          timeout: 3000,  
     success: function(data) {
        Shiny.setInputValue('openmeteoInput', data, {priority: 'event'});
     },
     error: function(jqXHR, textStatus, errorThrown) {
-      console.error("API call failed:", textStatus, errorThrown);
-      alert("API Meteo call failed: " +textStatus + ": " + errorThrown);
+      console.error("API call failed:", textStatus, errorThrown); 
+       Shiny.setInputValue('openmeteoInput', "Open Meteo API call failed: " + textStatus + " - " + errorThrown, {priority: 'event'});
+       
     },
     complete: function() { 
       loader.hide();

@@ -126,7 +126,8 @@ PANELS[["WEATHER & CONFIG"]] <- list(
   shiny::sliderInput("LDFMCS", "Fuel Moisture Scenario [1-4]", min = 1, max = 4, value = 2),
 
   shiny::hr(),
-  shiny::numericInput("SIM_THREADS", sprintf("CPU Threads (%d available)", detectCores()), value = ceiling(detectCores()/4), min = 1, max=detectCores()),
+  shiny::numericInput("SIM_THREADS", sprintf("CPU Threads (%d available)", Cell2FireR::detectCores()), 
+                      value = ceiling(Cell2FireR::detectCores()/4), min = 1, max=Cell2FireR::detectCores()),
   shiny::numericInput("RNG_SEED", "Random Seed", value = 123)
 
 )

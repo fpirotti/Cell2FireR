@@ -14,11 +14,16 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                    )
                                                )
                                                ),
-  footer = shinydashboardPlus::dashboardFooter(
-    left =  HTML("<a href='www.cirgeo.unipd.it' >CIRGEO - University of Padova</a> "),
-    right = HTML("<a href='mailto:francesco.pirotti@unipd.it' >MAIL<span style='font-size:22px'>📧</span></a> ")
-  ),
+  # footer = shinydashboardPlus::dashboardFooter(
+  #   left =  HTML("<a href='www.cirgeo.unipd.it' >CIRGEO - University of Padova</a> "),
+  #   right = HTML("<a href='mailto:francesco.pirotti@unipd.it' >MAIL<span style='font-size:22px'>📧</span></a> ")
+  # ),
   sidebar = shinydashboardPlus::dashboardSidebar(minified = FALSE, collapsed = FALSE,
+                                                 shiny::selectInput(
+                                                   "simulator",
+                                                   "Fire Spread Simulator",
+                                                   choices = c("Cell2Fire", "others...")
+                                                 ),
                                                  shiny::selectInput(
                                                    "inputfolder",
                                                    NULL,
