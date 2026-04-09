@@ -9,8 +9,17 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                          # size = "sm",
                                                          inputId = "tooltips",  
                                                          value = FALSE, 
+                                                         width ="200px",
                                                          label = "Tooltips" 
                                                       ) 
+                                                   ), 
+                                                   div(style="margin-bottom:-15px;", 
+                                                       title="Size of tooltip text",
+                                                       numericInputIcon("tooltipsSize" ,  
+                                                                        width ="100px",
+                                                         value = 13, min = 10, max = 24, step = 1,
+                                                         label=NULL
+                                                       ) 
                                                    )
                                                )
                                                ),
@@ -22,7 +31,9 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                  shiny::selectInput(
                                                    "simulator",
                                                    "Fire Spread Simulator",
-                                                   choices = c("Cell2Fire", "others...")
+                                                   choices = c("Cell2Fire"="Cell2Fire", 
+                                                               "FlamMap"="FlamMap",
+                                                               "..."="others")
                                                  ),
                                                  shiny::selectInput(
                                                    "inputfolder",
@@ -42,7 +53,8 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                      shiny::actionButton("deletefolder", NULL,
                                                                               icon=icon("trash") ), title="Delete dataset") ) 
                                                   ), 
-                                                 shiny::actionButton("runC2F", "Run Cell2Fire", icon=icon("fire") ),
+                                                 shiny::actionButton("runsim", "Run", icon=icon("fire"),  
+                                                                     title="From the  Fire2a research group at University of Chile, a big-scale, grid, forest fire simulator; parallel and fast (c++)  " ),
                                                  shiny::actionButton("ignitionsTable", "Ignitions Table", icon=tags$i("🔥") ), 
                                                  shinydashboard::sidebarMenu(
                                                    shinydashboard::menuItem("Map", tabName = "dashboardMap", icon = icon("dashboard")),
@@ -56,6 +68,11 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                                             ),
                                                    shinydashboard::menuItem("Outputs", icon = icon("table"), tabName = "outputInstances"),
                                                    shinydashboard::menuItem("Information", icon = icon("info"), tabName = "infoBox")
+                                                 ),
+                                                 
+                                                 tags$div(
+                                                   class = "sidebar-logo",
+                                                   tags$img(src = "wildfireLogo.png", style = "width:100%; padding:10px;")
                                                  )
                                               ),
   body = dashboardBody( 
@@ -76,13 +93,15 @@ ui <-  shinydashboardPlus::dashboardPage(
     ),
     shinydashboard::tabItems(
       shinydashboard::tabItem(tabName = "dashboardMap", 
-                              style="margin:-15px -30px;",
-              shinydashboardPlus::box(  leafletOutput("map", height = 600), 
+                              #style="margin:-15px -30px;",
+              shinydashboardPlus::box(id = "mapContainer",  leafletOutput("map", height = 600), 
                                         collapsible=TRUE, width = 12, 
                                         title="Map", solidHeader = TRUE,
                                         status = "black",         
-                                        sidebar = boxSidebar(icon=tags$div(tags$i("🔥"), "Toggle Ignition Table", title="Ignition table") ,
-                                                                                       background = "white",
+                                        sidebar = boxSidebar(icon=tags$div(tags$i("🔥"), 
+                                                                           "Toggle Ignition Table", 
+                                                                           title="Ignition table") ,
+                                                                           background = "white",
                                           id = "ignitionSideBar",
                                           # shinydashboardPlus::box(width=12, id = "inputInstancesIgnitions", title = 
                                                                   tags$div(
@@ -146,7 +165,7 @@ ui <-  shinydashboardPlus::dashboardPage(
                                   headerBorder = TRUE,
                                   enable_sidebar = FALSE,
                                   div(
-                                    style = "overflow-x: auto;",
+                                    style = "overflow-x: auto;", id="weatherTableOutputDIV",
                                     DTOutput("weather.table")
                                   )
           )

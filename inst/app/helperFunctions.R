@@ -1,4 +1,12 @@
 
+#' Title
+#'
+#' @param r raster in terra format
+#'
+#' @returns
+#' @export
+#'
+#' @examples
 center <- function(r){
   e <- terra::ext(r)
   list(

@@ -61,7 +61,7 @@ var makeWindWidget = function(){
         ctx.fillStyle = "red";
         ctx.fill();
           
-        var speedr = parseInt(speed)+5; 
+        var speedr = parseInt(speed)+10; 
         ctx.beginPath(); 
         ctx.moveTo(0,0);
         ctx.lineTo(-speedr*2,0); // arrow length proportional to speed
@@ -74,54 +74,31 @@ var makeWindWidget = function(){
         ctx.lineTo(-speedr*1.5+5,5);
         ctx.moveTo(-speedr*1.5,0);
         ctx.lineTo(-speedr*1.5+5,-5); 
-        ctx.strokeStyle = "red";
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = "blue";
+        ctx.lineWidth = 3;
         ctx.stroke();
      
     
         ctx.restore();
-    
-        // --- Angle label ---
-        //ctx.fillText(angle.toFixed(0) + "°", centerX, centerY);
+     
       }
-      
-      function getFromOpenMeteo(){
-        var center = mymap.getCenter();  
-        $.ajax({
-          url: "https://api.open-meteo.com/v1/forecast?latitude="+center.lat+"&longitude="+center.lng+"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms",
-          dataType: "json",
-          timeout: 3000, // milliseconds, e.g., 5000 = 5 seconds
-          success: function(data) {
-            speed = Math.round(data.current.wind_speed_10m);
-            dir = data.current.wind_direction_10m;
-            $('#speed').val(speed);
-            $('#wspeed').text(speed);
-            angle = dir;
-            $('#wdir').text(Math.round(dir));
-            drawCompass(); 
-          },
-          error: function(jqXHR, textStatus, errorThrown) {
-            console.error("API call failed:", textStatus, errorThrown); 
-       Shiny.setInputValue('openmeteoInput', "Open Meteo API call failed: " + textStatus + " - " + errorThrown, {priority: 'event'});
-          }
-        });
-   
-      }
+ 
      
       drawCompass();
 
       // Update speed
-      $('#speed').on('input', function(e){
+      $('#speed').on('input change', function(e){
         speed = $(this).val();
-        
         $('#wspeed').text(speed);
         drawCompass();  
       });
       
-      
-      $('#getFromOpenMeteo').on('click', function(e){
-        getFromOpenMeteo();
+      // Update dir
+      $('#wdir').on('change', function(e){
+        angle =  parseInt($('#wdir').text());
+        drawCompass();  
       });
+       
 
       var updateAngle = function(e){
         var rect = canvas.getBoundingClientRect();
@@ -130,9 +107,7 @@ var makeWindWidget = function(){
     
         // Convert to meteorological angle (FROM direction)
         var theta = Math.atan2(y, x) * 180 / Math.PI;
-        angle = (theta + 90 + 360) % 360;
-      
-        $('#wdir').text(Math.round(angle)); 
+        angle = (theta + 90 + 360) % 360; 
         drawCompass(); 
       }
 
@@ -149,6 +124,7 @@ var makeWindWidget = function(){
         }
       })
       .on('mouseleave mouseup', function() {
+        $('#wdir').text(Math.round(angle)); 
         isDragging = false;
       });
       

@@ -4,6 +4,16 @@
  
 # Cell2FireR: R bindings and platform for Fire Spread Simulations using Cell2Fire
 
+## Installation
+
+Grab the latest version from GitHub then run the interactive app, or keep 
+reading.
+
+```         
+remotes::install_github("fpirotti/Cell2FireR")
+shiny::runApp('inst/app')
+```
+ 
 ## Description
 
 Installing this package provides two main elements:

@@ -3,6 +3,7 @@ pkgs <- c("terra", "DT", "remotes", "sf", "httr", "shiny", "leaflet", "shinyjs",
           "tools", "shinydashboard", "xml2", "future", "promises", "stringr",  "leafem", "cli", "shinydashboardPlus", "fresh",
           "htmlwidgets")
  
+api.openMeteo <- 
 
 warn <- cli::combine_ansi_styles("magenta", "italic")
 for (p in pkgs) {
@@ -226,7 +227,7 @@ createLeaflet <- function(){
               var div = L.DomUtil.create('div','windCanvas'); 
               div.style.background = 'white';
               div.style.padding = '5px'; 
-              div.innerHTML = '<b id=\"getFromOpenMeteo\" style=\"cursor:pointer;\" title=\"Click here to get current values from open-meteo (NB this is experimental and not to be used for production envs).\">💨 Wind at 10 m height - <br>Speed: <span id=\"wspeed\">0</span> (m/s)</b><input type=\"range\" id=\"speed\" name=\"speed\" min=\"0\" value=0 max=\"30\"><b>Direction: <span id=\"wdir\">90</span>°</b><br><canvas id=\"windCanvas\" width=\"150\" height=\"150\"></canvas>';
+              div.innerHTML = '<span id=\"openmeteocloudButton\" onclick=$(\"#meteodata\").toggle() >Show/Hide  Meteo Data </span><br><div id=\"meteodata\"><span  id=\"openmeteocloudButton\" title=\"Click here to get current values from open-meteo (NB this is experimental and not to be used for production envs).\" onclick=\"getFromOpenMeteo();\">💨️Get from APIs </span>  <br>🌡T = <span id=wtmp></span> - <b  ><br>Wind at 10 m height <br>Speed: <span id=\"wspeed\">0</span> (m/s)</b><input type=\"range\" id=\"speed\" name=\"speed\" min=\"0\" value=0 max=\"30\"><b>Direction: <span id=\"wdir\">90</span>°</b><br><canvas id=\"windCanvas\" width=\"150\" height=\"150\"></canvas></div>';
               div.style.border = '1px solid gray';
               div.style.borderRadius = '4px';
               L.DomEvent.disableClickPropagation(div);

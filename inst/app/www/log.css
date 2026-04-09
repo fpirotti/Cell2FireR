@@ -10,6 +10,12 @@
  cursor: pointer;  
 }
 
+#openmeteocloudButton {
+  cursor:pointer;  
+  padding:3px;
+  background: cadetblue;
+  border:1px solid black;
+}
 .windCanvas {
   background: #eaeaea; 
 }

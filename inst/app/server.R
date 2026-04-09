@@ -104,6 +104,19 @@ server <- function(input, output, session) {
   }
 
   
+  # change simulator -----
+  observeEvent(input$simulator, {
+    
+      if(input$simulator=="FlamMap"){
+        shinyWidgets::inputSweetAlert(inputId = "flammapPath",
+                                      text="Please insert the exact path to FlamMap 
+software in your MS Windows machine (the same where you are running your R app). 
+Work in progress....",  input="textarea")
+      }    
+    
+    updateActionButton(inputId = "runsim",label = paste("Run ", input$simulator)  )
+    
+  })
   # change dataset folder ----
   observeEvent(input$inputfolder, {
     req(input$inputfolder)
@@ -415,15 +428,14 @@ server <- function(input, output, session) {
   })
   
   # tooltips  ----
-  observeEvent(input$tooltips, {
-    if(input$tooltips){
-      shinyjs::runjs("makeTooltips(); ttinstances.forEach(i => i.enable());")
-    } else { 
-      print("disable")
-      shinyjs::runjs("  ttinstances.forEach(i => i.disable());")
-    }
-    
-  })
+  observeEvent(list(input$tooltips, 
+                    input$tooltipsSize), {
+    if(input$tooltips){ 
+      shinyjs::runjs( sprintf("   makeTooltips(%d); ttinstances.forEach(i => i.enable());", input$tooltipsSize )  )
+    } else {  
+      shinyjs::runjs("   ttinstances.forEach(i => i.disable());")
+    } 
+  }) 
   
   # WMSQueryReturned Popup ----
   observeEvent(input$WMSQueryReturnedPop, {
@@ -498,8 +510,22 @@ server <- function(input, output, session) {
   })
   
   ## TABLE WEATHER table -----
-  output$weather.table <- renderDT({
-    datatable(weatherDataTable() , editable = TRUE)|> formatRound(
+  output$weather.table <- renderDT({ 
+    datatable(elementId = "weatherOutputTable", 
+              weatherDataTable() , 
+              editable = TRUE, 
+              options = list(
+                initComplete = JS(sprintf(
+                  "function(settings) {",
+                  "  var th = $('#weatherTableOutputDIV thead th').filter(function() {",
+                  "    $(this).attr('data-tippy-content', tooltipsStrings[$(this).text().trim() ] );  ",
+                  "  });",
+                  " makeTooltips(%d) ",
+                  "}", input$tooltipsSize
+                )
+               )
+              )
+              )|> formatRound(
       columns = c('DC', 'FWI', 'DMC', 'ISI', 'BUI', 'FFMC'),
       digits = 2
     )
@@ -850,7 +876,8 @@ server <- function(input, output, session) {
   
   
   # RUN CELL2FIRE ------
-  observeEvent(input$runC2F, {
+  observeEvent(input$runsim, {
+     cmd <- "FlamMap.exe /in:input.fmp /out:output /log:log.txt"
     Cell2FireR::cell2fire_run(input)
     # cell2fire_run(c("--input-instance-folder", input$inputfolder,
     #                 "--output-folder", "../Sub40x40", 

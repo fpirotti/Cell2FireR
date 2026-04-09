@@ -5,7 +5,7 @@ var infoPanelButton = null;
 var mymap = null;
 var ttinstances = null;
 
-function makeTooltips(){
+function makeTooltips(size=12){
   
   $('[title]').each(function() {
      $(this).attr('data-tippy-content', $(this).attr('title'));
@@ -15,18 +15,48 @@ function makeTooltips(){
   ttinstances = tippy('[data-tippy-content]', {
     theme: 'cool',
     allowHTML: true,
+    appendTo: document.body,  
     arrow: true,
-    animation: 'scale',
-    placement: 'top',
+    animation: 'scale', 
     trigger: 'mouseenter focus',
     interactive: true,
-    interactiveBorder: 10
+    interactiveBorder: 10,
+    onShow(instance) {  instance.popper.querySelector('.tippy-box').style.fontSize = size+'px'; }
   });
+  
+   
 }
+
+
+var tooltipsStrings = {
+  Instance: "Instance",
+  datetime: "Date and time of  specific weather scenario", 
+  RH: "💧 Relative Humidity: % of moisture in the air",
+  WD: "🧭 Dir: wind source direction in degrees where 0° is from East to West and values increase clockwise",
+  WS: "💨 Wind speed in km/h",
+  TMP: "🌡️ Temp: air temperature in °C",
+  FFMC: "🔥 FFMC: Fine Fuel Moisture Code (0–100+) — dryness of fine fuels, easier ignition — see EFFIS FWI system <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast target=_blank>LINK HERE</a>",
+  DMC:  "🌾 DMC: Duff Moisture Code (0–200+) — moisture of medium fuels, influences fuel availability — see EFFIS FWI system <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast  target=_blank>LINK HERE</a>",
+  DC:   "🏜️ DC: Drought Code (0–800+) — deep layer dryness, longer lasting fires — see EFFIS FWI system <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast target=_blank >LINK HERE</a>",
+  ISI:  "🌬️ ISI: Initial Spread Index (0–15+) — expected potential fire spread combining wind & FFMC — see EFFIS FWI description <a href=https://docs.argos-emergency.com/en/docs/data/hazard/nwp/effis.html target=_blank >LINK HERE</a>",
+  BUI:  "🌲 BUI: Buildup Index (0–180+) — total fuel available combining DMC+DC — see EFFIS FWI description <a href=https://docs.argos-emergency.com/en/docs/data/hazard/nwp/effis.html  target=_blank>LINK HERE</a>",
+  FWI:  "🔥📈 FWI: Fire Weather Index (0–50+) — overall fire danger rating combining ISI & BUI — see EFFIS overview <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast  target=_blank>LINK HERE</a>"
+
+};
+
+
+
+
+
+
+
+
 
 $(document).ready(function () {
   makeTooltips();
   ttinstances.forEach(i => i.disable());
+ 
+        
 });
 
 Shiny.addCustomMessageHandler("layersControlReady", function(message) {
@@ -50,14 +80,24 @@ function dateFromToday(back=0){
 
 
 
-var getFromOpenMeteo = function(){
-  var center = mymap.getCenter();  
+var getFromOpenMeteo = function(lat=null, lon=null,   pop=false){
+  
+      if(lat===null){
+      var center = mymap.getCenter();
+      lat =center.lat;
+      lon =center.lng;
+    } 
   $.ajax({
-    url: "https://api.open-meteo.com/v1/forecast?latitude="+center.lat+"&longitude="+center.lng+"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms",
+    url: "https://api.open-meteo.com/v1/forecast?latitude="+ lat+"&longitude="+lon+"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms",
     dataType: "json",
           timeout: 3000,  
     success: function(data) {
-       Shiny.setInputValue('openmeteoInput', data, {priority: 'event'});
+       Shiny.setInputValue('openmeteoInput', data, {priority: 'event'}); 
+      var speed = Math.round(parseFloat(data.current.wind_speed_10m));
+      var dir = data.current.wind_direction_10m;
+      $('#speed').val(speed).trigger('input');  
+      $('#wdir').text(dir).trigger('change');  
+      $('#wtmp').text(data.current.temperature_2m + "°C").trigger('change'); 
     },
     error: function(jqXHR, textStatus, errorThrown) {
       console.error("API call failed:", textStatus, errorThrown); 
