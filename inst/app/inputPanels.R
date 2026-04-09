@@ -24,7 +24,7 @@ SIM_INPUTS <- list(
   cbh = list(units = "m", description = paste0("cbh: ", tr("Canopy Base Height"))),
   cbd = list(units = "kg/m3", description = paste0("cbd: ", tr("Canopy Bulk Density"))),
   ccf = list(units = "0,1", description = paste0("ccf: ", tr("Canopy Cover Fraction"))),
-  hm = list(units = "m", description = paste0("hm: ", tr("Canopy Height"))),
+  chm = list(units = "m", description = paste0("chm: ", tr("Canopy Height"))),
   probabilityMap = list(
     units = "0,1",
     description = paste0(tr("Probability map"), tr(" (requires generation mode 1)"))
@@ -83,7 +83,7 @@ PANELS[["LANDSCAPE"]] <- list(
   shinyWidgets::pickerInput("CCF", paste0(SIM_INPUTS$ccf$description, " [", SIM_INPUTS$ccf$units, "]"),
               choices = get_existing_files()),
 
-  shinyWidgets::pickerInput("HM", paste0(SIM_INPUTS$hm$description, " [", SIM_INPUTS$hm$units, "] (only Scott & Burgan)"),
+  shinyWidgets::pickerInput("CHM", paste0(SIM_INPUTS$chm$description, " [", SIM_INPUTS$chm$units, "] (only Scott & Burgan)"),
               choices = get_existing_files()),
 
   shinyWidgets::prettySwitch("CROWN", "Enable Crown Fire behavior", value = FALSE, status = "danger"),

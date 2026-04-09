@@ -6,7 +6,7 @@ pkgs <- c("terra", "DT", "remotes", "sf", "httr", "shiny", "leaflet", "shinyjs",
           # "fresh",
           "htmlwidgets")
  
-api.openMeteo <- 
+api.openMeteo <- ""
  
 for (p in pkgs) {
   if (!requireNamespace(p, quietly = TRUE)) {

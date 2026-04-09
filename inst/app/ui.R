@@ -1,7 +1,7 @@
 # ui.R
 ui <-  shinydashboardPlus::dashboardPage(
   options = list(sidebarExpandOnHover = TRUE),
-  header = shinydashboardPlus::dashboardHeader(title = "Wildfire-Sim",
+  header = shinydashboardPlus::dashboardHeader(title = "🔥 Wildfire-Sim🔥",
                                                leftUi = tagList( 
                                                    div(style="margin-bottom:-15px;", 
                                                        title="Do you want to keep seeing the help tooltips or not?",
@@ -45,7 +45,7 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                    
                                                    shiny::column(4,    div(
                                                      shiny::fileInput("zipfileload", label=NULL, buttonLabel =  icon("upload") ), 
-                                                     title="add a zip file with all necessary files - please see documentation on how to prepare it"
+                                                     title="add a zip file with all necessary files - please see <a href=https://github.com/fpirotti/Cell2FireR/blob/master/README.md target=_blank> 📖 documentation HERE</a> on how to prepare it"
                                                    ) ), 
                                                     shiny::column(3,   div(
                                                      shiny::actionButton("downloadfolder" ,   NULL,

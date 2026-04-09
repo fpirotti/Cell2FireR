@@ -1,12 +1,16 @@
 # server.R
 
 server <- function(input, output, session) {
-##AUTH ------
+  ## AUTH ------
   # source("functions_auth.R", local=T)
+  ## LOAD STATE ------
+  source("functions_state.R", local=T)
   options(shiny.maxRequestSize = 100 * 1024^2)  # 100 MB
   # rasterInfo <- reactiveVal(NULL)
   ignitionFiles <- NULL
   weatherFiles <- NULL
+  rasters <- list()
+  terra.rasters <- list()
   ignitionPointsCoords <- reactiveVal(NULL)
   weatherDataTable <- reactiveVal( 
     data.frame(
@@ -28,6 +32,9 @@ server <- function(input, output, session) {
   currentRasterStack <- NULL
   lut_fbp_local <- reactiveVal(NULL)
   logfile <- reactiveVal(NULL)
+  rasterFiles <- reactiveVal(NULL)
+  weatherFiles <- reactiveVal(NULL)
+  ignitionFiles <- reactiveVal(NULL)
   lut_generic <- lut_fbp
   ## reactive log file  ----
   log_reader <- reactivePoll(
@@ -88,7 +95,11 @@ server <- function(input, output, session) {
                      type = typesh
                       )
     }
-
+    
+    
+    if(duration>10 && type=="error") {
+      shinyWidgets::alert(HTML(text), status="danger")
+    }
     logf <- isolate(logfile())
     if(!is.null(logf) && dir.exists(dirname(logf) ) ){
       cat(
@@ -117,9 +128,226 @@ Work in progress....",  input="textarea")
     updateActionButton(inputId = "runsim",label = paste("Run ", input$simulator)  )
     
   })
+  
+  # change RASTER stack -----
+  observeEvent(rasterFiles(),{
+    req(rasterFiles())
+    ### READ RASTERS ----
+    withProgress(message = 'Adding layers',  value = 0, {
+      ## UPDATE LEAFLET ------
+      leaflet::leafletProxy("map") |>
+        leaflet::clearImages()  |>
+        leaflet::clearControls() |> addFWI()
+      
+      crs <- NA
+      layerNames <- clcLayerName
+      rasters <<- list()
+      rfiles<- rasterFiles()
+      names(rfiles) <- basename(rfiles)
+      strt <- 0 
+      for(fi in rfiles){
+        strt <- strt + 1  
+        layerName <- paste0(basename(input$inputfolder), " - ", toupper(tools::file_path_sans_ext(basename(fi))))
+        
+        layerNames <- c(layerNames, layerName) 
+        incProgress( strt/(length(rfiles)+2), detail = sprintf("Adding layer %s", layerName) )
+        
+        r2 <- terra::rast(fi)
+        terra.rasters[[layerName]] <- r2
+        ## check alignment between rasters -----
+        if(length(rasters)>0){
+          if(!compareGeom(terra::rast(rasters[[1]]), r2, stopOnError = FALSE) ){
+            showNotification(
+              HTML(
+              sprintf("<b>Rasters NOT aligned!</b> Either CRS, 
+origin or resolution are 
+different between raster %s 
+and raster %s", 
+                    basename(sources(rasters[[1]])) , 
+                    basename(sources(r1))
+                      )
+                   ),
+              duration = 12,
+              type = "error"
+            )
+            break
+          } 
+        }
+        
+        
+        
+        if(terra::crs(r2)==""){
+          showNotification(
+            HTML("<b>Raster Info:</b> NO 🌐 CRS provided to raster, so a generic pseudo-mercator projection assigned: 
+<code>EPSG:3857</code>.  Work in progress for assigning a CRS 🌐 manually - keep tuned!"),
+            duration = 0,
+            type = "warning"
+          )
+          # guess CRS of input
+          cc<-center(r2)
+          if( abs(cc$lng) > 360 && abs(cc$lat) > 90  ){
+            terra::crs(r2) <- "EPSG:3857"
+          }
+        }
+        ## LANDSCAPE FILES ------
+        #### FUEL map ------
+        if(grepl("forest|fuel", layerName, ignore.case = T) ){
+          r2 <- terra::as.factor(r2) 
+          levs <- data.frame(
+            value = lut_fbp$grid_value,
+            class = lut_fbp$descriptive_name,
+            fuel = lut_fbp$fuel_type,
+            color =   rgb(lut_fbp$r, lut_fbp$g, lut_fbp$b, maxColorValue = 255)
+          )
+          lut_generic <- lut_fbp
+          if(isScottBurgan(r2)){ 
+            levs <- data.frame(
+              value = lut_sb$grid_value,
+              class = as.character(lut_sb$descriptive_name),
+              fuel = lut_sb$fuel_type,
+              color =   rgb(lut_sb$r, lut_sb$g, lut_sb$b, maxColorValue = 255)
+            )
+            lut_generic <- lut_sb
+          }
+          levels(r2) <- levs
+          copts <- leafem::colorOptions(palette = levs$color, domain=levs$value) 
+          
+          na.color = "transparent"
+          rasters[["FUEL"]] <- terra::sources(r2)[[1]]
+          shinyWidgets::updatePickerInput(inputId = "FUEL", 
+                                          choices =  rfiles ,
+                                          selected = basename(rasters[["FUEL"]]) )
+          
+        } else {
+          v <- spatSample(r2, size = 1e4, method = "regular", na.rm = TRUE)
+          
+          rrange <- quantile(v[,1], probs = c(0.1,0.9))
+          palette = viridisLite::viridis(20)
+          domain  = rrange 
+          copts <- colorOptions(palette=palette,
+                                domain=unname(domain),
+                                na.color = "#eaeaea00")
+        }
+        
+        
+        if(grepl("elev|dtm|dem", layerName, ignore.case = T) ){ 
+          rasters[["ELEVATION"]] <- terra::sources(r2)[[1]] 
+          shinyWidgets::updatePickerInput(inputId = "ELEVATION", 
+                                          choices =  rfiles ,
+                                          selected = basename(rasters[["ELEVATION"]]) )
+        }  else if(grepl("cbd|bulk", layerName, ignore.case = T) ){ 
+          rasters[["CBD"]] <- terra::sources(r2)[[1]]
+          shinyWidgets::updatePickerInput(inputId = "CBD", 
+                                          choices =  rfiles ,
+                                          selected = basename(rasters[["CBD"]]) )
+        }  else if(grepl("cbh|base", layerName, ignore.case = T) ){ 
+          rasters[["CBH"]] <- terra::sources(r2)[[1]]
+          shinyWidgets::updatePickerInput(inputId = "CBH", 
+                                          choices =  rfiles ,
+                                          selected = basename(rasters[["CBH"]]) )
+        }  else if(grepl("ccf|cover", layerName, ignore.case = T) ){ 
+          rasters[["CCF"]] <- terra::sources(r2)[[1]]
+          shinyWidgets::updatePickerInput(inputId = "CCF", 
+                                          choices =  rfiles ,
+                                          selected = basename(rasters[["CCF"]]) )
+        }  else if(grepl("ch|height", layerName, ignore.case = T) ){ 
+          rasters[["CHM"]] <- terra::sources(r2)[[1]]
+          shinyWidgets::updatePickerInput(inputId = "CHM", 
+                                          choices =  rfiles ,
+                                          selected = basename(rasters[["CHM"]]) )
+        }  else if(grepl("breaks", layerName, ignore.case = T) ){ 
+          rasters[["FIREBREAKS"]] <- terra::sources(r2)[[1]]
+          shinyWidgets::updatePickerInput(inputId = "FIREBREAKS", 
+                                          choices =  rfiles ,
+                                          selected = basename(rasters[["FIREBREAKS"]]) )
+        } else {
+          rasters[[layerName]] <- terra::sources(r2)[[1]] 
+        }
+        
+         
+        opacityControl [[layerName]] <- list(
+          min = 0,
+          max = 1,
+          step = 0.1,
+          default = 1,
+          width = '100%',
+          class = 'opacity-slider'
+        )
+        
+        view_settings[[layerName]] <- list(coords = as.numeric(st_transform(st_bbox(r2), 4326))   )
+        
+        leaflet::leafletProxy("map") |>
+          leafem::addGeoRaster( stars::st_as_stars(r2),
+                                colorOptions = copts,
+                                # pixelValuesToColorFn = pv2col,
+                                opacity = 0.85, 
+                                group = layerName,
+                                autozoom = F,
+                                options = leafletOptions(pane = "markerPane"),
+                                tileOptions = leaflet::tileOptions(zIndex = 999),
+                                imagequeryOptions = leafem::imagequeryOptions(digits=0,
+                                                                              prefix="",
+                                                                              position="bottomright",
+                                                                              noData = "NA"),
+                                layerId = gsub(" ", "", layerName)) |>
+          leaflet::hideGroup( layerName )
+      }
+    })
+    
+    currentRasterStack <<- tryCatch({
+      terra::rast(terra.rasters)
+    },
+    error=function(e){
+      showNotification(
+        paste("ERROR:", e$message),
+        type = "error",
+        duration = 16
+      )
+      NULL
+    })
+    if(is.null(currentRasterStack)) return(NA)
+    
+    r2 <- terra::project(ext(r2), from=terra::crs(r2), to="epsg:4326")
+    
+    
+    leafletProxy("map") |>
+      
+      addLayersControl(
+        baseGroups = unlist(unname(base_layers)),
+        overlayGroups = c(layerNames, names(fwi_layers)),
+        options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)
+      )   |>
+      customizeLayersControl(
+        view_settings =view_settings ,
+        # home_btns = TRUE,
+        opacityControl = opacityControl,
+        includelegends = TRUE,
+        addCollapseButton = TRUE,
+        layersControlCSS = list("opacity" = 0.6),
+        increaseOpacityOnHover = TRUE
+      ) |>
+      leaflet::fitBounds( lng1 =  xmin(r2),
+                          lat1 =  ymin(r2),
+                          lng2 =  xmax(r2),
+                          lat2 =  ymax(r2)
+      )  
+    
+    session$sendCustomMessage("layersControlReady", list())
+    # shinyjs::runjs("autoGroupLeafletLayers(\".leaflet-control-layers\");")
+    
+    if(is.null(currentRasterStack)){
+      showNotification(
+        "No Forest raster file found, please read Cell2Fire documentation on how to prepare a dataset",
+        type = "error",
+        duration = 6
+      )
+    }
+    
+  })
   # change dataset folder ----
   observeEvent(input$inputfolder, {
     req(input$inputfolder)
+    loadState() 
     outfolder <- file.path(input$inputfolder, "output")
     dir.create(outfolder, recursive = TRUE, showWarnings = FALSE)
     file.create(file.path(outfolder, "Logfile.log"), showWarnings = FALSE)
@@ -142,11 +370,19 @@ Work in progress....",  input="textarea")
     ip <- NULL
     currentRasterStack <<- NULL
 
-    rfiles <- list.files(
-      path = input$inputfolder,
-      pattern = "\\.(asc|tif|tiff)$",
-      full.names = TRUE,
-      ignore.case = TRUE
+    # rfiles <- list.files(
+    #   path = input$inputfolder,
+    #   pattern = "\\.(asc|tif|tiff)$",
+    #   full.names = TRUE,
+    #   ignore.case = TRUE
+    # )
+    rasterFiles(
+      list.files(
+        path = input$inputfolder,
+        pattern = "\\.(asc|tif|tiff)$",
+        full.names = TRUE,
+        ignore.case = TRUE
+     )
     )
     csvfiles <- list.files(
       path = input$inputfolder,
@@ -208,6 +444,22 @@ Work in progress....",  input="textarea")
                                       selected = ignitionFiles[[1]]  )
       
       ip <- read.csv(ignitionFiles[[1]] )
+      if(!is.null(ip)){
+        
+        if(!is.element("X", names(ip)) ){
+          ncell <- ip$Ncell
+          r2 <- terra::rast(raster$FUEL)
+          cr <- terra::xyFromCell(r2, ncell)
+          crv <- terra::vect(cr)
+          terra::crs(crv) <- terra::crs(r2) 
+          crv2 <- crv |> terra::project("EPSG:4326")
+          crvc <-  as.data.frame(crv2@pntr$coordinates())
+          names(crvc) <- c("X","Y")
+          ignitionPointsCoords(cbind(ip, crvc) )
+        } else{
+          ignitionPointsCoords(ip )
+        } 
+      }
       if(anyNA(ip$Ncell)){
         showNotification(
           paste0("In file ", ignitionFiles[[1]] , " some invalid ignition points found, please check file format."),
@@ -218,137 +470,11 @@ Work in progress....",  input="textarea")
  
     }
 
-    ## UPDATE LEAFLET ------
-    leaflet::leafletProxy("map") |>
-      leaflet::clearImages()  |>
-      leaflet::clearControls() |> addFWI()
 
-    crs <- NA
-    layerNames <- clcLayerName
-    rasters <- list()
 
     shinyjs::runjs("$('.info.legend.rastervals.leaflet-control').remove();")
 
-    ### READ RASTERS ----
-    withProgress(message = 'Adding layers',  value = 0, {
 
-
-      strt <- 0
-      for(fi in rfiles){
-        strt <- strt + 1
-
-
-        layerName <- toupper(tools::file_path_sans_ext(basename(fi)))
-        
-        layerName <- paste0(basename(input$inputfolder), " - ", toupper(layerName))
-        
-        layerNames <- c(layerNames, layerName)
-
-        incProgress( strt/(length(rfiles)+2), detail = sprintf("Layer %s", layerName) )
-
-        r2 <- terra::rast(fi)
-
-        if(terra::crs(r2)==""){
-          showNotification(
-            HTML("<b>Raster Info:</b> NO CRS provided to raster, so a generic UTM projection assigned: <code>EPSG:32632</code>"),
-            duration = 0,
-            type = "warning"
-          )
-          # guess CRS of input
-          cc<-center(r2)
-          if( abs(cc$lng) > 360 && abs(cc$lat) > 90  ){
-            terra::crs(r2) <- "EPSG:3857"
-          }
-        }
-        #### forest map ------
-        if(grepl("forest|fuel", layerName, ignore.case = T) ){
-          r2 <- terra::as.factor(r2)
-
-          levs <- data.frame(
-            value = lut_fbp$grid_value,
-            class = lut_fbp$descriptive_name,
-            fuel = lut_fbp$fuel_type,
-            color =   rgb(lut_fbp$r, lut_fbp$g, lut_fbp$b, maxColorValue = 255)
-          )
-          lut_generic <- lut_fbp
-          if(isScottBurgan(r2)){
-
-            levs <- data.frame(
-              value = lut_sb$grid_value,
-              class = as.character(lut_sb$descriptive_name),
-              fuel = lut_sb$fuel_type,
-              color =   rgb(lut_sb$r, lut_sb$g, lut_sb$b, maxColorValue = 255)
-            )
-            lut_generic <- lut_sb
-          }
-          levels(r2) <- levs
-          copts <- leafem::colorOptions(palette = levs$color, domain=levs$value)
-
-
-          na.color = "transparent"
-          # rasterInfo(raster_info(r2))
-
-          if(!is.null(ip)){
-           
-            if(!is.element("X", names(ip)) ){
-              ncell <- ip$Ncell
-              cr <- terra::xyFromCell(r2, ncell)
-              crv <- terra::vect(cr)
-              terra::crs(crv) <- terra::crs(r2) 
-              crv2 <- crv |> terra::project("EPSG:4326")
-              crvc <-  as.data.frame(crv2@pntr$coordinates())
-              names(crvc) <- c("X","Y")
-              ignitionPointsCoords(cbind(ip, crvc) )
-            } else{
-              ignitionPointsCoords(ip )
-            } 
-          }
-          rasters[["FUELMAP"]] <- r2
-
-
-        } else {
-          v <- spatSample(r2, size = 1e4, method = "regular", na.rm = TRUE)
-
-          rrange <- quantile(v[,1], probs = c(0.1,0.9))
-          palette = viridisLite::viridis(20)
-          domain  = rrange
-          rasters[[layerName]] <- r2
-          copts <- colorOptions(palette=palette,
-                       domain=unname(domain),
-                       na.color = "#eaeaea00")
-          pv2col <- NULL
-          # pal2 <- colorNumeric("viridis", terra::values(r2), na.color = "transparent")
-        }
-
-
-        opacityControl [[layerName]] <- list(
-          min = 0,
-          max = 1,
-          step = 0.1,
-          default = 1,
-          width = '100%',
-          class = 'opacity-slider'
-           )
-
-        view_settings[[layerName]] <- list(coords = as.numeric(st_transform(st_bbox(r2), 4326))   )
-
-        leaflet::leafletProxy("map") |>
-          leafem::addGeoRaster( stars::st_as_stars(r2),
-                                colorOptions = copts,
-                                # pixelValuesToColorFn = pv2col,
-                                opacity = 0.85, 
-                                group = layerName,
-                                autozoom = F,
-                                options = leafletOptions(pane = "markerPane"),
-                                tileOptions = leaflet::tileOptions(zIndex = 999),
-                                imagequeryOptions = leafem::imagequeryOptions(digits=0,
-                                                                              prefix="",
-                                                                              position="bottomright",
-                                                                              noData = "NA"),
-                                layerId = gsub(" ", "", layerName)) |>
-          leaflet::hideGroup( layerName )
-      }
-    })
 
     ## FBP FILE ----
     fbpFile <-  grep("fbp_lookup_table", basename(tolower(csvfiles)), ignore.case = T )
@@ -362,54 +488,7 @@ Work in progress....",  input="textarea")
       )
       lut_fbp_local(lut_generic)
     }
-    currentRasterStack <<- tryCatch({
-      terra::rast(rasters)
-      },
-      error=function(e){
-          showNotification(
-            paste("ERROR:", e$message),
-            type = "error",
-            duration = 16
-          )
-        NULL
-      })
-    if(is.null(currentRasterStack)) return(NA)
 
-    r2 <- terra::project(ext(r2), from=terra::crs(r2), to="epsg:4326")
-
-
-    leafletProxy("map") |>
-
-      addLayersControl(
-        baseGroups = unlist(unname(base_layers)),
-        overlayGroups = c(layerNames, names(fwi_layers)),
-        options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)
-      )   |>
-      customizeLayersControl(
-        view_settings =view_settings ,
-        # home_btns = TRUE,
-        opacityControl = opacityControl,
-        includelegends = TRUE,
-        addCollapseButton = TRUE,
-        layersControlCSS = list("opacity" = 0.6),
-        increaseOpacityOnHover = TRUE
-      ) |>
-      leaflet::fitBounds( lng1 =  xmin(r2),
-                                lat1 =  ymin(r2),
-                                lng2 =  xmax(r2),
-                                lat2 =  ymax(r2)
-      )  
-
-     session$sendCustomMessage("layersControlReady", list())
-    # shinyjs::runjs("autoGroupLeafletLayers(\".leaflet-control-layers\");")
-
-    if(is.null(currentRasterStack)){
-      showNotification(
-        "No Forest raster file found, please read Cell2Fire documentation on how to prepare a dataset",
-        type = "error",
-        duration = 6
-      )
-    }
 
 
   })
@@ -899,11 +978,11 @@ Work in progress....",  input="textarea")
 
   }, ignoreNULL = FALSE)
 
+
   ## END SESSION ----
   observe({
     session$onSessionEnded(function(inp=input) { 
-      state <- isolate(reactiveValuesToList(input))
-      cat("Session ended\n")
+      saveState()
       # cleanup qui
     })
   })

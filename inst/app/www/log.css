@@ -9,7 +9,9 @@
 .leaflet-layer-group-header{
  cursor: pointer;  
 }
-
+.main-header .logo {
+  letter-spacing: 0.05em;
+}
 #openmeteocloudButton {
   cursor:pointer;  
   padding:3px;
