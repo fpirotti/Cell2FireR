@@ -1,6 +1,8 @@
 <!-- badges: start -->
   [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![CRAN status](https://www.r-pkg.org/badges/version/Cell2FireR)](https://CRAN.R-project.org/package=Cell2FireR)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+[![R-CMD-check](https://github.com/fpirotti/Cell2FireR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/fpirotti/Cell2FireR/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
  
 # Cell2FireR: R bindings and platform for Fire Spread Simulations using Cell2Fire
