@@ -6,7 +6,7 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                    div(style="margin-bottom:-15px;", 
                                                        title="Do you want to keep seeing the help tooltips or not?",
                                                        switchInput(  
-                                                         # size = "sm",
+                                                         size = "sm",
                                                          inputId = "tooltips",  
                                                          value = FALSE, 
                                                          width ="200px",
@@ -15,8 +15,9 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                    ), 
                                                    div(style="margin-bottom:-15px;", 
                                                        title="Size of tooltip text",
-                                                       numericInputIcon("tooltipsSize" ,  
-                                                                        width ="100px",
+                                                       numericInputIcon("tooltipsSize" , 
+                                                                        size = "sm", 
+                                                                        width ="60px",
                                                          value = 13, min = 10, max = 24, step = 1,
                                                          label=NULL
                                                        ) 
@@ -37,7 +38,7 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                  ),
                                                  shiny::selectInput(
                                                    "inputfolder",
-                                                   NULL,
+                                                   "Choose dataset",
                                                    choices = c("")
                                                  ),
                                                  shiny::fluidRow(

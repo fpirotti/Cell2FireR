@@ -1,5 +1,6 @@
 <!-- badges: start -->
   [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![CRAN status](https://www.r-pkg.org/badges/version/Cell2FireR)](https://CRAN.R-project.org/package=Cell2FireR)
 <!-- badges: end -->
  
 # Cell2FireR: R bindings and platform for Fire Spread Simulations using Cell2Fire
@@ -79,7 +80,7 @@ Map Server](https://www.cirgeo.unipd.it/fire-res/app/) platform for 100
 m resolution maps or try one from the [direct link
 HERE](https://www.cirgeo.unipd.it/FIRE-RES/ITC34/ITC34.zip)
 
-![](man/images/clipboard-1986611967.png)
+<img src="man/images/clipboard-1986611967.png"   style="max-width:600px; " />
 
 
 ## Acknowledgements

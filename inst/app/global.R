@@ -1,14 +1,16 @@
 ## make sure leafem is version 0.2.5 or more!
-pkgs <- c("terra", "DT", "remotes", "sf", "httr", "shiny", "leaflet", "shinyjs", "optparse",
-          "tools", "shinydashboard", "xml2", "future", "promises", "stringr",  "leafem", "cli", "shinydashboardPlus", "fresh",
+pkgs <- c("terra", "DT", "remotes", "sf", "httr", "shiny", "leaflet", "shinyjs",
+          # "optparse",
+          "tools", "shinydashboard", "shinyvalidate", "bcrypt", "xml2", "future",
+          "promises", "stringr",  "leafem", "cli", "shinydashboardPlus",
+          # "fresh",
           "htmlwidgets")
  
 api.openMeteo <- 
-
-warn <- cli::combine_ansi_styles("magenta", "italic")
+ 
 for (p in pkgs) {
   if (!requireNamespace(p, quietly = TRUE)) {
-    warn("Package ", cli::style_bold(p), " not found... installing it.")
+    warn("Package ", p, " not found... installing it.")
     install.packages(p)
   }
   library(p, character.only = TRUE)

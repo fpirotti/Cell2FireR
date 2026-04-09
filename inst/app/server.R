@@ -1,8 +1,8 @@
 # server.R
 
 server <- function(input, output, session) {
-
-  
+##AUTH ------
+  # source("functions_auth.R", local=T)
   options(shiny.maxRequestSize = 100 * 1024^2)  # 100 MB
   # rasterInfo <- reactiveVal(NULL)
   ignitionFiles <- NULL
@@ -511,18 +511,18 @@ Work in progress....",  input="textarea")
   
   ## TABLE WEATHER table -----
   output$weather.table <- renderDT({ 
-    datatable(elementId = "weatherOutputTable", 
+    datatable( 
               weatherDataTable() , 
               editable = TRUE, 
               options = list(
-                initComplete = JS(sprintf(
+                initComplete = JS(
                   "function(settings) {",
                   "  var th = $('#weatherTableOutputDIV thead th').filter(function() {",
                   "    $(this).attr('data-tippy-content', tooltipsStrings[$(this).text().trim() ] );  ",
                   "  });",
-                  " makeTooltips(%d) ",
-                  "}", input$tooltipsSize
-                )
+                 ifelse(input$tooltips, sprintf(" makeTooltips(%d); ", input$tooltipsSize), ""),
+                  "}"
+                 
                )
               )
               )|> formatRound(

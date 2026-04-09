@@ -1,12 +1,17 @@
 /* Smooth modern tooltip */
 .tippy-box[data-theme~='cool'] {
-  background: linear-gradient(135deg, #fff, #aaaaaacc);
+  background: linear-gradient(135deg, #fff, #ccc);
   color: black;
   border-radius: 8px;
   font-size: 13px;
   border:1px solid black;
   padding: 6px 10px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.75);
+}
+
+div.tippy-content > a {
+  color:darkred;
+  font-weight: bold;
 }
 
 #shiny-tab-dashboardMap > div {
