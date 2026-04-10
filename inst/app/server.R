@@ -5,11 +5,9 @@ server <- function(input, output, session) {
   # source("functions_auth.R", local=T)
   ## LOAD STATE ------
   source("functions_state.R", local=T)
-  
+  uniqueId <- paste0(format(Sys.time(), "%H%M%S"),substr(session$token, 1, 6))
   outfolder<-NULL
   
-  cat("Session starting ", getwd() , "\n")
-  # runjs('$("#runsim").prop("disabled", true);')
   options(shiny.maxRequestSize = 100 * 1024^2)  # 100 MB
   # rasterInfo <- reactiveVal(NULL)
   weatherDataTable <- reactiveVal( 
@@ -31,7 +29,11 @@ server <- function(input, output, session) {
   )
   currentRasterStack <- NULL
   lut_fbp_local <- reactiveVal(NULL)
-  logfile <- reactiveVal(NULL)
+  logs <- list( logfile = file.path(this.path::this.dir(), "sessionLogs",  
+                       paste0(uniqueId, "Logfile.log") ) 
+                ) 
+  logs$log_con = file(logs$logfile, "a")
+  
   ignitionFiles <- NULL
   weatherFiles <- NULL
   rasters <- list()
@@ -43,6 +45,7 @@ server <- function(input, output, session) {
   # weatherFiles <- reactiveVal(NULL)
   # ignitionFiles <- reactiveVal(NULL)
   lut_generic <- lut_fbp
+  
   ## reactive log file  ----
   log_reader <- reactivePoll(
     intervalMillis = 1000,  # 1 second
@@ -50,18 +53,22 @@ server <- function(input, output, session) {
 
     # cheap check: did the file change?
     checkFunc = function() {
-      if(is.null(logfile())) return(NULL)
-      if ( !file.exists(logfile())) return(NULL)
-      file.info(logfile())$mtime
+      if(is.null(logs$logfile)) return(NULL)
+      if ( !file.exists(logs$logfile)) return(NULL)
+      file.info(logs$logfile)$mtime
     },
 
     # expensive read: only when it DID change
     valueFunc = function() {
-      if(is.null(logfile())) return("No logfile yet")
-      if ( !file.exists(logfile())) return("Log file does not exist yet")
-      readLines(logfile(), warn = FALSE)
+      if(is.null(logs$logfile)) return("No logfile yet")
+      if ( !file.exists(logs$logfile)) return("Log file does not exist yet")
+      readLines(logs$logfile, warn = FALSE)
     }
   )
+  
+  ## RUN SIM STRING ------
+  source("functions_makeCmd.R", local=T)
+  
   ## reactive log html ----
   log_html <- reactive({
     lines <- log_reader()
@@ -106,23 +113,18 @@ server <- function(input, output, session) {
     
     if(duration>10) {
       shinyWidgets::sendSweetAlert(HTML(text), title=type,html = T)
-    }
-    logf <- isolate(logfile())
-    if(!is.null(logf) && dir.exists(dirname(logf) ) ){
-      cat(
-        format(Sys.time(), "[%Y-%m-%d %H:%M:%S] "), toupper(type),
-        " | ",
-        paste(text, collapse = " "),
-        "\n",
-        file = logf,
-        append = TRUE
+    } 
+    if(!is.null(logs$logfile)   ){
+      writeLines(
+        c( format(Sys.time(), "[%Y-%m-%d %H:%M:%S] "), toupper(type),
+        paste(text, collapse = " "), "===============" ),
+        con = logs$log_con
       )
+      flush(logs$log_con)
     }
 
   }
  
-  ## RUN SIM STRING ------
-  source("functions_makeCmd.R", local=T)
   # change simulator -----
   observeEvent(input$simulator, {
     
@@ -404,9 +406,7 @@ and raster %s",
     # runjs('$("#runsim").prop("disabled", false);')
     loadState() 
     outfolder <<- file.path(input$inputfolder, "output")
-    dir.create(outfolder, recursive = TRUE, showWarnings = FALSE)
-    file.create(file.path(outfolder, "Logfile.log"), showWarnings = FALSE)
-    logfile(file.path(outfolder, "Logfile.log"))
+    dir.create(outfolder, recursive = TRUE, showWarnings = FALSE) 
     # if(dir.exists(outfolder)){
     #   showNotification(
     #     paste0("Directory ", outfolder, " exists, files will be overwritten if you continue!"),
@@ -534,18 +534,18 @@ and raster %s",
 
 
     ## FBP FILE ----
-    fbpFile <-  grep("fbp_lookup_table", basename(tolower(isolate(csvFiles()) )), 
-                     ignore.case = T )
-    if(length(fbpFile)>0){
-      lut_fbp_local(read.csv(csvFiles[[fbpFile[[1]]]] ))
-    } else {
-      showNotification(
-        paste0("Did not find file fbp_lookup_table.csv! Will fall back to default template file in 'templates' folder."),
-        type = "warning",
-        duration = 1
-      )
-      lut_fbp_local(lut_generic)
-    }
+    # fbpFile <-  grep("fbp_lookup_table", basename(tolower(isolate(csvFiles()) )), 
+    #                  ignore.case = T )
+    # if(length(fbpFile)>0){
+    #   lut_fbp_local(read.csv(csvFiles[[fbpFile[[1]]]] ))
+    # } else {
+    #   showNotification(
+    #     paste0("Did not find file  ! Will fall back to default template file in 'templates' folder."),
+    #     type = "warning",
+    #     duration = 1
+    #   )
+    #   lut_fbp_local(lut_generic)
+    # }
 
   })
 
@@ -1026,7 +1026,7 @@ and raster %s",
        
     }
     proc()
-    browser()
+    
     # Cell2FireR::cell2fire_run(input)
     # cell2fire_run(c("--input-instance-folder", input$inputfolder,
     #                 "--output-folder", "../Sub40x40", 
@@ -1050,8 +1050,9 @@ and raster %s",
 
 
   ## END SESSION ----
-  observe({
-    session$onSessionEnded(function(inp=input) { 
+  # observe({
+    onSessionEnded(function() {  
+      if (!is.null(logs$log_con)) close(logs$log_con) 
       state <- isolate(reactiveValuesToList(input))
       if(isTruthy(isolate(input$inputfolder))){  
         cat("Session ending ", getwd() , "\n")
@@ -1060,12 +1061,15 @@ and raster %s",
         }, warning=function(e){
           browser()
           
+        }, error=function(e){
+          browser()
+          
         })
         
         cat("Session ended\n")
       }
       # cleanup qui
-    })
+    # })
   })
 
   

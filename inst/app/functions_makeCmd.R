@@ -26,6 +26,7 @@ clean <- function(){
   info <- file.info(dirs) 
   # select old folders
   old_dirs <- dirs[info$mtime < cutoff] 
+  print(old_dirs)
   # remove them (recursively!)
   unlink(old_dirs, recursive = TRUE, force = TRUE)
 }
@@ -42,9 +43,9 @@ proc <- function() {
       timestamp <- format(Sys.time(), "%y%m%d_%H%M%S")
       instance_dir <- file.path(outfolder, paste0("firesim_", timestamp))
       results_dir <- file.path(instance_dir, "results")
-        
+      simLog <- file.path(instance_dir, "log.txt")
       dir.create(instance_dir, recursive = TRUE, showWarnings = FALSE)
-      dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
+      # dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
       
       map2instance <- list()
       # Helper to copy and rename files to standard names expected by C2F
@@ -77,7 +78,7 @@ proc <- function() {
       # 2. COPY LANDSCAPE INPUTS
       # -------------------------------------------------------------
       copy_to_instance(input$FUEL, "fuels")
-      copy_to_instance(input$ELEVATION, "elevation")
+      copy_to_instance(input$ELEVATION, "elevation") 
       
       if (input$CROWN) {
         copy_to_instance(input$CBH, "cbh")
@@ -85,6 +86,29 @@ proc <- function() {
         copy_to_instance(input$CCF, "ccf")
         copy_to_instance(input$CHM, "hm")
       }
+      
+      
+      Simulator <- get_fuel_key(input$FUEL_MODEL)
+      if (Simulator == "K") {
+        lookupTable = "kitral_lookup_table.csv";
+      }
+      else if (Simulator == "S") {
+        lookupTable = "spain_lookup_table.csv";
+      }
+      else if (Simulator == "C") {
+        lookupTable = "fbp_lookup_table.csv";
+      }
+      else if (Simulator == "P") {
+        lookupTable =  "portugal_lookup_table.csv";
+      }
+      else { 
+        shinyWidgets::sendSweetAlert(text= paste0("Simulation type not found. Type ", 
+                                                  input$FUEL_MODEL),
+                                     type = "warning" ) 
+      }
+      
+      file.copy( file.path( this.path::this.dir(), "templates", lookupTable), 
+                 file.path( instance_dir, lookupTable ) )
       
       if (input$IGNITION_MODE == "1. Probability map distributed random ignition") {
         copy_to_instance(input$IGNITIONFILE, "probabilityMap")
@@ -104,7 +128,7 @@ proc <- function() {
       # -------------------------------------------------------------
       if (input$WEATHER_MODE == "0. Single weather file") { 
         if(!shiny::isTruthy(input$WEAFILE) || !file.exists(input$WEAFILE) ){
-          shinyWidgets::sendSweetAlert(text = "No Weather file found or selected, I will use a generic weather file with 25° and zero wind", 
+          shinyWidgets::sendSweetAlert(text = "No Weather file found or selected, I will use a generic weather file with 20° and 20 km/h wind from south direction blowing towards north (direction 180°).", 
                                        type = "warning")
           file.copy( file.path( this.path::this.dir(), "templates", "Weather.csv" ), file.path(instance_dir, "Weather.csv"))
         } else { 
@@ -160,7 +184,7 @@ proc <- function() {
       # -------------------------------------------------------------
       # Core Arguments
       args <- list(
-        "--sim" = get_fuel_key(input$FUEL_MODEL),
+        "--sim" = Simulator,
         "--nsims" = input$NSIM,
         "--seed" = input$RNG_SEED,
         "--nthreads" = input$SIM_THREADS,
@@ -216,23 +240,23 @@ proc <- function() {
                                                               "bin", "C2F", "Cell2Fire.exe") else file.path(dirname(this.path::this.dir()), 
                                                                                                             "bin", "C2F",
                                                                                                                               "Cell2Fire")
-      
+      flush(logs$log_con)
       # Optional: Print command to R console for debugging
-      cat("Executing:", c2f_bin, paste(cli_args, collapse = " "), "\n")
-      
-      removeNotification("sim_status")
-      print("here1a")
-      shiny::showNotification(ui = "Simulation running...", id = "sim_status",  type = "message")
-      
+      writeLines(paste0("INFO: ", c2f_bin, paste(cli_args, collapse = " ") ),
+                 con =   logs$log_con)
+      flush(logs$log_con)
+       # append mode
       # Execute via system2. Output is pushed to LogFile.txt
       exit_code <- system2(
         command = c2f_bin,
         args = cli_args,
-        stdout = file.path(results_dir, "LogFile.txt"),
-        stderr = file.path(results_dir, "LogFile.txt"),
+        stdout = simLog,
+        stderr = simLog,
         wait = TRUE
       )
       
+      writeLines(readLines(simLog), con =   logs$log_con)
+      flush(logs$log_con)
       # cli_args <- stringr::str_split("--sim S --nsims 3 --seed 123 --nthreads 4 --fmc 66 --scenario 2 --weather random --finalscar --ignitionpoints --input-instance-folder '/archivio/shared/R/Cell2FireR/inst/app/data/PanEU-ITC34/output/firesim_260410_145503' --output-folder '/archivio/shared/R/Cell2FireR/inst/app/data/PanEU-ITC34/output/firesim_260410_145503/results'", 
       #                    " ")
       # results_dir = "/archivio/shared/R/Cell2FireR/inst/app/data/PanEU-ITC34/output/firesim_260410_145503/results"
@@ -246,6 +270,7 @@ proc <- function() {
       # )
       # 
       if (exit_code == 0) { 
+        flush(logs$log_con)
         shinyWidgets::sendSweetAlert(text= "Simulation Finished Successfully! Results are in the output folder.",
                                      type = "success" ) 
         
@@ -253,11 +278,12 @@ proc <- function() {
         # and render them to a leaflet map.
         
       } else { 
-        readLines(logf)
+        flush(logs$log_con)
         shinyWidgets::sendSweetAlert(text= paste("Simulation Failed.  Exit code:", 
                                exit_code, 
-                               "Check log<br>=====<br>", 
-                               paste(readLines(logf), collapse="<br>") ), type = "error" )
+                               "Check logfile here<br>=====<br>"  ), type = "error" )
+        
+        updateTabsetPanel(session, "tabs", selected = "processLogTab")
       }
       
     }, error = function(e) {  

@@ -69,7 +69,7 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                  shiny::actionButton("ignitionsTable", "Ignitions Table", icon=tags$i("🔥") ), 
                                                  shinydashboard::sidebarMenu(id="tabs",
                                                    shinydashboard::menuItem("Map", tabName = "dashboardMap", icon = icon("dashboard")),
-                                                   shinydashboard::menuItem("Process Log", icon = icon("gear"), tabName = "widgets"),
+                                                   shinydashboard::menuItem("Process Log", icon = icon("gear"), tabName = "processLogTab"),
                                                    shinydashboard::menuItem("Inputs", icon = icon("table"),
                                                                             shinydashboard::menuItem("Input Args", icon = icon("sliders-h"), tabName = "inputInstancesInputArgs"),
                                                                            # shinydashboard::menuItem("Input Args2", icon = icon("sliders-h"), tabName = "inputInstancesInputArgs2"),
@@ -140,7 +140,7 @@ ui <-  shinydashboardPlus::dashboardPage(
               # shinydashboardPlus::box( uiOutput("raster_info"),collapsible=TRUE,title="Rasters Info",solidHeader = TRUE )
       ),
 
-      shinydashboard::tabItem(tabName = "widgets",
+      shinydashboard::tabItem(tabName = "processLogTab",
               shinydashboardPlus::box( uiOutput("log"), width=12, collapsible=TRUE,title="Log of process",solidHeader = TRUE,status = "primary"),
 
       ),
