@@ -5,7 +5,6 @@ server <- function(input, output, session) {
   # source("functions_auth.R", local=T)
   ## LOAD STATE ------
   source("functions_state.R", local=T)
-  source("functions_makeCmd.R", local=T)
   
   outfolder<-NULL
   
@@ -105,8 +104,8 @@ server <- function(input, output, session) {
     }
     
     
-    if(duration>10 && type=="error") {
-      shinyWidgets::alert(HTML(text), status="danger")
+    if(duration>10) {
+      shinyWidgets::sendSweetAlert(HTML(text), title=type,html = T)
     }
     logf <- isolate(logfile())
     if(!is.null(logf) && dir.exists(dirname(logf) ) ){
@@ -121,8 +120,9 @@ server <- function(input, output, session) {
     }
 
   }
-
-  
+ 
+  ## RUN SIM STRING ------
+  source("functions_makeCmd.R", local=T)
   # change simulator -----
   observeEvent(input$simulator, {
     
@@ -386,7 +386,7 @@ and raster %s",
   
   # change dataset folder ----
   observeEvent(input$CROWN, {
-    if(input$CROWN){
+    if(!input$CROWN){
       shinyjs::disable("CBH")
       shinyjs::disable("CBD") 
       shinyjs::disable("CCF") 
@@ -1056,9 +1056,10 @@ and raster %s",
       if(isTruthy(isolate(input$inputfolder))){  
         cat("Session ending ", getwd() , "\n")
         tryCatch({
-          save(state, file = file.path(isolate(input$inputfolder), "state.rda") )
+          save(state, file = file.path(this.path::this.dir(), isolate(input$inputfolder), "state.rda") )
         }, warning=function(e){
           browser()
+          
         })
         
         cat("Session ended\n")

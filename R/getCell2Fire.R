@@ -10,8 +10,8 @@ getCell2Fire <- function(outdir) {
   out <- tryCatch({
     
     if (!dir.exists(dest)) {
-      utils::download.file(
-        "https://github.com/fire2a/C2F-W/releases/download/v1.0.1/Cell2FireW_v1.0.1.zip",
+      utils::download.file( 
+        "https://github.com/fpirotti/C2F-W/releases/download/v1.0.1/Cell2FireW_v1.0.1.zip",
         destfile = paste0(dest, ".zip")
       )
       utils::unzip(paste0(dest, ".zip"), exdir = dest)

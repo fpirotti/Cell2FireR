@@ -1,20 +1,39 @@
 # Helper function mapping the UI fuel choices to Cell2Fire's internal string keys
 # (This replaces the NAME["fuel_model_key"] from the Python script)
+# Helper function mapping the UI fuel choices to Cell2Fire's expected single-character flags
 get_fuel_key <- function(fuel_string) {
   fuel_map <- c(
-    "0. Scott & Burgan" = "ScottBurgan",
-    "1. Kitral" = "Kitral",
-    "2. Canada FBP" = "FBP",
-    "3. Portugal" = "Portugal"
+    "0. Scott & Burgan" = "S",
+    "1. Kitral" = "K",
+    "2. Canada FBP" = "C",
+    "3. Portugal" = "P"
   )
-  return(unname(fuel_map[fuel_string]))
+  
+  # Fallback to "S" if the input somehow doesn't match, mirroring the C++ default behavior
+  mapped_val <- unname(fuel_map[fuel_string])
+  if (is.null(mapped_val) || is.na(mapped_val)) {
+    return("S") 
+  }
+  return(mapped_val)
 }
- 
-proc <- function() {   
-  browser()
+
+clean <- function(){
+  # threshold: one week ago
+  cutoff <- Sys.time() - 7 * 24 * 60 * 60 
+  # list all subdirectories
+  dirs <- list.dirs(outfolder, full.names = TRUE, recursive = FALSE) 
+  # get modification times
+  info <- file.info(dirs) 
+  # select old folders
+  old_dirs <- dirs[info$mtime < cutoff] 
+  # remove them (recursively!)
+  unlink(old_dirs, recursive = TRUE, force = TRUE)
+}
+
+
+proc <- function() {  
     req(input$FUEL, input$FUEL_MODEL, input$inputfolder)
-    showNotification("Building Simulation Instance...", id = "sim_status", duration = NULL)
-    
+   
     tryCatch({
       # -------------------------------------------------------------
       # 1. SETUP DIRECTORIES
@@ -27,12 +46,31 @@ proc <- function() {
       dir.create(instance_dir, recursive = TRUE, showWarnings = FALSE)
       dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
       
+      map2instance <- list()
       # Helper to copy and rename files to standard names expected by C2F
       copy_to_instance <- function(filepath, standard_name) {
+        # map2instance <- list()
         if (!is.null(filepath) && filepath != "") {
           ext <- tools::file_ext(filepath)
-          file.copy(filepath, file.path(instance_dir, paste0(standard_name, ".", ext)))
+          map2instance[[paste0(standard_name, ".", ext)]] <<- filepath
+          # file.link()
+          if(standard_name=="fuels"){
+            tf <- terra::rast(filepath)
+            if( as.integer(substr(terra::datatype(tf), 4, 4) ) < 4){
+               
+              shinyWidgets::sendSweetAlert(text = "Fuel is not in 32 or 64 bits, will have to copy it... please upload a dataset with fuel as 32 and 64 bits to avoid this warning",
+                               type = "warning"  )
+              terra::writeRaster(tf, datatype="INT4U",  
+                                 file.path(instance_dir, paste0(standard_name, ".", ext)), 
+                                 overwrite=T
+                                 )
+            } 
+          } else {
+            
+            file.link(filepath, file.path(instance_dir, paste0(standard_name, ".", ext)))
+          }
         }
+        # map2instance
       }
       
       # -------------------------------------------------------------
@@ -64,37 +102,57 @@ proc <- function() {
       # -------------------------------------------------------------
       # 3. WEATHER & IGNITIONS
       # -------------------------------------------------------------
-      if (input$WEATHER_MODE == "0. Single weather file") {
-        req(input$WEAFILE)
-        file.copy(input$WEAFILE, file.path(instance_dir, "Weather.csv"))
-      } else {
+      if (input$WEATHER_MODE == "0. Single weather file") { 
+        if(!shiny::isTruthy(input$WEAFILE) || !file.exists(input$WEAFILE) ){
+          shinyWidgets::sendSweetAlert(text = "No Weather file found or selected, I will use a generic weather file with 25° and zero wind", 
+                                       type = "warning")
+          file.copy( file.path( this.path::this.dir(), "templates", "Weather.csv" ), file.path(instance_dir, "Weather.csv"))
+        } else { 
+          file.copy(input$WEAFILE, file.path(instance_dir, "Weather.csv"))
+        }
+      } else { 
         # Random draw from directory (Looks in the directory of the selected dataset)
-        wea_dir <- dirname(input$WEAFILE)
+        wea_dir <- input$inputfolder
         wea_out <- file.path(instance_dir, "Weathers")
         dir.create(wea_out, showWarnings = FALSE)
-        
+         
         wea_files <- list.files(wea_dir, pattern = "^Weather[0-9]*\\.csv$", full.names = TRUE)
         if (length(wea_files) > 0) {
           file.copy(wea_files, wea_out)
-        } else {
-          stop("Multiple weathers requires a directory with Weather[0-9]*.csv files!")
+        } else { 
+          shinyWidgets::sendSweetAlert(text="Multiple weathers requires a directory with Weather[0-9]*.csv files!", 
+                                  type = "Error" ) 
         }
       }
-      
+       
       if (input$IGNITION_MODE == "2. Single point on a Layer") {
         req(input$IGNIPOINT)
+        
+        if(!shiny::isTruthy(input$IGNIPOINT) || !file.exists(input$IGNIPOINT) ){ 
+          shinyWidgets::sendSweetAlert(text="No ignition points!", 
+                                       type = "Error" ) 
+        } else {
+          fuel_rast <- terra::rast(input$FUEL)
+          ign_pt <- sf::st_read(input$IGNIPOINT, quiet = TRUE)
+          if(is.na(sf::st_is_longlat(ign_pt))){ 
+            if(is.data.frame(ign_pt)) {
+              write.csv(ign_pt, file.path(instance_dir, "Ignitions.csv"), row.names = F)
+            } else { 
+              shinyWidgets::sendSweetAlert(text="Cannot read Ignition points!", 
+                                           type = "Error" ) 
+            }
+          } else {
+            # Match CRS
+            ign_pt <- sf::st_transform(ign_pt, terra::crs(fuel_rast)) 
+            # Get cell index mapping (Cell2Fire uses 1-based indexing top-left to bottom-right)
+            cell_id <- terra::cellFromXY(fuel_rast, sf::st_coordinates(ign_pt)[1, 1:2]) 
+            # Write Ignitions.csv
+            writeLines(c("Year,Ncell", paste0("1,", cell_id)), file.path(instance_dir, "Ignitions.csv")) 
+          }
+        }
         # Assuming IGNIPOINT is a vector file. We extract its coordinate, 
         # map it to the fuel raster to get the cell ID.
-        fuel_rast <- terra::rast(input$FUEL)
-        ign_pt <- sf::st_read(input$IGNIPOINT, quiet = TRUE)
-        # Match CRS
-        ign_pt <- sf::st_transform(ign_pt, terra::crs(fuel_rast))
         
-        # Get cell index mapping (Cell2Fire uses 1-based indexing top-left to bottom-right)
-        cell_id <- terra::cellFromXY(fuel_rast, sf::st_coordinates(ign_pt)[1, 1:2])
-        
-        # Write Ignitions.csv
-        writeLines(c("Year,Ncell", paste0("1,", cell_id)), file.path(instance_dir, "Ignitions.csv"))
       }
       
       # -------------------------------------------------------------
@@ -136,8 +194,8 @@ proc <- function() {
       }
       
       # Directories
-      args[["--input-instance-folder"]] <- shQuote(instance_dir)
-      args[["--output-folder"]] <- shQuote(results_dir)
+      args[["--input-instance-folder"]] <- shQuote( file.path(this.path::this.dir(),  instance_dir))
+      args[["--output-folder"]] <- shQuote( file.path(this.path::this.dir(),  results_dir) )
       
       # Flatten list to a character vector for system2
       cli_args <- character()
@@ -149,41 +207,65 @@ proc <- function() {
         }
       }
       
+ 
       # -------------------------------------------------------------
       # 5. EXECUTE CELL2FIRE
       # -------------------------------------------------------------
-      # Change this path if your Cell2Fire binary lives elsewhere
-      c2f_bin <- if(.Platform$OS.type == "windows") "Cell2Fire.exe" else "./Cell2Fire"
+      # Cell2Fire is  in ../bin/C2F/
+      c2f_bin <- if(.Platform$OS.type == "windows") file.path(dirname(this.path::this.dir()), 
+                                                              "bin", "C2F", "Cell2Fire.exe") else file.path(dirname(this.path::this.dir()), 
+                                                                                                            "bin", "C2F",
+                                                                                                                              "Cell2Fire")
       
       # Optional: Print command to R console for debugging
       cat("Executing:", c2f_bin, paste(cli_args, collapse = " "), "\n")
       
       removeNotification("sim_status")
-      showNotification("Simulation running...", id = "sim_status", duration = NULL, type = "message")
+      print("here1a")
+      shiny::showNotification(ui = "Simulation running...", id = "sim_status",  type = "message")
       
       # Execute via system2. Output is pushed to LogFile.txt
       exit_code <- system2(
         command = c2f_bin,
         args = cli_args,
         stdout = file.path(results_dir, "LogFile.txt"),
-        stderr = "2>&1",
+        stderr = file.path(results_dir, "LogFile.txt"),
         wait = TRUE
       )
       
-      if (exit_code == 0) {
-        removeNotification("sim_status")
-        showNotification("Simulation Finished Successfully! Results are in the output folder.", type = "message")
+      # cli_args <- stringr::str_split("--sim S --nsims 3 --seed 123 --nthreads 4 --fmc 66 --scenario 2 --weather random --finalscar --ignitionpoints --input-instance-folder '/archivio/shared/R/Cell2FireR/inst/app/data/PanEU-ITC34/output/firesim_260410_145503' --output-folder '/archivio/shared/R/Cell2FireR/inst/app/data/PanEU-ITC34/output/firesim_260410_145503/results'", 
+      #                    " ")
+      # results_dir = "/archivio/shared/R/Cell2FireR/inst/app/data/PanEU-ITC34/output/firesim_260410_145503/results"
+      # logf <- file.path(results_dir, "LogFile.txt")
+      # exit_code <- system2(
+      #   command = "/archivio/shared/R/Cell2FireR/inst/bin/C2F/Cell2Fire",
+      #   args = cli_args[[1]],
+      #   stdout = logf,
+      #   stderr = logf,
+      #   wait = TRUE
+      # )
+      # 
+      if (exit_code == 0) { 
+        shinyWidgets::sendSweetAlert(text= "Simulation Finished Successfully! Results are in the output folder.",
+                                     type = "success" ) 
         
         # NOTE: At this point, you would read the shapefiles/rasters from `results_dir` 
         # and render them to a leaflet map.
         
-      } else {
-        removeNotification("sim_status")
-        showNotification(paste("Simulation Failed. Exit code:", exit_code), type = "error")
+      } else { 
+        readLines(logf)
+        shinyWidgets::sendSweetAlert(text= paste("Simulation Failed.  Exit code:", 
+                               exit_code, 
+                               "Check log<br>=====<br>", 
+                               paste(readLines(logf), collapse="<br>") ), type = "error" )
       }
       
-    }, error = function(e) {
-      removeNotification("sim_status")
-      showNotification(paste("Error preparing simulation:", e$message), type = "error")
+    }, error = function(e) {  
+      browser()
+      shiny::showNotification(ui = paste("Error preparing simulation:", e$message) )
+    }, warning = function(e) { 
+      print(e$message) 
+      browser()
+      shiny::showNotification(ui = paste("Error preparing simulation:", e$message) )
     })
   }  
