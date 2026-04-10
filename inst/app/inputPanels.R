@@ -19,17 +19,19 @@ get_existing_files <- function(type="rast" , datasetpath="data") {
 }
 
 SIM_INPUTS <- list(
-  fuels = list(units = "categorical", description = tr("Fuel")),
+  fuel = list(units = "categorical", description = tr("Fuel")),
   elevation = list(units = "m", description = tr("Elevation")),
   cbh = list(units = "m", description = paste0("cbh: ", tr("Canopy Base Height"))),
   cbd = list(units = "kg/m3", description = paste0("cbd: ", tr("Canopy Bulk Density"))),
   ccf = list(units = "0,1", description = paste0("ccf: ", tr("Canopy Cover Fraction"))),
   chm = list(units = "m", description = paste0("chm: ", tr("Canopy Height"))),
-  probabilityMap = list(
+  firebreaks = list(units = "0,1", description = paste0("Fire breaks: ", tr(" Fire breaks"))),
+  ignitionfile = list(
     units = "0,1",
     description = paste0(tr("Probability map"), tr(" (requires generation mode 1)"))
   )
 )
+ 
 
 STATS <- list(
   ros = list(name = tr("Hit Rate Of Spread"), suffix = ""),
@@ -62,33 +64,62 @@ NAME <- list(
 )
 
 PANELS <- list()
+
+
+simout <- sapply(SIM_OUTPUTS, function(x) paste0(x$name, x$suffix))
+simoutf <- names(simout)
+names(simoutf) <- simout
+## OUTPUTS & DIREsimout## OUTPUTS & DIRECTORIES ----
+# PANELS[["OUTPUTS & DIRECTORIES"]] <- list(
+#   
+#   shiny::selectizeInput(
+#     inputId = "OUTPUTS",
+#     label = "Select desired outputs:",
+#     choices = simoutf,
+#     selected = c("Final Fire Scar", "Ignition Points")
+#   ) #,
+#   
+#   # shinyWidgets::materialSwitch("INSTANCE_IN_PROJECT", "Override instance directory", value = FALSE, status = "primary"),
+#   # 
+#   # shinyWidgets::materialSwitch("RESULTS_IN_INSTANCE", "Results in instance folder", value = TRUE, status = "primary") 
+#   
+#   # shiny::textInput("RESULTS_DIR", "Custom Results Directory", placeholder = "Leave empty for default...")
+#   
+# )
+
 ## landscape ----
 PANELS[["LANDSCAPE"]] <- list(
-  shinyWidgets::pickerInput("FUEL_MODEL", "Surface fuel model", choices = NAME$fuel_models),
+  shiny::selectizeInput(
+    inputId = "OUTPUTS", multiple=T,
+    label = "Select desired outputs:",
+    choices = simoutf,
+    selected = c("finalscar", "ignitionpoints")
+  ),
+  shiny::selectInput("FUEL_MODEL", "Surface fuel model", choices = NAME$fuel_models),
 
-  shinyWidgets::pickerInput("FUEL", SIM_INPUTS$fuels$description,
-              choices = get_existing_files(), options = list(`live-search` = TRUE)),
+  shiny::selectInput("FUEL", SIM_INPUTS$fuel$description,
+              choices = get_existing_files() ),
 
-  prettyCheckbox("PAINTFUELS", "Style (paint) fuel raster", value = FALSE, status = "info"),
+  # prettyCheckbox("PAINTFUELS", "Style (paint) fuel raster", value = FALSE, status = "info"),
 
-  shinyWidgets::pickerInput("ELEVATION", paste0(SIM_INPUTS$elevation$description, " [", SIM_INPUTS$elevation$units, "]"),
+  shiny::selectInput("ELEVATION", paste0(SIM_INPUTS$elevation$description, " [", SIM_INPUTS$elevation$units, "]"),
               choices = get_existing_files()),
 
-  shinyWidgets::pickerInput("CBH", paste0(SIM_INPUTS$cbh$description, " [", SIM_INPUTS$cbh$units, "]"),
+  shiny::selectInput("CBH", paste0(SIM_INPUTS$cbh$description, " [", SIM_INPUTS$cbh$units, "]"),
               choices = get_existing_files()),
 
-  shinyWidgets::pickerInput("CBD", paste0(SIM_INPUTS$cbd$description, " [", SIM_INPUTS$cbd$units, "]"),
+  shiny::selectInput("CBD", paste0(SIM_INPUTS$cbd$description, " [", SIM_INPUTS$cbd$units, "]"),
               choices = get_existing_files()),
 
-  shinyWidgets::pickerInput("CCF", paste0(SIM_INPUTS$ccf$description, " [", SIM_INPUTS$ccf$units, "]"),
+  shiny::selectInput("CCF", paste0(SIM_INPUTS$ccf$description, " [", SIM_INPUTS$ccf$units, "]"),
               choices = get_existing_files()),
 
-  shinyWidgets::pickerInput("CHM", paste0(SIM_INPUTS$chm$description, " [", SIM_INPUTS$chm$units, "] (only Scott & Burgan)"),
+  shiny::selectInput("CHM", paste0(SIM_INPUTS$chm$description, " [", SIM_INPUTS$chm$units, "] (only Scott & Burgan)"),
               choices = get_existing_files()),
 
   shinyWidgets::prettySwitch("CROWN", "Enable Crown Fire behavior", value = FALSE, status = "danger"),
 
-  shinyWidgets::pickerInput("FIREBREAKS", "Firebreaks raster (1=firebreak)", choices = get_existing_files())
+  shiny::selectInput("FIREBREAKS", "Firebreaks raster (1=firebreak)", choices = get_existing_files())
 )
 
 
@@ -96,15 +127,16 @@ PANELS[["LANDSCAPE"]] <- list(
 PANELS[["IGNITION SECTION"]] <- list(
   shiny::numericInput("NSIM", "Number of simulations", value = 3, min = 1),
 
-  shinyWidgets::pickerInput("IGNITION_MODE", "Generation mode", choices = NAME$ignition_modes),
+  shiny::selectInput("IGNITION_MODE", "Generation mode", choices = NAME$ignition_modes),
 
-  shinyWidgets::pickerInput("IGNIPROBMAP", "Probability map [0,1]", choices = get_existing_files()),
+  shiny::selectInput("IGNITIONFILE", "Probability map [0,1]", paste0(SIM_INPUTS$ignitionfile$description, " [", SIM_INPUTS$ignitionfile$units, "]"),
+                            choices = get_existing_files()),
 
   shiny::div( title="", enabled=FALSE,
-    shinyWidgets::pickerInput("IGNIPOINT", "Single point vector layer", choices = get_existing_files())
+    shiny::selectInput("IGNIPOINT", "Single points  layer", choices = get_existing_files())
   ) ,
 
-  shiny::sliderInput("IGNIRADIUS", "Radius around single point", min = 0, max = 11, value = 0)
+  shiny::sliderInput("IGNIRADIUS", "Radius around single point", min = 0, max = 11, value = 1)
 
 
 )
@@ -115,9 +147,9 @@ PANELS[["WEATHER & CONFIG"]] <- list(
 
   div(title="for Single Weather File you must pick a file, for random choice 
  from directory it will look into the directory of the selected dataset.",
-      shinyWidgets::pickerInput("WEATHER_MODE", "Source mode", choices = NAME$weather_modes) ),
+      shiny::selectInput("WEATHER_MODE", "Source mode", choices = NAME$weather_modes) ),
 
-  shinyWidgets::pickerInput("WEAFILE", "Single weather file (.csv)", choices = get_existing_files("\\.csv$")),
+  shiny::selectInput("WEAFILE", "Single weather file (.csv)", choices = get_existing_files("\\.csv$")),
 
   # shiny::textInput("WEADIR", "Weather directory path", placeholder = "/path/to/weather/"),
 
@@ -133,21 +165,3 @@ PANELS[["WEATHER & CONFIG"]] <- list(
 )
 
 
-
-## OUTPUTS & DIRECTORIES ----
-PANELS[["OUTPUTS & DIRECTORIES"]] <- list(
-
-  shinyWidgets::multiInput(
-    inputId = "OUTPUTS",
-    label = "Select desired outputs:",
-    choices = sapply(SIM_OUTPUTS, function(x) paste0(x$name, x$suffix)),
-    selected = c("Final Fire Scar", "Ignition Points")
-  ) #,
-
-  # shinyWidgets::materialSwitch("INSTANCE_IN_PROJECT", "Override instance directory", value = FALSE, status = "primary"),
-  # 
-  # shinyWidgets::materialSwitch("RESULTS_IN_INSTANCE", "Results in instance folder", value = TRUE, status = "primary") 
-
-  # shiny::textInput("RESULTS_DIR", "Custom Results Directory", placeholder = "Leave empty for default...")
-
-)

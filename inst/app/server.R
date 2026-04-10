@@ -5,13 +5,14 @@ server <- function(input, output, session) {
   # source("functions_auth.R", local=T)
   ## LOAD STATE ------
   source("functions_state.R", local=T)
+  source("functions_makeCmd.R", local=T)
+  
+  outfolder<-NULL
+  
+  cat("Session starting ", getwd() , "\n")
+  # runjs('$("#runsim").prop("disabled", true);')
   options(shiny.maxRequestSize = 100 * 1024^2)  # 100 MB
   # rasterInfo <- reactiveVal(NULL)
-  ignitionFiles <- NULL
-  weatherFiles <- NULL
-  rasters <- list()
-  terra.rasters <- list()
-  ignitionPointsCoords <- reactiveVal(NULL)
   weatherDataTable <- reactiveVal( 
     data.frame(
       Instance ="",
@@ -32,9 +33,16 @@ server <- function(input, output, session) {
   currentRasterStack <- NULL
   lut_fbp_local <- reactiveVal(NULL)
   logfile <- reactiveVal(NULL)
+  ignitionFiles <- NULL
+  weatherFiles <- NULL
+  rasters <- list()
+  terra.rasters <- list()
+  ignitionPointsCoords <- reactiveVal(NULL)
+  
   rasterFiles <- reactiveVal(NULL)
-  weatherFiles <- reactiveVal(NULL)
-  ignitionFiles <- reactiveVal(NULL)
+  csvFiles <- reactiveVal(NULL)
+  # weatherFiles <- reactiveVal(NULL)
+  # ignitionFiles <- reactiveVal(NULL)
   lut_generic <- lut_fbp
   ## reactive log file  ----
   log_reader <- reactivePoll(
@@ -129,9 +137,18 @@ Work in progress....",  input="textarea")
     
   })
   
+  # change CSV files stack -----
+  observeEvent(csvFiles(),{ 
+    shiny::updateSelectInput(inputId = "WEAFILE", 
+                             choices =  csvFiles() ,
+                             selected =  ""   )
+    shiny::updateSelectInput(inputId = "IGNIPOINT", 
+                             choices =  csvFiles() ,
+                             selected =  ""   )
+  })
   # change RASTER stack -----
   observeEvent(rasterFiles(),{
-    req(rasterFiles())
+    req(rasterFiles()) 
     ### READ RASTERS ----
     withProgress(message = 'Adding layers',  value = 0, {
       ## UPDATE LEAFLET ------
@@ -144,6 +161,11 @@ Work in progress....",  input="textarea")
       rasters <<- list()
       rfiles<- rasterFiles()
       names(rfiles) <- basename(rfiles)
+      for(wg in names(SIM_INPUTS)){
+        # print(toupper(wg))
+        shiny::updateSelectInput(inputId = toupper(wg),
+                                        choices =  rfiles, selected=""  )
+      }
       strt <- 0 
       for(fi in rfiles){
         strt <- strt + 1  
@@ -153,7 +175,7 @@ Work in progress....",  input="textarea")
         incProgress( strt/(length(rfiles)+2), detail = sprintf("Adding layer %s", layerName) )
         
         r2 <- terra::rast(fi)
-        terra.rasters[[layerName]] <- r2
+        terra.rasters[[layerName]] <<- r2
         ## check alignment between rasters -----
         if(length(rasters)>0){
           if(!compareGeom(terra::rast(rasters[[1]]), r2, stopOnError = FALSE) ){
@@ -193,12 +215,15 @@ and raster %s",
         #### FUEL map ------
         if(grepl("forest|fuel", layerName, ignore.case = T) ){
           r2 <- terra::as.factor(r2) 
+ 
           levs <- data.frame(
             value = lut_fbp$grid_value,
             class = lut_fbp$descriptive_name,
             fuel = lut_fbp$fuel_type,
             color =   rgb(lut_fbp$r, lut_fbp$g, lut_fbp$b, maxColorValue = 255)
           )
+          
+          
           lut_generic <- lut_fbp
           if(isScottBurgan(r2)){ 
             levs <- data.frame(
@@ -209,14 +234,25 @@ and raster %s",
             )
             lut_generic <- lut_sb
           }
+          
+          nl <- levs[1, ]
+          nl$value <- 0; nl$class<- "N.A."; nl$fuel<- "N.A."; nl$color<- "#00000000";
+          if(nrow(levs[levs$value==0,])==0) {
+            levs <- rbind(nl , levs)
+          } else {
+            levs[levs$value==0,] <- nl 
+          }
           levels(r2) <- levs
-          copts <- leafem::colorOptions(palette = levs$color, domain=levs$value) 
+          # browser()
+          copts <- leafem::colorOptions(palette = levs$color, domain=levs$value,
+                                        na.color = "#00000000") 
           
           na.color = "transparent"
-          rasters[["FUEL"]] <- terra::sources(r2)[[1]]
-          shinyWidgets::updatePickerInput(inputId = "FUEL", 
+          rasters[["FUEL"]] <<- terra::sources(r2)[[1]]
+          shiny::updateSelectInput(inputId = "FUEL", 
                                           choices =  rfiles ,
-                                          selected = basename(rasters[["FUEL"]]) )
+                                          selected =   rasters[["FUEL"]]   )
+       
           
         } else {
           v <- spatSample(r2, size = 1e4, method = "regular", na.rm = TRUE)
@@ -226,42 +262,42 @@ and raster %s",
           domain  = rrange 
           copts <- colorOptions(palette=palette,
                                 domain=unname(domain),
-                                na.color = "#eaeaea00")
+                                na.color = "#00000000")
         }
         
         
         if(grepl("elev|dtm|dem", layerName, ignore.case = T) ){ 
-          rasters[["ELEVATION"]] <- terra::sources(r2)[[1]] 
-          shinyWidgets::updatePickerInput(inputId = "ELEVATION", 
+          rasters[["ELEVATION"]] <<- terra::sources(r2)[[1]] 
+          shiny::updateSelectInput(inputId = "ELEVATION", 
                                           choices =  rfiles ,
-                                          selected = basename(rasters[["ELEVATION"]]) )
+                                          selected =  rasters[["ELEVATION"]]  )
         }  else if(grepl("cbd|bulk", layerName, ignore.case = T) ){ 
-          rasters[["CBD"]] <- terra::sources(r2)[[1]]
-          shinyWidgets::updatePickerInput(inputId = "CBD", 
+          rasters[["CBD"]] <<- terra::sources(r2)[[1]]
+          shiny::updateSelectInput(inputId = "CBD", 
                                           choices =  rfiles ,
-                                          selected = basename(rasters[["CBD"]]) )
+                                          selected =  rasters[["CBD"]]  )
         }  else if(grepl("cbh|base", layerName, ignore.case = T) ){ 
-          rasters[["CBH"]] <- terra::sources(r2)[[1]]
-          shinyWidgets::updatePickerInput(inputId = "CBH", 
+          rasters[["CBH"]] <<- terra::sources(r2)[[1]]
+          shiny::updateSelectInput(inputId = "CBH", 
                                           choices =  rfiles ,
-                                          selected = basename(rasters[["CBH"]]) )
+                                          selected =  rasters[["CBH"]]  )
         }  else if(grepl("ccf|cover", layerName, ignore.case = T) ){ 
-          rasters[["CCF"]] <- terra::sources(r2)[[1]]
-          shinyWidgets::updatePickerInput(inputId = "CCF", 
+          rasters[["CCF"]] <<- terra::sources(r2)[[1]]
+          shiny::updateSelectInput(inputId = "CCF", 
                                           choices =  rfiles ,
-                                          selected = basename(rasters[["CCF"]]) )
+                                          selected =  rasters[["CCF"]]   )
         }  else if(grepl("ch|height", layerName, ignore.case = T) ){ 
-          rasters[["CHM"]] <- terra::sources(r2)[[1]]
-          shinyWidgets::updatePickerInput(inputId = "CHM", 
+          rasters[["CHM"]] <<- terra::sources(r2)[[1]]
+          shiny::updateSelectInput(inputId = "CHM", 
                                           choices =  rfiles ,
-                                          selected = basename(rasters[["CHM"]]) )
+                                          selected =  rasters[["CHM"]]  )
         }  else if(grepl("breaks", layerName, ignore.case = T) ){ 
-          rasters[["FIREBREAKS"]] <- terra::sources(r2)[[1]]
-          shinyWidgets::updatePickerInput(inputId = "FIREBREAKS", 
+          rasters[["FIREBREAKS"]] <<- terra::sources(r2)[[1]]
+          shiny::updateSelectInput(inputId = "FIREBREAKS", 
                                           choices =  rfiles ,
-                                          selected = basename(rasters[["FIREBREAKS"]]) )
+                                          selected = rasters[["FIREBREAKS"]] )
         } else {
-          rasters[[layerName]] <- terra::sources(r2)[[1]] 
+          rasters[[layerName]] <<- terra::sources(r2)[[1]] 
         }
         
          
@@ -269,7 +305,7 @@ and raster %s",
           min = 0,
           max = 1,
           step = 0.1,
-          default = 1,
+          default = 0.85,
           width = '100%',
           class = 'opacity-slider'
         )
@@ -289,8 +325,11 @@ and raster %s",
                                                                               prefix="",
                                                                               position="bottomright",
                                                                               noData = "NA"),
-                                layerId = gsub(" ", "", layerName)) |>
-          leaflet::hideGroup( layerName )
+                                layerId = gsub(" ", "", layerName))
+          if(!grepl("forest|fuel", layerName, ignore.case = T) ){
+            leaflet::leafletProxy("map")   |> leaflet::hideGroup( layerName )
+          }
+           
       }
     })
     
@@ -337,34 +376,50 @@ and raster %s",
     
     if(is.null(currentRasterStack)){
       showNotification(
-        "No Forest raster file found, please read Cell2Fire documentation on how to prepare a dataset",
+        "No Forest raster file found, please read  documentation on how to prepare a dataset",
         type = "error",
-        duration = 6
+        duration = 12
       )
     }
     
   })
+  
+  # change dataset folder ----
+  observeEvent(input$CROWN, {
+    if(input$CROWN){
+      shinyjs::disable("CBH")
+      shinyjs::disable("CBD") 
+      shinyjs::disable("CCF") 
+      shinyjs::disable("CHM")
+    } else {
+      shinyjs::enable("CBH")
+      shinyjs::enable("CBD") 
+      shinyjs::enable("CCF") 
+      shinyjs::enable("CHM")
+    }
+  })
   # change dataset folder ----
   observeEvent(input$inputfolder, {
     req(input$inputfolder)
+    # runjs('$("#runsim").prop("disabled", false);')
     loadState() 
-    outfolder <- file.path(input$inputfolder, "output")
+    outfolder <<- file.path(input$inputfolder, "output")
     dir.create(outfolder, recursive = TRUE, showWarnings = FALSE)
     file.create(file.path(outfolder, "Logfile.log"), showWarnings = FALSE)
     logfile(file.path(outfolder, "Logfile.log"))
-    if(dir.exists(outfolder)){
-      showNotification(
-        paste0("Directory ", outfolder, " exists, files will be overwritten if you continue!"),
-        type = "warning",
-        duration = 8
-      )
-    } else {
-      showNotification(
-        paste0("Output Directory: <b>", outfolder, "</b> does not exist and will be created"),
-        type = "INFO",
-        duration = 0
-      )
-    }
+    # if(dir.exists(outfolder)){
+    #   showNotification(
+    #     paste0("Directory ", outfolder, " exists, files will be overwritten if you continue!"),
+    #     type = "warning",
+    #     duration = 0
+    #   )
+    # } else {
+    #   showNotification(
+    #     paste0("Output Directory: <b>", outfolder, "</b> does not exist and will be created"),
+    #     type = "INFO",
+    #     duration = 0
+    #   )
+    # }
  
  
     ip <- NULL
@@ -378,17 +433,19 @@ and raster %s",
     # )
     rasterFiles(
       list.files(
-        path = input$inputfolder,
+        path = normalizePath(input$inputfolder),
         pattern = "\\.(asc|tif|tiff)$",
         full.names = TRUE,
         ignore.case = TRUE
      )
     )
-    csvfiles <- list.files(
-      path = input$inputfolder,
+    csvFiles(
+      list.files(
+      path =  normalizePath(input$inputfolder),
       pattern = "\\.(csv)$",
       full.names = TRUE,
       ignore.case = TRUE
+     )
     )
 
     ignitionFiles <<- list.files(
@@ -424,8 +481,8 @@ and raster %s",
                                     clearOptions = T  )
     
     shinyWidgets::updatePickerInput(inputId = "WEAFILE",
-                                    choices = weatherFiles,
-                                    clearOptions = T, 
+                                    # choices = weatherFiles,
+                                    # clearOptions = T, 
                                     selected = weatherFiles[[1]]  )
     
  
@@ -477,9 +534,10 @@ and raster %s",
 
 
     ## FBP FILE ----
-    fbpFile <-  grep("fbp_lookup_table", basename(tolower(csvfiles)), ignore.case = T )
+    fbpFile <-  grep("fbp_lookup_table", basename(tolower(isolate(csvFiles()) )), 
+                     ignore.case = T )
     if(length(fbpFile)>0){
-      lut_fbp_local(read.csv(csvfiles[[fbpFile[[1]]]] ))
+      lut_fbp_local(read.csv(csvFiles[[fbpFile[[1]]]] ))
     } else {
       showNotification(
         paste0("Did not find file fbp_lookup_table.csv! Will fall back to default template file in 'templates' folder."),
@@ -488,8 +546,6 @@ and raster %s",
       )
       lut_fbp_local(lut_generic)
     }
-
-
 
   })
 
@@ -500,7 +556,7 @@ and raster %s",
 
   # CLICK mode ----
   observeEvent(input$map_mode, {
-    print(input$map_mode)
+    # print(input$map_mode)
     if(input$map_mode==""){
       runjs("document.getElementById('map').style.cursor = null;")
     }
@@ -635,16 +691,16 @@ and raster %s",
     DT::datatable(
       ip,
       escape = FALSE,
-      extensions = "Buttons",
+      # extensions = "Buttons",
       editable = FALSE ,
       options = list(
-        dom = "Bfrtip",
+        # dom = "Bfrtip",
         columnDefs = list(
           list(
             targets = ncol(ip),
             render = JS(
               "function(data, type, row, meta) {
-                      return '<button onclick=\"mymap.flyTo(['+row[4]+', '+row[3]+'], 10);\">🔎</button>';
+                      return '<button onclick=\"mymap.flyTo(['+row[4]+', '+(parseFloat(row[3])+0.02)+'], 14);\">🔎</button>';
            }"
             )
           )
@@ -736,13 +792,17 @@ and raster %s",
   observeEvent(input$overwrite_file_confirm_yes, {
     req(input$chooseIgnitionFile) 
     save_table_ignition_final(T) 
+    removeModal()
   })
   
   observeEvent(input$overwrite_file_confirm_newFile, {
-    save_table_ignition_final(F) 
+    save_table_ignition_final(F)
+    removeModal() 
   })
+  
   ## updates side bar ignition ----
   observeEvent(input$ignitionsTable, {
+    updateTabsetPanel(session, "tabs", selected = "dashboardMap")
     updateBoxSidebar("ignitionSideBar")
   })
   
@@ -764,7 +824,7 @@ and raster %s",
     ipt <- na.omit(ip)
     leafletProxy("map") |> leaflet::clearMarkers()
     for(i in 1:nrow(ipt)){
-      print(ipt[i,  ])
+      # print(ipt[i,  ])
       leafletProxy("map") |>
         addAwesomeMarkers(  as.numeric(ipt[i, 3] ),
                    as.numeric(ipt[i, 4]),
@@ -827,9 +887,9 @@ and raster %s",
         sendSweetAlert(
           session = session,
           title = "Sorry!", html=T,
-          text = "Ignition point is not over a valid value but over 
+          text = HTML("Ignition point is not over a valid value but over 
                             an NA value, will not add ignition point.<br> 
-          <b>Please make sure it overlaps data in input rasters.</b>",
+          <b>Please make sure it overlaps data in input rasters.</b>"),
           type = "warning"
         ) 
         return(NA)
@@ -953,11 +1013,21 @@ and raster %s",
     }
   )
   
-  
+ 
   # RUN CELL2FIRE ------
   observeEvent(input$runsim, {
-     cmd <- "FlamMap.exe /in:input.fmp /out:output /log:log.txt"
-    Cell2FireR::cell2fire_run(input)
+ 
+    cmd <- "FlamMap.exe /in:input.fmp /out:output /log:log.txt"
+    if(!isTruthy(input$inputfolder)){
+      shinyWidgets::sendSweetAlert(
+        title=NULL, 
+        text="Please choose a dataset to run simulations!", 
+                                   status = "warning")
+       
+    }
+    proc()
+    browser()
+    # Cell2FireR::cell2fire_run(input)
     # cell2fire_run(c("--input-instance-folder", input$inputfolder,
     #                 "--output-folder", "../Sub40x40", 
     #                 "--ignitions", "1",
@@ -982,7 +1052,17 @@ and raster %s",
   ## END SESSION ----
   observe({
     session$onSessionEnded(function(inp=input) { 
-      saveState()
+      state <- isolate(reactiveValuesToList(input))
+      if(isTruthy(isolate(input$inputfolder))){  
+        cat("Session ending ", getwd() , "\n")
+        tryCatch({
+          save(state, file = file.path(isolate(input$inputfolder), "state.rda") )
+        }, warning=function(e){
+          browser()
+        })
+        
+        cat("Session ended\n")
+      }
       # cleanup qui
     })
   })

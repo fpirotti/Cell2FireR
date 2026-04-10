@@ -1,26 +1,36 @@
 # ui.R
 ui <-  shinydashboardPlus::dashboardPage(
   options = list(sidebarExpandOnHover = TRUE),
-  header = shinydashboardPlus::dashboardHeader(title = "🔥 Wildfire-Sim🔥",
+  header = shinydashboardPlus::dashboardHeader(title = HTML("<div title='Wildfire-Sim: Learning Wildfire Behaviour with Interaction with Spatial Data'>🔥 Wildfire-Sim🔥</div>"),
                                                leftUi = tagList( 
                                                    div(style="margin-bottom:-15px;", 
                                                        title="Do you want to keep seeing the help tooltips or not?",
                                                        switchInput(  
                                                          size = "sm",
                                                          inputId = "tooltips",  
-                                                         value = FALSE, 
-                                                         width ="200px",
+                                                         value = FALSE, inline = T,
+                                                         # width ="200px",
                                                          label = "Tooltips" 
                                                       ) 
                                                    ), 
                                                    div(style="margin-bottom:-15px;", 
                                                        title="Size of tooltip text",
-                                                       numericInputIcon("tooltipsSize" , 
-                                                                        size = "sm", 
-                                                                        width ="60px",
+                                                       numericInput("tooltipsSize" , 
+                                                                        # size = "sm", 
+                                                                        # inline = T,
+                                                                        width="60px",
                                                          value = 13, min = 10, max = 24, step = 1,
                                                          label=NULL
                                                        ) 
+                                                   ), 
+                                                  div(  # style="margin-bottom:-15px;", 
+                                                       title="Quick overview of functionalities",
+                                                       actionBttn("runTooltips" , 
+                                                                        size = "sm", 
+                                                                  # icon = icon("chalkboard-teacher"), 
+                                                                  inline = T,
+                                                                  style = "simple",
+                                                                 label="🎓 overview"  ) 
                                                    )
                                                )
                                                ),
@@ -57,7 +67,7 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                  shiny::actionButton("runsim", "Run", icon=icon("fire"),  
                                                                      title="From the  Fire2a research group at University of Chile, a big-scale, grid, forest fire simulator; parallel and fast (c++)  " ),
                                                  shiny::actionButton("ignitionsTable", "Ignitions Table", icon=tags$i("🔥") ), 
-                                                 shinydashboard::sidebarMenu(
+                                                 shinydashboard::sidebarMenu(id="tabs",
                                                    shinydashboard::menuItem("Map", tabName = "dashboardMap", icon = icon("dashboard")),
                                                    shinydashboard::menuItem("Process Log", icon = icon("gear"), tabName = "widgets"),
                                                    shinydashboard::menuItem("Inputs", icon = icon("table"),

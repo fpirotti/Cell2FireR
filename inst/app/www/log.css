@@ -12,6 +12,9 @@
 .main-header .logo {
   letter-spacing: 0.05em;
 }
+#tooltipsSize {
+  height:30px !important;
+}
 #openmeteocloudButton {
   cursor:pointer;  
   padding:3px;

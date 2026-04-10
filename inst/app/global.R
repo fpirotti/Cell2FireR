@@ -171,7 +171,7 @@ createLeaflet <- function(){
         opacity=0.6
       ),
       attribution = "Copernicus Land Monitoring Service"
-    ) |>
+    ) |> hideGroup(clcLayerName) |>
     setView(
       lng = default_center["lng"],
       lat = default_center["lat"],

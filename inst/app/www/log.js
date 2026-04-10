@@ -5,6 +5,30 @@ var infoPanelButton = null;
 var mymap = null;
 var ttinstances = null;
 
+
+var tooltipsStrings = {
+  Instance: "Instance",
+  datetime: "Date and time of  specific weather scenario", 
+  RH: "💧 Relative Humidity: % of moisture in the air",
+  WD: "🧭 Dir: wind source direction in degrees where 0° is from East to West and values increase clockwise",
+  WS: "💨 Wind speed in km/h",
+  TMP: "🌡️ Temp: air temperature in °C",
+  FFMC: "🔥 FFMC: Fine Fuel Moisture Code (0–100+) — dryness of fine fuels, easier ignition — see EFFIS FWI system <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast target=_blank>LINK HERE</a>",
+  DMC:  "🌾 DMC: Duff Moisture Code (0–200+) — moisture of medium fuels, influences fuel availability — see EFFIS FWI system <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast  target=_blank>LINK HERE</a>",
+  DC:   "🏜️ DC: Drought Code (0–800+) — deep layer dryness, longer lasting fires — see EFFIS FWI system <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast target=_blank >LINK HERE</a>",
+  ISI:  "🌬️ ISI: Initial Spread Index (0–15+) — expected potential fire spread combining wind & FFMC — see EFFIS FWI description <a href=https://docs.argos-emergency.com/en/docs/data/hazard/nwp/effis.html target=_blank >LINK HERE</a>",
+  BUI:  "🌲 BUI: Buildup Index (0–180+) — total fuel available combining DMC+DC — see EFFIS FWI description <a href=https://docs.argos-emergency.com/en/docs/data/hazard/nwp/effis.html  target=_blank>LINK HERE</a>",
+  FWI:  "🔥📈 FWI: Fire Weather Index (0–50+) — overall fire danger rating combining ISI & BUI — see EFFIS overview <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast  target=_blank>LINK HERE</a>"
+
+};
+
+
+
+function runToolTipsEdu(){
+  
+}
+
+
 function makeTooltips(size=12){
   
   $('[title]').each(function() {
@@ -26,24 +50,6 @@ function makeTooltips(size=12){
   
    
 }
-
-
-var tooltipsStrings = {
-  Instance: "Instance",
-  datetime: "Date and time of  specific weather scenario", 
-  RH: "💧 Relative Humidity: % of moisture in the air",
-  WD: "🧭 Dir: wind source direction in degrees where 0° is from East to West and values increase clockwise",
-  WS: "💨 Wind speed in km/h",
-  TMP: "🌡️ Temp: air temperature in °C",
-  FFMC: "🔥 FFMC: Fine Fuel Moisture Code (0–100+) — dryness of fine fuels, easier ignition — see EFFIS FWI system <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast target=_blank>LINK HERE</a>",
-  DMC:  "🌾 DMC: Duff Moisture Code (0–200+) — moisture of medium fuels, influences fuel availability — see EFFIS FWI system <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast  target=_blank>LINK HERE</a>",
-  DC:   "🏜️ DC: Drought Code (0–800+) — deep layer dryness, longer lasting fires — see EFFIS FWI system <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast target=_blank >LINK HERE</a>",
-  ISI:  "🌬️ ISI: Initial Spread Index (0–15+) — expected potential fire spread combining wind & FFMC — see EFFIS FWI description <a href=https://docs.argos-emergency.com/en/docs/data/hazard/nwp/effis.html target=_blank >LINK HERE</a>",
-  BUI:  "🌲 BUI: Buildup Index (0–180+) — total fuel available combining DMC+DC — see EFFIS FWI description <a href=https://docs.argos-emergency.com/en/docs/data/hazard/nwp/effis.html  target=_blank>LINK HERE</a>",
-  FWI:  "🔥📈 FWI: Fire Weather Index (0–50+) — overall fire danger rating combining ISI & BUI — see EFFIS overview <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast  target=_blank>LINK HERE</a>"
-
-};
-
 
 
 
