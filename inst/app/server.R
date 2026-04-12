@@ -73,8 +73,11 @@ server <- function(input, output, session) {
             file=logs$logfileSim, append = T)
       } 
     } else {
-      cat("Process finished with status: ", p$get_exit_status(), "\n","\n","\n", 
+      cat("
+====  Process finished with status: ", p$get_exit_status(), "\n","
+=========================\n", 
           file=logs$logfileSim, append = T)
+      
       simProcess(NULL)  # stop polling
     }
   })
@@ -1062,7 +1065,8 @@ and raster %s",
                                    status = "warning")
        
     }
-    proc()
+    
+    proc(F)
     
     # Cell2FireR::cell2fire_run(input)
     # cell2fire_run(c("--input-instance-folder", input$inputfolder,

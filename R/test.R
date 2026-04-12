@@ -25,4 +25,4 @@ cmd_args <- list(
 
 # 2. Instantiate and run
 # This triggers the initialize() -> run() sequence inside the R6 class
- # sim <- Cell2FireR::Cell2FireC$new(cmd_args)
+# sim <- Cell2FireR::Cell2FireC$new(cmd_args)

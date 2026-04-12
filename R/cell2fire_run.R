@@ -91,7 +91,7 @@ cell2fire_run <- function(input) {
     copy_raster(input$IGNIPROBMAP, "probabilityMap")
     args <- c(args, "--ignitions")
     
-  } else if (input$IGNITION_MODE == "2. Single point on a Layer") {
+  } else if (input$IGNITION_MODE == "2. Single points on a Layer") {
     args <- c(args, "--ignitions", "--IgnitionRad", input$IGNIRADIUS)
     
     if (!is.null(input$IGNIPOINT) && input$IGNIPOINT != "") {

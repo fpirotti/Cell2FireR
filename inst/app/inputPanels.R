@@ -46,6 +46,7 @@ STATS <- list(
 )
 
 SIM_OUTPUTS <- list(
+  'final-grid' = list(name = tr("Generate final grid"), suffix=""),
   finalscar = list(name = tr("Final Fire Scar"), suffix = ""),
   propagationscars = list(name = tr("Propagation Fire Scars"), suffix = ""),
   propagationdigraph = list(name = tr("Propagation Directed Graph"), suffix = ""),
@@ -58,7 +59,7 @@ NAME <- list(
   ignition_modes = c(
     "0. Uniformly distributed random ignition",
     "1. Probability map distributed random ignition",
-    "2. Single point on a Layer"
+    "2. Single points on a Layer"
   ),
   weather_modes = c("0. Single weather file", "1. Random draw from directory")
 )
@@ -70,31 +71,27 @@ simout <- sapply(SIM_OUTPUTS, function(x) paste0(x$name, x$suffix))
 simoutf <- names(simout)
 names(simoutf) <- simout
 ## OUTPUTS & DIREsimout## OUTPUTS & DIRECTORIES ----
-# PANELS[["OUTPUTS & DIRECTORIES"]] <- list(
-#   
-#   shiny::selectizeInput(
-#     inputId = "OUTPUTS",
-#     label = "Select desired outputs:",
-#     choices = simoutf,
-#     selected = c("Final Fire Scar", "Ignition Points")
-#   ) #,
-#   
-#   # shinyWidgets::materialSwitch("INSTANCE_IN_PROJECT", "Override instance directory", value = FALSE, status = "primary"),
-#   # 
-#   # shinyWidgets::materialSwitch("RESULTS_IN_INSTANCE", "Results in instance folder", value = TRUE, status = "primary") 
-#   
-#   # shiny::textInput("RESULTS_DIR", "Custom Results Directory", placeholder = "Leave empty for default...")
-#   
-# )
+PANELS[["OUTPUTS OPTIONS"]] <- list(
+  shinyWidgets::prettySwitch("VERBOSE", "Verbose", value = TRUE, status = "danger"),
+
+  shiny::selectizeInput(
+    inputId = "OUTPUTS", multiple=T,
+    label = "Select desired outputs / boolean options:",
+    choices = simoutf,
+    selected = c("finalscar", "ignitionpoints")
+  )
+
+  # shinyWidgets::materialSwitch("INSTANCE_IN_PROJECT", "Override instance directory", value = FALSE, status = "primary"),
+  #
+  # shinyWidgets::materialSwitch("RESULTS_IN_INSTANCE", "Results in instance folder", value = TRUE, status = "primary")
+
+  # shiny::textInput("RESULTS_DIR", "Custom Results Directory", placeholder = "Leave empty for default...")
+
+)
 
 ## landscape ----
 PANELS[["LANDSCAPE"]] <- list(
-  shiny::selectizeInput(
-    inputId = "OUTPUTS", multiple=T,
-    label = "Select desired outputs:",
-    choices = simoutf,
-    selected = c("finalscar", "ignitionpoints")
-  ),
+ 
   shiny::selectInput("FUEL_MODEL", "Surface fuel model", choices = NAME$fuel_models),
 
   shiny::selectInput("FUEL", SIM_INPUTS$fuel$description,

@@ -32,13 +32,15 @@ clean <- function(){
 }
 
 
-proc <- function() {  
+proc <- function(dry=T) {  
     req(input$FUEL, input$FUEL_MODEL, input$inputfolder)
   
-  showNotification(text=c("
+  if(!dry)  showNotification(text=c("
 ========================================
 ====== SIMULATION STARTING =============
 ========================================")  )
+ 
+
     tryCatch({
       # -------------------------------------------------------------
       # 1. SETUP DIRECTORIES
@@ -63,16 +65,17 @@ proc <- function() {
             tf <- terra::rast(filepath)
             if( as.integer(substr(terra::datatype(tf), 4, 4) ) < 4){
                
-              showNotification(text = "Fuel is not in 32 or 64 bits, will have to copy it... please upload a dataset with fuel as 32 and 64 bits to avoid this warning",
+              if(!dry){
+                showNotification(text = "Fuel is not in 32 or 64 bits, will have to copy it... please upload a dataset with fuel as 32 and 64 bits to avoid this warning",
                                type = "warning"  )
-              terra::writeRaster(tf, datatype="INT4U",  
+               terra::writeRaster(tf, datatype="INT4U",  
                                  file.path(instance_dir, paste0(standard_name, ".", ext)), 
                                  overwrite=T
                                  )
+              }
             } 
-          } else {
-            
-            file.link(filepath, file.path(instance_dir, paste0(standard_name, ".", ext)))
+          } else { 
+            if(!dry)  file.link(filepath, file.path(instance_dir, paste0(standard_name, ".", ext)))
           }
         }
         # map2instance
@@ -84,15 +87,14 @@ proc <- function() {
       copy_to_instance(input$FUEL, "fuels")
       copy_to_instance(input$ELEVATION, "elevation") 
       
-      if (input$CROWN) {
-        
-        showNotification(text=c("CROWN info available and used")  ) 
+      if (input$CROWN) { 
+        if(!dry) showNotification(text=c("CROWN info available and used")  ) 
         copy_to_instance(input$CBH, "cbh")
         copy_to_instance(input$CBD, "cbd")
         copy_to_instance(input$CCF, "ccf")
         copy_to_instance(input$CHM, "hm")
       } else {
-        showNotification(text=c("CROWN info not used")  )
+        if(!dry) showNotification(text=c("CROWN info not used")  )
       }
       
       
@@ -115,7 +117,7 @@ proc <- function() {
                                      type = "warning" ) 
       }
       
-      file.copy( file.path( this.path::this.dir(), "templates", lookupTable), 
+      if(!dry) file.copy( file.path( this.path::this.dir(), "templates", lookupTable), 
                  file.path( instance_dir, lookupTable ) )
       
       if (input$IGNITION_MODE == "1. Probability map distributed random ignition") {
@@ -128,7 +130,7 @@ proc <- function() {
         fb_rast <- terra::rast(input$FIREBREAKS)
         fb_cells <- terra::cells(fb_rast, 1) # Get cell indices where value is 1
         # Cell2Fire requires 1-based indices or specific row/col CSVs depending on the version
-        write.csv(data.frame(Cell = fb_cells), file.path(instance_dir, "firebreaks.csv"), row.names = FALSE)
+        if(!dry)  write.csv(data.frame(Cell = fb_cells), file.path(instance_dir, "firebreaks.csv"), row.names = FALSE)
       }
       
       # -------------------------------------------------------------
@@ -141,48 +143,54 @@ proc <- function() {
           showNotification(text = "No Weather file found or selected, I will use a generic weather file with 20° and 20 km/h wind from south direction blowing towards north (direction 180°).", 
                                        type = "warning")
            
-          file.copy( file.path( this.path::this.dir(), "templates", "Weather.csv" ), file.path(instance_dir, "Weather.csv"))
+          if(!dry) file.copy( file.path( this.path::this.dir(), "templates", "Weather.csv" ), file.path(instance_dir, "Weather.csv"))
         } else { 
-          file.copy(input$WEAFILE, file.path(instance_dir, "Weather.csv"))
+          if(!dry) file.copy(input$WEAFILE, file.path(instance_dir, "Weather.csv"))
         }
       } else { 
         # Random draw from directory (Looks in the directory of the selected dataset)
         wea_dir <- input$inputfolder
         wea_out <- file.path(instance_dir, "Weathers")
-        dir.create(wea_out, showWarnings = FALSE)
+        if(!dry)  dir.create(wea_out, showWarnings = FALSE)
          
         wea_files <- list.files(wea_dir, pattern = "^Weather[0-9]*\\.csv$", full.names = TRUE)
         if (length(wea_files) > 0) {
-          file.copy(wea_files, wea_out)
+          if(!dry) file.copy(wea_files, wea_out)
         } else { 
           showNotification(text="Multiple weathers requires a directory with Weather[0-9]*.csv files!", 
                                   type = "Error" ) 
         }
       }
       
-      showNotification(text=c("IGNITION_MODE: ", input$IGNITION_MODE)  ) 
-      if (input$IGNITION_MODE == "2. Single point on a Layer") {
+      if(!dry) showNotification(text=c("IGNITION_MODE: ", input$IGNITION_MODE)  ) 
+      if (input$IGNITION_MODE == "2. Single points on a Layer") {
         req(input$IGNIPOINT)
         
         if(!shiny::isTruthy(input$IGNIPOINT) || !file.exists(input$IGNIPOINT) ){ 
-          showNotification(text="No ignition points!",   type = "Error" ) 
+          showNotification(text="No ignition points found!",   type = "Error" ) 
         } else {
           fuel_rast <- terra::rast(input$FUEL)
           ign_pt <- sf::st_read(input$IGNIPOINT, quiet = TRUE)
           if(is.na(sf::st_is_longlat(ign_pt))){ 
-            if(is.data.frame(ign_pt)) {
-              write.csv(ign_pt, file.path(instance_dir, "Ignitions.csv"), row.names = F)
+            if(is.data.frame(ign_pt)) { 
+              if(!dry) {
+                showNotification(text="Writing Ignition points!",type = "info" ) 
+                write.csv(ign_pt, file.path(instance_dir, "Ignitions.csv"), 
+                          row.names = F)
+              }
             } else { 
-              shinyWidgets::sendSweetAlert(text="Cannot read Ignition points!", 
+              showNotification(text="Cannot read Ignition points anywhere - was a file provided?", 
                                            type = "Error" ) 
             }
           } else {
             # Match CRS
-            ign_pt <- sf::st_transform(ign_pt, terra::crs(fuel_rast)) 
-            # Get cell index mapping (Cell2Fire uses 1-based indexing top-left to bottom-right)
-            cell_id <- terra::cellFromXY(fuel_rast, sf::st_coordinates(ign_pt)[1, 1:2]) 
-            # Write Ignitions.csv
-            writeLines(c("Year,Ncell", paste0("1,", cell_id)), file.path(instance_dir, "Ignitions.csv")) 
+            if(!dry) {
+              ign_pt <- sf::st_transform(ign_pt, terra::crs(fuel_rast)) 
+              # Get cell index mapping (Cell2Fire uses 1-based indexing top-left to bottom-right)
+              cell_id <- terra::cellFromXY(fuel_rast, sf::st_coordinates(ign_pt)[1, 1:2]) 
+              # Write Ignitions.csv
+              writeLines(c("Year,Ncell", paste0("1,", cell_id)), file.path(instance_dir, "Ignitions.csv")) 
+            }
           }
         }
         # Assuming IGNIPOINT is a vector file. We extract its coordinate, 
@@ -206,7 +214,7 @@ proc <- function() {
       # Boolean / Mode Flags
       if (input$CROWN) args[["--cros"]] <- ""
       
-      if (input$IGNITION_MODE == "2. Single point on a Layer") {
+      if (input$IGNITION_MODE == "2. Single points on a Layer") {
         args[["--ignitions"]] <- ""
         args[["--IgnitionRad"]] <- input$IGNIRADIUS
       }
@@ -227,6 +235,9 @@ proc <- function() {
           args[[paste0("--", opt)]] <- ""
         }
       }
+      
+      ## always make grids!
+      args[[paste0("--grids")]] <- ""
       
       # Directories
       args[["--input-instance-folder"]] <-   file.path(this.path::this.dir(),  instance_dir) 
@@ -257,11 +268,16 @@ proc <- function() {
  <br>
  " ),  con =   logs$log_con)
       flush(logs$log_con)
+      
+      
        # append mode
       # Execute via system2. Output is pushed to LogFile.txt
       
       updateTabsetPanel(session, "tabs", selected = "processLogTab")
-       
+      
+      if(dry){
+        return(NULL)
+      }
       # exit_code <- system2(
       p <- processx::process$new( c2f_bin,
         args = cli_args,

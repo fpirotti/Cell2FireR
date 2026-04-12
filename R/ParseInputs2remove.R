@@ -72,7 +72,7 @@ make_parser <- function() {
     make_option("--noEvaluation",
                 help="Generate the treatment plans without evaluating them",
                 action="store_true", default=FALSE),
-
+    
     # Genetic params
     make_option("--ngen",
                 help="Number of generations for genetic algorithm",
@@ -92,7 +92,7 @@ make_parser <- function() {
     make_option("--indpb",
                 help="Individual prob.",
                 type="double", default=0.5),
-
+    
     # Booleans / Flags
     make_option("--weather",
                 help="The 'type' of weather: constant, random, rows",
