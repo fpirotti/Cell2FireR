@@ -30,10 +30,19 @@ server <- function(input, output, session) {
   currentRasterStack <- NULL
   lut_fbp_local <- reactiveVal(NULL)
   logs <- list( logfile = file.path(this.path::this.dir(), "sessionLogs",  
-                       paste0(uniqueId, "Logfile.log") ) 
-                ) 
+                       paste0(uniqueId, "Logfile.log") ) ,
+                logfileSim = file.path(this.path::this.dir(), "sessionLogs",  
+                                       paste0(uniqueId, "LogfileSim.log") )  ) 
   logs$log_con = file(logs$logfile, "a")
+  ## dummy start/stop process
+  simProcess <- reactiveVal(NULL)
+  observeEvent(simProcess(), { 
+    req(simProcess())
+    print(simProcess()$is_alive())
+  })
   
+  file.create(logs$logfileSim, showWarnings = FALSE)
+  logs$t
   ignitionFiles <- NULL
   weatherFiles <- NULL
   rasters <- list()
@@ -46,23 +55,45 @@ server <- function(input, output, session) {
   # ignitionFiles <- reactiveVal(NULL)
   lut_generic <- lut_fbp
   
+  ## reactive Polling
+  observe({
+    p <- simProcess() 
+    req(p)  
+    invalidateLater(1000)
+    
+    if (p$is_alive()) {
+      out <- p$read_output_lines() 
+      if (length(out)) {
+        cat("INFO: ", paste(out, collapse = "\n"), "\n", 
+            file=logs$logfileSim, append = T)
+      } 
+      err <- p$read_error_lines()
+      if (length(err)) {
+        cat("ERROR: ", paste(err, collapse = "\n"), "\n", 
+            file=logs$logfileSim, append = T)
+      } 
+    } else {
+      cat("Process finished with status: ", p$get_exit_status(), "\n","\n","\n", 
+          file=logs$logfileSim, append = T)
+      simProcess(NULL)  # stop polling
+    }
+  })
   ## reactive log file  ----
   log_reader <- reactivePoll(
     intervalMillis = 1000,  # 1 second
     session = session,
-
-    # cheap check: did the file change?
-    checkFunc = function() {
-      if(is.null(logs$logfile)) return(NULL)
-      if ( !file.exists(logs$logfile)) return(NULL)
-      file.info(logs$logfile)$mtime
+ 
+    checkFunc = function() {  
+      c(file.info(logs$logfile)$mtime, 
+        file.info(logs$logfileSim)$mtime 
+        )
     },
 
     # expensive read: only when it DID change
-    valueFunc = function() {
-      if(is.null(logs$logfile)) return("No logfile yet")
-      if ( !file.exists(logs$logfile)) return("Log file does not exist yet")
-      readLines(logs$logfile, warn = FALSE)
+    valueFunc = function() {  
+      l1 <- readLines(logs$logfile, warn = FALSE)
+      l2 <- readLines(logs$logfileSim, warn = FALSE)
+      c(l1, "=========== SIMULATION LOGS: ", l2)
     }
   )
   
@@ -70,9 +101,8 @@ server <- function(input, output, session) {
   source("functions_makeCmd.R", local=T)
   
   ## reactive log html ----
-  log_html <- reactive({
+  log_html <- reactive({ 
     lines <- log_reader()
-
     tags$div(
       lapply(lines, function(line) {
         cls <- dplyr::case_when(
@@ -116,8 +146,11 @@ server <- function(input, output, session) {
     } 
     if(!is.null(logs$logfile)   ){
       writeLines(
-        c( format(Sys.time(), "[%Y-%m-%d %H:%M:%S] "), toupper(type),
-        paste(text, collapse = " "), "===============" ),
+        c( paste0(format(Sys.time(), "[%Y-%m-%d %H:%M:%S] "), toupper(type), "; 
+  ",
+        paste(text, collapse = " ") ), "
+
+" ),
         con = logs$log_con
       )
       flush(logs$log_con)
@@ -386,7 +419,7 @@ and raster %s",
     
   })
   
-  # change dataset folder ----
+  # CROWN  ----
   observeEvent(input$CROWN, {
     if(!input$CROWN){
       shinyjs::disable("CBH")
@@ -405,6 +438,10 @@ and raster %s",
     req(input$inputfolder)
     # runjs('$("#runsim").prop("disabled", false);')
     loadState() 
+    showNotification(text=c("
+========================================
+====== DATASET INSTANCE CHANGE   
+========================================"), duration=0  )
     outfolder <<- file.path(input$inputfolder, "output")
     dir.create(outfolder, recursive = TRUE, showWarnings = FALSE) 
     # if(dir.exists(outfolder)){

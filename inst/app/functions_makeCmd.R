@@ -34,7 +34,11 @@ clean <- function(){
 
 proc <- function() {  
     req(input$FUEL, input$FUEL_MODEL, input$inputfolder)
-   
+  
+  showNotification(text=c("
+========================================
+====== SIMULATION STARTING =============
+========================================")  )
     tryCatch({
       # -------------------------------------------------------------
       # 1. SETUP DIRECTORIES
@@ -43,9 +47,9 @@ proc <- function() {
       timestamp <- format(Sys.time(), "%y%m%d_%H%M%S")
       instance_dir <- file.path(outfolder, paste0("firesim_", timestamp))
       results_dir <- file.path(instance_dir, "results")
-      simLog <- file.path(instance_dir, "log.txt")
+      simLog <- logs$logfileSim
       dir.create(instance_dir, recursive = TRUE, showWarnings = FALSE)
-      # dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
+      dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
       
       map2instance <- list()
       # Helper to copy and rename files to standard names expected by C2F
@@ -59,7 +63,7 @@ proc <- function() {
             tf <- terra::rast(filepath)
             if( as.integer(substr(terra::datatype(tf), 4, 4) ) < 4){
                
-              shinyWidgets::sendSweetAlert(text = "Fuel is not in 32 or 64 bits, will have to copy it... please upload a dataset with fuel as 32 and 64 bits to avoid this warning",
+              showNotification(text = "Fuel is not in 32 or 64 bits, will have to copy it... please upload a dataset with fuel as 32 and 64 bits to avoid this warning",
                                type = "warning"  )
               terra::writeRaster(tf, datatype="INT4U",  
                                  file.path(instance_dir, paste0(standard_name, ".", ext)), 
@@ -81,10 +85,14 @@ proc <- function() {
       copy_to_instance(input$ELEVATION, "elevation") 
       
       if (input$CROWN) {
+        
+        showNotification(text=c("CROWN info available and used")  ) 
         copy_to_instance(input$CBH, "cbh")
         copy_to_instance(input$CBD, "cbd")
         copy_to_instance(input$CCF, "ccf")
         copy_to_instance(input$CHM, "hm")
+      } else {
+        showNotification(text=c("CROWN info not used")  )
       }
       
       
@@ -102,7 +110,7 @@ proc <- function() {
         lookupTable =  "portugal_lookup_table.csv";
       }
       else { 
-        shinyWidgets::sendSweetAlert(text= paste0("Simulation type not found. Type ", 
+        showNotification(text= paste0("Simulation type not found. Type ", 
                                                   input$FUEL_MODEL),
                                      type = "warning" ) 
       }
@@ -126,10 +134,13 @@ proc <- function() {
       # -------------------------------------------------------------
       # 3. WEATHER & IGNITIONS
       # -------------------------------------------------------------
+      
+      showNotification(text=c("WEATHER_MODE: ", input$WEATHER_MODE)  ) 
       if (input$WEATHER_MODE == "0. Single weather file") { 
         if(!shiny::isTruthy(input$WEAFILE) || !file.exists(input$WEAFILE) ){
-          shinyWidgets::sendSweetAlert(text = "No Weather file found or selected, I will use a generic weather file with 20° and 20 km/h wind from south direction blowing towards north (direction 180°).", 
+          showNotification(text = "No Weather file found or selected, I will use a generic weather file with 20° and 20 km/h wind from south direction blowing towards north (direction 180°).", 
                                        type = "warning")
+           
           file.copy( file.path( this.path::this.dir(), "templates", "Weather.csv" ), file.path(instance_dir, "Weather.csv"))
         } else { 
           file.copy(input$WEAFILE, file.path(instance_dir, "Weather.csv"))
@@ -144,17 +155,17 @@ proc <- function() {
         if (length(wea_files) > 0) {
           file.copy(wea_files, wea_out)
         } else { 
-          shinyWidgets::sendSweetAlert(text="Multiple weathers requires a directory with Weather[0-9]*.csv files!", 
+          showNotification(text="Multiple weathers requires a directory with Weather[0-9]*.csv files!", 
                                   type = "Error" ) 
         }
       }
-       
+      
+      showNotification(text=c("IGNITION_MODE: ", input$IGNITION_MODE)  ) 
       if (input$IGNITION_MODE == "2. Single point on a Layer") {
         req(input$IGNIPOINT)
         
         if(!shiny::isTruthy(input$IGNIPOINT) || !file.exists(input$IGNIPOINT) ){ 
-          shinyWidgets::sendSweetAlert(text="No ignition points!", 
-                                       type = "Error" ) 
+          showNotification(text="No ignition points!",   type = "Error" ) 
         } else {
           fuel_rast <- terra::rast(input$FUEL)
           ign_pt <- sf::st_read(input$IGNIPOINT, quiet = TRUE)
@@ -218,8 +229,8 @@ proc <- function() {
       }
       
       # Directories
-      args[["--input-instance-folder"]] <- shQuote( file.path(this.path::this.dir(),  instance_dir))
-      args[["--output-folder"]] <- shQuote( file.path(this.path::this.dir(),  results_dir) )
+      args[["--input-instance-folder"]] <-   file.path(this.path::this.dir(),  instance_dir) 
+      args[["--output-folder"]] <-   file.path(this.path::this.dir(),  results_dir) 
       
       # Flatten list to a character vector for system2
       cli_args <- character()
@@ -242,50 +253,24 @@ proc <- function() {
                                                                                                                               "Cell2Fire")
       flush(logs$log_con)
       # Optional: Print command to R console for debugging
-      writeLines(paste0("INFO: ", c2f_bin, paste(cli_args, collapse = " ") ),
-                 con =   logs$log_con)
+      writeLines(paste0("INFO: ", c2f_bin, " ",  paste(cli_args, collapse = " "), " 
+ <br>
+ " ),  con =   logs$log_con)
       flush(logs$log_con)
        # append mode
       # Execute via system2. Output is pushed to LogFile.txt
-      exit_code <- system2(
-        command = c2f_bin,
-        args = cli_args,
-        stdout = simLog,
-        stderr = simLog,
-        wait = TRUE
-      )
       
-      writeLines(readLines(simLog), con =   logs$log_con)
-      flush(logs$log_con)
-      # cli_args <- stringr::str_split("--sim S --nsims 3 --seed 123 --nthreads 4 --fmc 66 --scenario 2 --weather random --finalscar --ignitionpoints --input-instance-folder '/archivio/shared/R/Cell2FireR/inst/app/data/PanEU-ITC34/output/firesim_260410_145503' --output-folder '/archivio/shared/R/Cell2FireR/inst/app/data/PanEU-ITC34/output/firesim_260410_145503/results'", 
-      #                    " ")
-      # results_dir = "/archivio/shared/R/Cell2FireR/inst/app/data/PanEU-ITC34/output/firesim_260410_145503/results"
-      # logf <- file.path(results_dir, "LogFile.txt")
+      updateTabsetPanel(session, "tabs", selected = "processLogTab")
+       
       # exit_code <- system2(
-      #   command = "/archivio/shared/R/Cell2FireR/inst/bin/C2F/Cell2Fire",
-      #   args = cli_args[[1]],
-      #   stdout = logf,
-      #   stderr = logf,
-      #   wait = TRUE
-      # )
-      # 
-      if (exit_code == 0) { 
-        flush(logs$log_con)
-        shinyWidgets::sendSweetAlert(text= "Simulation Finished Successfully! Results are in the output folder.",
-                                     type = "success" ) 
-        
-        # NOTE: At this point, you would read the shapefiles/rasters from `results_dir` 
-        # and render them to a leaflet map.
-        
-      } else { 
-        flush(logs$log_con)
-        shinyWidgets::sendSweetAlert(text= paste("Simulation Failed.  Exit code:", 
-                               exit_code, 
-                               "Check logfile here<br>=====<br>"  ), type = "error" )
-        
-        updateTabsetPanel(session, "tabs", selected = "processLogTab")
-      }
-      
+      p <- processx::process$new( c2f_bin,
+        args = cli_args,
+        stdout = "|",
+        stderr = "|"
+      )
+       
+      simProcess(p) 
+  
     }, error = function(e) {  
       browser()
       shiny::showNotification(ui = paste("Error preparing simulation:", e$message) )
