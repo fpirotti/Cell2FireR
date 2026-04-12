@@ -32,26 +32,140 @@ SIM_INPUTS <- list(
   )
 )
  
-
 STATS <- list(
-  ros = list(name = tr("Hit Rate Of Spread"), suffix = ""),
-  flamelen = list(name = tr("Surface Flame Length"), suffix = ""),
-  surfintensity = list(name = tr("Byram Surface Intensity"), suffix = ""),
-  crownscar = list(name = tr("Crown Fire Scar"), suffix = ""),
-  crownconsumptionratio = list(name = tr("Crown Fire Fuel Consumption Ratio"), suffix = ""),
-  surfaceburnfraction = list(name = tr("Surface Burn Fraction"), suffix = tr(" (only Canada FBP)")),
-  crownintensity = list(name = tr("Crown Intensity"), suffix = tr(" (only Spain S&B)")),
-  crownflamelen = list(name = tr("Crown Flame Length"), suffix = tr(" (only Spain S&B)")),
-  maxflamelen = list(name = tr("Max Flame Length"), suffix = tr(" (only Spain S&B)"))
+  ros = list(
+    name  = tr("Hit Rate Of Spread"),
+    dir   = "RateOfSpread",
+    file  = "ROSFile",
+    ext   = "asc",
+    arg   = "out-ros",
+    unit  = "m/min",
+    dtype = "float32"
+  ),
+  
+  flamelen = list(
+    name  = tr("Surface Flame Length"),
+    dir   = "SurfaceFlameLength",
+    file  = "SurfaceFlameLength",
+    ext   = "asc",
+    arg   = "out-fl",
+    unit  = "m",
+    dtype = "float32"
+  ),
+  
+  surfintensity = list(
+    name  = tr("Byram Surface Intensity"),
+    dir   = "SurfaceIntensity",
+    file  = "SurfaceIntensity",
+    ext   = "asc",
+    arg   = "out-intensity",
+    unit  = "kW/m",
+    dtype = "float32"
+  ),
+  
+  crownscar = list(
+    name  = tr("Crown Fire Scar"),
+    dir   = "CrownFire",
+    file  = "Crown",
+    ext   = "asc",
+    arg   = "out-crown",
+    unit  = "bool",
+    dtype = "int16"
+  ),
+  
+  crownconsumptionratio = list(
+    name  = tr("Crown Fire Fuel Consumption Ratio"),
+    dir   = "CrownFractionBurn",
+    file  = "Cfb",
+    ext   = "asc",
+    arg   = "out-cfb",
+    unit  = "ratio",
+    dtype = "float32"
+  ),
+  
+  surfaceburnfraction = list(
+    name   = tr("Surface Burn Fraction"),
+    suffix = tr(" (only Canada FBP)"),
+    dir    = "SurfFractionBurn",
+    file   = "Sfb",
+    ext    = "asc",
+    arg    = "out-sfb",
+    unit   = "ton",
+    dtype  = "float32"
+  ),
+  
+  crownintensity = list(
+    name   = tr("Crown Intensity"),
+    suffix = tr(" (only Spain S&B)"),
+    dir    = "CrownIntensity",
+    file   = "CrownIntensity",
+    ext    = "asc",
+    arg    = "out-intensity",
+    unit   = "kW/m",
+    dtype  = "float32"
+  ),
+  
+  crownflamelen = list(
+    name   = tr("Crown Flame Length"),
+    suffix = tr(" (only Spain S&B)"),
+    dir    = "CrownFlameLength",
+    file   = "CrownFlameLength",
+    ext    = "asc",
+    arg    = "out-fl",
+    unit   = "m",
+    dtype  = "float32"
+  ),
+  
+  maxflamelen = list(
+    name   = tr("Max Flame Length"),
+    suffix = tr(" (only Spain S&B)"),
+    dir    = "MaxFlameLength",
+    file   = "MaxFlameLength",
+    ext    = "asc",
+    arg    = "out-fl",
+    unit   = "m",
+    dtype  = "float32"
+  )
 )
 
 SIM_OUTPUTS <- list(
-  'final-grid' = list(name = tr("Generate final grid"), suffix=""),
-  finalscar = list(name = tr("Final Fire Scar"), suffix = ""),
-  propagationscars = list(name = tr("Propagation Fire Scars"), suffix = ""),
-  propagationdigraph = list(name = tr("Propagation Directed Graph"), suffix = ""),
-  ignitionpoints = list(name = tr("Ignition Points"), suffix = "")
+  finalscar = list(
+    name = tr("Final Fire Scar"),
+    dir  = file.path("Grids", "Grids"),
+    file = "ForestGrid",
+    ext  = "csv",
+    arg  = "final-grid",
+    unit = "bool"
+  ),
+  
+  propagationscars = list(
+    name = tr("Propagation Fire Scars"),
+    dir  = file.path("Grids", "Grids"),
+    file = "ForestGrid",
+    ext  = "csv",
+    arg  = "grids",
+    unit = "bool"
+  ),
+  
+  propagationdigraph = list(
+    name = tr("Propagation Directed Graph"),
+    dir  = "Messages",
+    file = "MessagesFile",
+    ext  = "csv",
+    arg  = "output-messages",
+    unit = "simtime"
+  ),
+  
+  ignitionpoints = list(
+    name = tr("Ignition Points"),
+    dir  = ".",
+    file = "ignition_and_weather_log",
+    ext  = "csv",
+    arg  = "ignitionsLog",
+    unit = "cell_id"
+  )
 )
+ 
 SIM_OUTPUTS <- modifyList(SIM_OUTPUTS, STATS)
 
 NAME <- list(
@@ -67,16 +181,19 @@ NAME <- list(
 PANELS <- list()
 
 
-simout <- sapply(SIM_OUTPUTS, function(x) paste0(x$name, x$suffix))
+simout <- sapply(SIM_OUTPUTS, function(x) {
+  if(!is.null(x$unit)) x$unit <- paste0(" [", x$unit , "]")
+  paste0(x$name, x$unit, x$suffix)
+  })
 simoutf <- names(simout)
 names(simoutf) <- simout
 ## OUTPUTS & DIREsimout## OUTPUTS & DIRECTORIES ----
 PANELS[["OUTPUTS OPTIONS"]] <- list(
   shinyWidgets::prettySwitch("VERBOSE", "Verbose", value = TRUE, status = "danger"),
-
+ 
   shiny::selectizeInput(
     inputId = "OUTPUTS", multiple=T,
-    label = "Select desired outputs / boolean options:",
+    label = "Select desired outputs / options:",
     choices = simoutf,
     selected = c("finalscar", "ignitionpoints")
   )

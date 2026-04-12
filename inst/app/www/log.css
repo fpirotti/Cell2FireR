@@ -6,6 +6,25 @@
   padding: 10px;
   border-radius: 6px;
 }
+.code-box {
+  background: #f6f8fa;
+  padding: 10px;
+  border-radius: 6px;
+  font-family: monospace;
+  position: relative;
+}
+.copy-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  color:black;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 3px 6px;
+  background: #ddd;
+  border-radius: 4px;
+}
+
 .leaflet-layer-group-header{
  cursor: pointer;  
 }

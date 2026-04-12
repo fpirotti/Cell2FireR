@@ -95,8 +95,9 @@ server <- function(input, output, session) {
     # expensive read: only when it DID change
     valueFunc = function() {  
       l1 <- readLines(logs$logfile, warn = FALSE)
-      l2 <- readLines(logs$logfileSim, warn = FALSE)
-      c(l1, "=========== SIMULATION LOGS: ", l2)
+      l2 <- readLines(logs$logfileSim, warn = FALSE) 
+      if(isTruthy(l2)) l2 <- c("=========== SIMULATION LOGS: ", l2) 
+      c(l1, l2)
     }
   )
   
@@ -127,7 +128,7 @@ server <- function(input, output, session) {
     )
   })
 
-  showNotification<-function(..., type="message", duration=4){
+  showNotification<-function(..., type="message", duration=0){
     text <- paste(..., collapse = " ")
     if( !is.element(type, c("default", "message", "warning", "error")) ){
       typesh <- "default"
@@ -142,8 +143,7 @@ server <- function(input, output, session) {
                      type = typesh
                       )
     }
-    
-    
+     
     if(duration>10) {
       shinyWidgets::sendSweetAlert(HTML(text), title=type,html = T)
     } 

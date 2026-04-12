@@ -311,7 +311,7 @@ fireIcon <- leaflet::makeAwesomeIcon(
 source("inputPanels.R")
 
 uiInputsArgs <- lapply(names(PANELS), function(op){
-  shinydashboardPlus::box(width=6, collapsible=TRUE, title=op, 
+  shinydashboardPlus::box(width=3, collapsible=TRUE, title=op, 
                           solidHeader = TRUE,status = "primary",
                           PANELS[[op]] )
 })

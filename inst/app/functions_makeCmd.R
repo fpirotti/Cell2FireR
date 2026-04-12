@@ -55,30 +55,27 @@ proc <- function(dry=T) {
       
       map2instance <- list()
       # Helper to copy and rename files to standard names expected by C2F
-      copy_to_instance <- function(filepath, standard_name) {
-        # map2instance <- list()
-        if (!is.null(filepath) && filepath != "") {
+      copy_to_instance <- function(filepath, standard_name) { 
+        FP<-NULL
+        if (!is.null(filepath) && filepath != "") { 
           ext <- tools::file_ext(filepath)
-          map2instance[[paste0(standard_name, ".", ext)]] <<- filepath
-          # file.link()
+          map2instance[[paste0(standard_name, ".", ext)]] <<- filepath 
+          FP <- file.path(instance_dir, paste0(standard_name, ".", ext)) 
           if(standard_name=="fuels"){
             tf <- terra::rast(filepath)
-            if( as.integer(substr(terra::datatype(tf), 4, 4) ) < 4){
-               
+            if( as.integer(substr(terra::datatype(tf), 4, 4) ) < 4){ 
+              filepath <- add_suffix(filepath, "INT4U")
               if(!dry){
                 showNotification(text = "Fuel is not in 32 or 64 bits, will have to copy it... please upload a dataset with fuel as 32 and 64 bits to avoid this warning",
                                type = "warning"  )
-               terra::writeRaster(tf, datatype="INT4U",  
-                                 file.path(instance_dir, paste0(standard_name, ".", ext)), 
-                                 overwrite=T
-                                 )
-              }
+                terra::writeRaster(tf, filename = filepath,
+                                   datatype="INT4U"   )
+              } 
             } 
-          } else { 
-            if(!dry)  file.link(filepath, file.path(instance_dir, paste0(standard_name, ".", ext)))
           }
+         if(!dry)  file.link(filepath,  FP)  
         }
-        # map2instance
+        FP
       }
       
       # -------------------------------------------------------------
@@ -97,7 +94,7 @@ proc <- function(dry=T) {
         if(!dry) showNotification(text=c("CROWN info not used")  )
       }
       
-      
+      # SIMULATOR LUT -----
       Simulator <- get_fuel_key(input$FUEL_MODEL)
       if (Simulator == "K") {
         lookupTable = "kitral_lookup_table.csv";
@@ -134,9 +131,9 @@ proc <- function(dry=T) {
       }
       
       # -------------------------------------------------------------
-      # 3. WEATHER & IGNITIONS
+      # 3.1 WEATHER  ----- 
       # -------------------------------------------------------------
-      
+ 
       showNotification(text=c("WEATHER_MODE: ", input$WEATHER_MODE)  ) 
       if (input$WEATHER_MODE == "0. Single weather file") { 
         if(!shiny::isTruthy(input$WEAFILE) || !file.exists(input$WEAFILE) ){
@@ -162,6 +159,9 @@ proc <- function(dry=T) {
         }
       }
       
+      # -------------------------------------------------------------
+      # 3.2 IGNITION  ----- 
+      # -------------------------------------------------------------
       if(!dry) showNotification(text=c("IGNITION_MODE: ", input$IGNITION_MODE)  ) 
       if (input$IGNITION_MODE == "2. Single points on a Layer") {
         req(input$IGNIPOINT)
@@ -211,35 +211,46 @@ proc <- function(dry=T) {
         "--scenario" = input$LDFMCS
       )
       
+      
+      # WEATHERWEIGHTS ----
+      if (!is.null(input$WEATHERWEIGHTS) && input$WEATHERWEIGHTS != "") {
+        args[["--weather-weights"]] <- copy_to_instance(input$WEATHERWEIGHTS, "weatherweights") 
+      }
+      # weather  ----
+      if (input$WEATHER_MODE == "0. Single weather file") {
+        args[["--weather"]] <- "rows" 
+      } else {
+        args[["--weather"]] <- "random"
+      }
+      
+      
       # Boolean / Mode Flags
       if (input$CROWN) args[["--cros"]] <- ""
       
+      # ignition  ----
       if (input$IGNITION_MODE == "2. Single points on a Layer") {
         args[["--ignitions"]] <- ""
         args[["--IgnitionRad"]] <- input$IGNIRADIUS
       }
       
-      if (input$WEATHER_MODE == "0. Single weather file") {
-        args[["--weather"]] <- "rows"
-      } else {
-        args[["--weather"]] <- "random"
-      }
+
       
+      # FIREBREAKS ----
       if (!is.null(input$FIREBREAKS) && input$FIREBREAKS != "") {
-        args[["--FirebreakCells"]] <- shQuote(file.path(instance_dir, "firebreaks.csv"))
+        args[["--FirebreakCells"]] <- file.path(instance_dir, "firebreaks.csv")
       }
       
-      # Append Selected Outputs
+      # Append Selected Outputs ----
       if (!is.null(input$OUTPUTS)) {
         for (opt in input$OUTPUTS) {
           args[[paste0("--", opt)]] <- ""
         }
       }
       
-      ## always make grids!
+      ## always grids!  -----
       args[[paste0("--grids")]] <- ""
       
-      # Directories
+      # Directories -----
       args[["--input-instance-folder"]] <-   file.path(this.path::this.dir(),  instance_dir) 
       args[["--output-folder"]] <-   file.path(this.path::this.dir(),  results_dir) 
       
@@ -264,9 +275,9 @@ proc <- function(dry=T) {
                                                                                                                               "Cell2Fire")
       flush(logs$log_con)
       # Optional: Print command to R console for debugging
-      writeLines(paste0("INFO: ", c2f_bin, " ",  paste(cli_args, collapse = " "), " 
- <br>
- " ),  con =   logs$log_con)
+      writeLines(c("INFO - this is the command line used...",
+                   paste0("<br><div class=code-box><span class =copy-btn onclick =\"copyToClipboard('code1')\">Copy</span><pre id=code1>", 
+basename(c2f_bin), " ",  paste(cli_args, collapse = " "), "</pre></div><br>") ),  con =   logs$log_con)
       flush(logs$log_con)
       
       
@@ -278,13 +289,15 @@ proc <- function(dry=T) {
       if(dry){
         return(NULL)
       }
+      
+       
       # exit_code <- system2(
       p <- processx::process$new( c2f_bin,
         args = cli_args,
         stdout = "|",
         stderr = "|"
       )
-       
+      
       simProcess(p) 
   
     }, error = function(e) {  

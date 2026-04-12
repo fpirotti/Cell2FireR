@@ -14,7 +14,9 @@ center <- function(r){
     lat = (e$ymin + e$ymax) / 2
   )
 }
-
+add_suffix <- function(x, suffix) {
+  sub("(\\.[^.]+)$", paste0(suffix, "\\1"), x)
+}
 popup_text <- function(name, value=NULL) {
   pp<-paste0("<b>", name, "</b>")
   if(!is.null(value)) pp<-paste0("<b>", name, ":</b> ", value)

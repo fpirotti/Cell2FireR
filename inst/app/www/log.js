@@ -5,6 +5,10 @@ var infoPanelButton = null;
 var mymap = null;
 var ttinstances = null;
 
+function copyToClipboard(id) {
+  var text = document.getElementById(id).innerText;
+  navigator.clipboard.writeText(text);
+}
 
 var tooltipsStrings = {
   Instance: "Instance",
