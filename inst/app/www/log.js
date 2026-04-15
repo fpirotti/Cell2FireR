@@ -8,6 +8,7 @@ var ttinstances = null;
 function copyToClipboard(id) {
   var text = document.getElementById(id).innerText;
   navigator.clipboard.writeText(text);
+  alert("Code copied to clipboard")
 }
 
 var tooltipsStrings = {
@@ -329,6 +330,31 @@ var updateControl = function() {
     }
 };
 
+
+Shiny.addCustomMessageHandler('appendLog', function(msg) {
+  var $box = $('#logSim');
+  var $boxErr = $('#logSimErr');
+  if ($box.length === 0) return;
+  if ($boxErr.length === 0) return;
+
+  if(msg.out !== null) msg.out.forEach(function(line) { 
+                                          var $div = $('<div/>')
+                                            .text(line.text) 
+                                          $box.append($div);
+                                        });
+
+if(msg.err !== null) {
+    msg.err.forEach(function(line) { 
+      var $div = $('<div/>')
+        .text(line.text) 
+      $boxErr.append($div);
+     });
+  }
+  
+  $box.scrollTop($box[0].scrollHeight);
+  $boxErr.scrollTop($boxErr[0].scrollHeight);
+    });
+    
 // Simple global loader object
 window.loader = {
   show: function() {

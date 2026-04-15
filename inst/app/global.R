@@ -1,7 +1,7 @@
 ## make sure leafem is version 0.2.5 or more!
 pkgs <- c("terra", "DT", "remotes", "sf", "httr", "shiny", "leaflet", "shinyjs",
           # "optparse",
-          "processx",
+          "processx", "dplyr",
           "tools", "shinydashboard", "shinyvalidate", "bcrypt", "xml2", "future",
           "promises", "stringr",  "leafem", "cli", "shinydashboardPlus",
           # "fresh",
@@ -311,7 +311,7 @@ fireIcon <- leaflet::makeAwesomeIcon(
 source("inputPanels.R")
 
 uiInputsArgs <- lapply(names(PANELS), function(op){
-  shinydashboardPlus::box(width=3, collapsible=TRUE, title=op, 
+  shinydashboardPlus::box(width=12, collapsible=TRUE, title=op, 
                           solidHeader = TRUE,status = "primary",
                           PANELS[[op]] )
 })

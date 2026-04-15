@@ -1,13 +1,27 @@
-#logbox {
+#logbox, #logSimErr {
   max-height: 400px;
   overflow-y: auto;
   font-family: monospace;
   background: #111111dd;
   padding: 10px;
+  color:white;
   border-radius: 6px;
 }
+.masonry {
+  column-count: 2;
+  column-gap: 15px;
+}
+.masonry .box {
+  display: inline-block;
+  width: 100% !important;
+  margin-bottom: 15px;
+}
+.bootstrap-switch-label {
+    white-space:nowrap;
+  }
 .code-box {
   background: #f6f8fa;
+  color:black;
   padding: 10px;
   border-radius: 6px;
   font-family: monospace;

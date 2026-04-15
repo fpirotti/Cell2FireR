@@ -185,7 +185,7 @@ simout <- sapply(SIM_OUTPUTS, function(x) {
   if(!is.null(x$unit)) x$unit <- paste0(" [", x$unit , "]")
   paste0(x$name, x$unit, x$suffix)
   })
-simoutf <- names(simout)
+simoutf <- sapply(SIM_OUTPUTS, function(x)  x$arg)
 names(simoutf) <- simout
 ## OUTPUTS & DIREsimout## OUTPUTS & DIRECTORIES ----
 PANELS[["OUTPUTS OPTIONS"]] <- list(
@@ -206,7 +206,25 @@ PANELS[["OUTPUTS OPTIONS"]] <- list(
 
 )
 
-## landscape ----
+## IGNITION SECTION ----
+PANELS[["IGNITION SECTION"]] <- list(
+  shiny::numericInput("NSIM", "Number of simulations", value = 3, min = 1),
+  
+  shiny::selectInput("IGNITION_MODE", "Generation mode", choices = NAME$ignition_modes),
+  
+  shiny::selectInput("IGNITIONFILE", "Probability map [0,1]", paste0(SIM_INPUTS$ignitionfile$description, " [", SIM_INPUTS$ignitionfile$units, "]"),
+                     choices = get_existing_files()),
+  
+  shiny::div( title="", enabled=FALSE,
+              shiny::selectInput("IGNIPOINT", "Single points  layer", choices = get_existing_files())
+  ) ,
+  
+  shiny::sliderInput("IGNIRADIUS", "Radius around single point", min = 0, max = 11, value = 1)
+  
+  
+)
+
+## LANDSCAPE ----
 PANELS[["LANDSCAPE"]] <- list(
  
   shiny::selectInput("FUEL_MODEL", "Surface fuel model", choices = NAME$fuel_models),
@@ -236,24 +254,6 @@ PANELS[["LANDSCAPE"]] <- list(
   shiny::selectInput("FIREBREAKS", "Firebreaks raster (1=firebreak)", choices = get_existing_files())
 )
 
-
-## IGNITION SECTION ----
-PANELS[["IGNITION SECTION"]] <- list(
-  shiny::numericInput("NSIM", "Number of simulations", value = 3, min = 1),
-
-  shiny::selectInput("IGNITION_MODE", "Generation mode", choices = NAME$ignition_modes),
-
-  shiny::selectInput("IGNITIONFILE", "Probability map [0,1]", paste0(SIM_INPUTS$ignitionfile$description, " [", SIM_INPUTS$ignitionfile$units, "]"),
-                            choices = get_existing_files()),
-
-  shiny::div( title="", enabled=FALSE,
-    shiny::selectInput("IGNIPOINT", "Single points  layer", choices = get_existing_files())
-  ) ,
-
-  shiny::sliderInput("IGNIRADIUS", "Radius around single point", min = 0, max = 11, value = 1)
-
-
-)
 
 
 ## WEATHER & CONFIG ----

@@ -68,8 +68,10 @@ proc <- function(dry=T) {
               if(!dry){
                 showNotification(text = "Fuel is not in 32 or 64 bits, will have to copy it... please upload a dataset with fuel as 32 and 64 bits to avoid this warning",
                                type = "warning"  )
-                terra::writeRaster(tf, filename = filepath,
-                                   datatype="INT4U"   )
+                if(!file.exists(filepath)){ 
+                  terra::writeRaster(tf, filename = filepath,
+                                     datatype="INT4U"   )
+                }
               } 
             } 
           }
@@ -276,8 +278,8 @@ proc <- function(dry=T) {
       flush(logs$log_con)
       # Optional: Print command to R console for debugging
       writeLines(c("INFO - this is the command line used...",
-                   paste0("<br><div class=code-box><span class =copy-btn onclick =\"copyToClipboard('code1')\">Copy</span><pre id=code1>", 
-basename(c2f_bin), " ",  paste(cli_args, collapse = " "), "</pre></div><br>") ),  con =   logs$log_con)
+                   paste0("<br><div class=code-box><span class =copy-btn onclick =\"copyToClipboard('code1')\">Copy</span><div id=code1>", 
+basename(c2f_bin), " ",  paste(cli_args, collapse = " "), "</div></div><br>") ),  con =   logs$log_con)
       flush(logs$log_con)
       
       
@@ -292,13 +294,12 @@ basename(c2f_bin), " ",  paste(cli_args, collapse = " "), "</pre></div><br>") ),
       
        
       # exit_code <- system2(
-      p <- processx::process$new( c2f_bin,
+      simProcess <<- processx::process$new( c2f_bin,
         args = cli_args,
         stdout = "|",
         stderr = "|"
       )
-      
-      simProcess(p) 
+       
   
     }, error = function(e) {  
       browser()

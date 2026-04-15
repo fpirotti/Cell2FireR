@@ -31,15 +31,17 @@ server <- function(input, output, session) {
   lut_fbp_local <- reactiveVal(NULL)
   logs <- list( logfile = file.path(this.path::this.dir(), "sessionLogs",  
                        paste0(uniqueId, "Logfile.log") ) ,
+                logfileLn = 0,
                 logfileSim = file.path(this.path::this.dir(), "sessionLogs",  
-                                       paste0(uniqueId, "LogfileSim.log") )  ) 
+                                       paste0(uniqueId, "LogfileSim.log") ),
+                loffileSimLn = 0)
+  
+   
   logs$log_con = file(logs$logfile, "a")
+  
   ## dummy start/stop process
-  simProcess <- reactiveVal(NULL)
-  observeEvent(simProcess(), { 
-    req(simProcess())
-    print(simProcess()$is_alive())
-  })
+  simProcess <- NULL
+ 
   
   file.create(logs$logfileSim, showWarnings = FALSE)
   logs$t
@@ -51,63 +53,82 @@ server <- function(input, output, session) {
   
   rasterFiles <- reactiveVal(NULL)
   csvFiles <- reactiveVal(NULL)
-  # weatherFiles <- reactiveVal(NULL)
-  # ignitionFiles <- reactiveVal(NULL)
+  weatherFiles <- reactiveVal(NULL)
+  ignitionFiles <- reactiveVal(NULL)
   lut_generic <- lut_fbp
   
   ## reactive Polling
   observe({
-    p <- simProcess() 
-    req(p)  
-    invalidateLater(1000)
+    invalidateLater(1000) 
+    if (is.null(simProcess)) return()    
     
-    if (p$is_alive()) {
-      out <- p$read_output_lines() 
-      if (length(out)) {
-        cat("INFO: ", paste(out, collapse = "\n"), "\n", 
-            file=logs$logfileSim, append = T)
-      } 
-      err <- p$read_error_lines()
-      if (length(err)) {
-        cat("ERROR: ", paste(err, collapse = "\n"), "\n", 
-            file=logs$logfileSim, append = T)
-      } 
-    } else {
-      cat("
-====  Process finished with status: ", p$get_exit_status(), "\n","
-=========================\n", 
-          file=logs$logfileSim, append = T)
+    out <- simProcess$read_output_lines()
+    err <- simProcess$read_error_lines()
+    
+    if (length(out) > 0 || length(err) > 0) {
       
-      simProcess(NULL)  # stop polling
+      msgs <-  list("out" = lapply(out, \(x) list(type="out", text=x)),
+                    "err" = lapply(err, \(x) list(type="err", text=x)) 
+                       )
+      
+      session$sendCustomMessage("appendLog", msgs)
     }
+      
+    
+    # ---- process finished? ----
+    if (!simProcess$is_alive()) {
+      
+      # IMPORTANT: final drain loop
+      repeat {
+        out <- simProcess$read_output_lines()
+        err <- simProcess$read_error_lines()
+        
+        if (length(out) == 0 && length(err) == 0)
+          break
+        
+        session$sendCustomMessage("appendLog",
+                                  list("out" = lapply(out, \(x) list(type="out", text=x)),
+                                       "err" = lapply(err, \(x) list(type="err", text=x)) 
+                                  )
+        )
+      }
+      
+      session$sendCustomMessage("appendLog", list( "out"=
+        list( list(type="out", text="--- process finished ---") ),
+        "err"=
+        list( list(type="out", text="--- process finished ---") )
+      ))
+      
+      simProcess <<- NULL
+    }
+       
   })
+
+  
   ## reactive log file  ----
   log_reader <- reactivePoll(
     intervalMillis = 1000,  # 1 second
     session = session,
- 
+    
     checkFunc = function() {  
-      c(file.info(logs$logfile)$mtime, 
-        file.info(logs$logfileSim)$mtime 
-        )
+       file.info(logs$logfile)$mtime  
     },
-
+    
     # expensive read: only when it DID change
     valueFunc = function() {  
-      l1 <- readLines(logs$logfile, warn = FALSE)
-      l2 <- readLines(logs$logfileSim, warn = FALSE) 
-      if(isTruthy(l2)) l2 <- c("=========== SIMULATION LOGS: ", l2) 
-      c(l1, l2)
+      readLines(logs$logfile, warn = FALSE)   
     }
   )
+  
   
   ## RUN SIM STRING ------
   source("functions_makeCmd.R", local=T)
   
-  ## reactive log html ----
-  log_html <- reactive({ 
+ 
+  ## render HTML to log ----
+  output$log <- renderUI({  
     lines <- log_reader()
-    tags$div(
+    tt <- tags$div(
       lapply(lines, function(line) {
         cls <- dplyr::case_when(
           grepl("ERROR", line, ignore.case = T) ~ "log-error",
@@ -118,16 +139,14 @@ server <- function(input, output, session) {
         tags$div(class = cls, HTML(line))
       })
     )
-  })
-
-  ## render HTML to log ----
-  output$log <- renderUI({
+    
     tags$div(
       id="logbox",
-      log_html()
+      tt
     )
   })
-
+  
+ 
   showNotification<-function(..., type="message", duration=0){
     text <- paste(..., collapse = " ")
     if( !is.element(type, c("default", "message", "warning", "error")) ){
@@ -175,14 +194,81 @@ Work in progress....",  input="textarea")
     
   })
   
-  # change CSV files stack -----
-  observeEvent(csvFiles(),{ 
-    shiny::updateSelectInput(inputId = "WEAFILE", 
-                             choices =  csvFiles() ,
-                             selected =  ""   )
-    shiny::updateSelectInput(inputId = "IGNIPOINT", 
-                             choices =  csvFiles() ,
-                             selected =  ""   )
+  # IGNITION files stack -----
+  observeEvent(ignitionFiles(),{
+    ign <- ignitionFiles()
+    names(ign) <- basename(ign)
+
+    
+    shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile",
+                                    choices = ign,
+                                    clearOptions = T  )
+     
+    if(length(ign)>0){ 
+      ip <- read.csv(ign[[1]] )
+      if(nrow(ip)!=0){
+        ## DOES NOT HAVE coordinates -> get THEM FROM Cell index IP
+        if(!is.element("X", names(ip)) ){
+          ncell <- ip$Ncell
+          r2 <- terra::rast(raster$FUEL)
+          cr <- terra::xyFromCell(r2, ncell)
+          crv <- terra::vect(cr)
+          terra::crs(crv) <- terra::crs(r2) 
+          crv2 <- crv |> terra::project("EPSG:4326")
+          crvc <-  as.data.frame(crv2@pntr$coordinates())
+          names(crvc) <- c("X","Y")
+          ignitionPointsCoords(cbind(ip, crvc) )
+        } else{
+          ignitionPointsCoords(ip )
+        } 
+      }
+      if(anyNA(ip$Ncell)){
+        showNotification(
+          paste0("In file ", ignitionFiles[[1]] , " some invalid ignition points found, please check file format."),
+          type = "warning",
+          duration = 2
+        )
+      } 
+      
+    }
+    
+    
+    sel <- ign[[1]] 
+    if(isTruthy(input$IGNIPOINT)) sel <- input$IGNIPOINT
+    shinyWidgets::updatePickerInput(inputId = "IGNIPOINT",
+                                    choices = ign, 
+                                    selected = sel  )
+     
+  })
+  
+  observeEvent(weatherFiles(),{ 
+    wf <- weatherFiles()
+    if(length(wf)!=0) { 
+      df <-  read.csv(wf[[1]] ) 
+      weatherDataTable(df) 
+      names(wf) <- basename(wf)
+      shinyWidgets::updatePickerInput(inputId = "chooseWeatherFile",
+                                      choices = wf,
+                                      clearOptions = T  )
+      sel <- wf[[1]] 
+      if(isTruthy(input$WEAFILE)) sel <- input$WEAFILE
+      shinyWidgets::updatePickerInput(inputId = "WEAFILE",
+                                      choices = wf, 
+                                      selected = sel  )
+      
+      
+    } else {
+      showNotification(
+        paste0("NO WEATHER FILE! A TEMPLATE WITH ONE LINE IS LOADED ..."),
+        type = "warning") 
+      f<-file.path(input$inputfolder, "Weather.csv")
+      weatherFiles(f)
+      df <- read.csv("templates/Weather.csv", nrows = 1)
+      write.csv(df,   f, row.names = FALSE )
+      weatherDataTable(df)
+    }
+
+    
   })
   # change RASTER stack -----
   observeEvent(rasterFiles(),{
@@ -383,9 +469,8 @@ and raster %s",
       NULL
     })
     if(is.null(currentRasterStack)) return(NA)
-    
-    r2 <- terra::project(ext(r2), from=terra::crs(r2), to="epsg:4326")
-    
+     
+    r2 <- terra::project(terra::ext(r2), from=terra::crs(r2), to="epsg:4326")
     
     leafletProxy("map") |>
       
@@ -436,41 +521,22 @@ and raster %s",
       shinyjs::enable("CHM")
     }
   })
+  
+  
+  
   # change dataset folder ----
   observeEvent(input$inputfolder, {
-    req(input$inputfolder)
-    # runjs('$("#runsim").prop("disabled", false);')
-    loadState() 
-    showNotification(text=c("
+    req(input$inputfolder) 
+    showNotification(text=paste0("
 ========================================
-====== DATASET INSTANCE CHANGE   
-========================================"), duration=0  )
+====== DATASET:  ", basename(input$inputfolder) ," 
+========================================")  )
     outfolder <<- file.path(input$inputfolder, "output")
     dir.create(outfolder, recursive = TRUE, showWarnings = FALSE) 
-    # if(dir.exists(outfolder)){
-    #   showNotification(
-    #     paste0("Directory ", outfolder, " exists, files will be overwritten if you continue!"),
-    #     type = "warning",
-    #     duration = 0
-    #   )
-    # } else {
-    #   showNotification(
-    #     paste0("Output Directory: <b>", outfolder, "</b> does not exist and will be created"),
-    #     type = "INFO",
-    #     duration = 0
-    #   )
-    # }
- 
- 
+
     ip <- NULL
     currentRasterStack <<- NULL
 
-    # rfiles <- list.files(
-    #   path = input$inputfolder,
-    #   pattern = "\\.(asc|tif|tiff)$",
-    #   full.names = TRUE,
-    #   ignore.case = TRUE
-    # )
     rasterFiles(
       list.files(
         path = normalizePath(input$inputfolder),
@@ -488,105 +554,29 @@ and raster %s",
      )
     )
 
-    ignitionFiles <<- list.files(
-      path = input$inputfolder,
-      pattern = ".*ignition.*\\.(csv)$",
-      full.names = TRUE,
-      ignore.case = TRUE
+    ignitionFiles(
+      list.files(
+        path = input$inputfolder,
+        pattern = ".*ignition.*\\.(csv)$",
+        full.names = TRUE,
+        ignore.case = TRUE
+      )
     )
 
-    weatherFiles <<- list.files(
-      path = input$inputfolder,
-      pattern = ".*weather.*\\.(csv)$",
-      full.names = TRUE,
-      ignore.case = TRUE
-    ) 
-    
-    if(length(weatherFiles)!=0) { 
-      df <-  read.csv(weatherFiles[[1]] ) 
-      weatherDataTable(df) 
-    } else {
-      showNotification(
-        paste0("NO WEATHER FILE! I LOADED A TEMPLATE..."),
-        type = "warning",
-        duration = 8 )
-      weatherFiles <- file.path(input$inputfolder, "Weather.csv")
-      df <- read.csv("templates/Weather.csv", nrows = 1)
-      write.csv(df,   weatherFiles, row.names = FALSE )
-      weatherDataTable(df)
-    }
-    names(weatherFiles) <- basename(weatherFiles)
-    shinyWidgets::updatePickerInput(inputId = "chooseWeatherFile",
-                                    choices = weatherFiles,
-                                    clearOptions = T  )
-    
-    shinyWidgets::updatePickerInput(inputId = "WEAFILE",
-                                    # choices = weatherFiles,
-                                    # clearOptions = T, 
-                                    selected = weatherFiles[[1]]  )
+    weatherFiles(
+      list.files(
+        path = input$inputfolder,
+        pattern = ".*weather.*\\.(csv)$",
+        full.names = TRUE,
+        ignore.case = TRUE
+      ) 
+    )
     
  
-    names(ignitionFiles) <<- basename(ignitionFiles)
-    shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile",
-                                    choices = ignitionFiles,
-                                    clearOptions = T  )
-
-    ## IGNITION FILE ----
-    # ignitionFile <-  grep("ignition", basename(tolower(csvfiles)), ignore.case = T )
-    if(length(ignitionFiles)>0){
-      
-      shinyWidgets::updatePickerInput(inputId = "IGNIPOINT",
-                                      choices = ignitionFiles,
-                                      clearOptions = T, 
-                                      selected = ignitionFiles[[1]]  )
-      
-      ip <- read.csv(ignitionFiles[[1]] )
-      if(!is.null(ip)){
-        
-        if(!is.element("X", names(ip)) ){
-          ncell <- ip$Ncell
-          r2 <- terra::rast(raster$FUEL)
-          cr <- terra::xyFromCell(r2, ncell)
-          crv <- terra::vect(cr)
-          terra::crs(crv) <- terra::crs(r2) 
-          crv2 <- crv |> terra::project("EPSG:4326")
-          crvc <-  as.data.frame(crv2@pntr$coordinates())
-          names(crvc) <- c("X","Y")
-          ignitionPointsCoords(cbind(ip, crvc) )
-        } else{
-          ignitionPointsCoords(ip )
-        } 
-      }
-      if(anyNA(ip$Ncell)){
-        showNotification(
-          paste0("In file ", ignitionFiles[[1]] , " some invalid ignition points found, please check file format."),
-          type = "warning",
-          duration = 2
-        )
-      } 
- 
-    }
-
-
-
     shinyjs::runjs("$('.info.legend.rastervals.leaflet-control').remove();")
 
-
-
-    ## FBP FILE ----
-    # fbpFile <-  grep("fbp_lookup_table", basename(tolower(isolate(csvFiles()) )), 
-    #                  ignore.case = T )
-    # if(length(fbpFile)>0){
-    #   lut_fbp_local(read.csv(csvFiles[[fbpFile[[1]]]] ))
-    # } else {
-    #   showNotification(
-    #     paste0("Did not find file  ! Will fall back to default template file in 'templates' folder."),
-    #     type = "warning",
-    #     duration = 1
-    #   )
-    #   lut_fbp_local(lut_generic)
-    # }
-
+    loadState()
+    
   })
 
   ##render leaflet -----
@@ -1094,21 +1084,7 @@ and raster %s",
   # observe({
     onSessionEnded(function() {  
       if (!is.null(logs$log_con)) close(logs$log_con) 
-      state <- isolate(reactiveValuesToList(input))
-      if(isTruthy(isolate(input$inputfolder))){  
-        cat("Session ending ", getwd() , "\n")
-        tryCatch({
-          save(state, file = file.path(this.path::this.dir(), isolate(input$inputfolder), "state.rda") )
-        }, warning=function(e){
-          browser()
-          
-        }, error=function(e){
-          browser()
-          
-        })
-        
-        cat("Session ended\n")
-      }
+      saveState()
       # cleanup qui
     # })
   })

@@ -6,25 +6,23 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                    div(style="margin-bottom:-15px;", 
                                                        title="Do you want to keep seeing the help tooltips or not?",
                                                        switchInput(  
-                                                         size = "sm",
-                                                         inputId = "tooltips",  
+                                                          size = "sm",
+                                                         inputId = "tooltips", 
                                                          value = FALSE, inline = T,
-                                                         # width ="200px",
-                                                         label = "Tooltips" 
+                                                       
+                                                         label = "🎓Tips" 
                                                       ) 
                                                    ), 
                                                    div(style="margin-bottom:-15px;", 
                                                        title="Size of tooltip text",
-                                                       numericInput("tooltipsSize" , 
-                                                                        # size = "sm", 
-                                                                        # inline = T,
+                                                       numericInput("tooltipsSize" ,  
                                                                         width="60px",
                                                          value = 13, min = 10, max = 24, step = 1,
                                                          label=NULL
                                                        ) 
                                                    ), 
                                                   div(  # style="margin-bottom:-15px;", 
-                                                       title="Quick overview of functionalities",
+                                                       title="Quick overview of functionalities (not yet active)",
                                                        actionBttn("runTooltips" , 
                                                                         size = "sm", 
                                                                   # icon = icon("chalkboard-teacher"), 
@@ -141,7 +139,12 @@ ui <-  shinydashboardPlus::dashboardPage(
       ),
 
       shinydashboard::tabItem(tabName = "processLogTab",
-              shinydashboardPlus::box( uiOutput("log"), width=12, collapsible=TRUE,title="Log of process",solidHeader = TRUE,status = "primary"),
+                              tabsetPanel(
+                                tabPanel("Log of Wildfire-Sim",  uiOutput("log")),
+                                tabPanel("Message Log of Simulator",  div(id="logSim")) ,
+                                tabPanel("Errors/Warnings of Simulator",  div(id="logSimErr"))
+                              )
+              # shinydashboardPlus::box( uiOutput("log"), width=12, collapsible=TRUE,title="Log of process",solidHeader = TRUE,status = "primary"),
 
       ),
 
@@ -204,7 +207,11 @@ ui <-  shinydashboardPlus::dashboardPage(
       ),
 
       shinydashboard::tabItem(tabName = "inputInstancesInputArgs",
-                              uiInputsArgs
+                              
+                              tags$div(
+                                class = "masonry",
+                                uiInputsArgs
+                              )
       )
 
      )
