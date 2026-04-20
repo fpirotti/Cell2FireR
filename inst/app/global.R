@@ -1,6 +1,5 @@
 ## make sure leafem is version 0.2.5 or more!
-pkgs <- c("terra", "DT", "remotes", "sf", "httr", "shiny", "leaflet", "shinyjs",
-          # "optparse",
+pkgs <- c("terra", "DT", "remotes", "sf", "httr", "shiny", "leaflet", "shinyjs", 
           "processx", "dplyr",
           "tools", "shinydashboard", "shinyvalidate", "bcrypt", "xml2", "future",
           "promises", "stringr",  "leafem", "cli", "shinydashboardPlus",
@@ -307,7 +306,7 @@ fireIcon <- leaflet::makeAwesomeIcon(
   text="<span style='font-size:24px'>🔥</span>"
 )
 
-### source parser -----
+### source parser of input cell2fire for panels -----
 source("inputPanels.R")
 
 uiInputsArgs <- lapply(names(PANELS), function(op){
@@ -316,48 +315,7 @@ uiInputsArgs <- lapply(names(PANELS), function(op){
                           PANELS[[op]] )
 })
 
-# source("../../R/ParseInputs.R")
-# mp <- make_parser()
-# uiInputs <- lapply(mp@options, function(op){
-#   out<-NULL
-#  if(op@type=="integer"){
-#    out<- div(title= op@help , numericInput(
-#      inputId = gsub("-", ".", op@long_flag),
-#      label   = op@long_flag,
-#      value   = op@default,
-#      min     = -1,
-#      max     = 10000,
-#      step = 1
-#    ) )
-#  }
-#   if(op@type=="double"){
-#     out<-  div(title= op@help , numericInput(
-#       inputId = gsub("-", ".", op@long_flag),
-#       label   = op@long_flag,
-#       value   = op@default,
-#       min     = -1,
-#       max     = 10000,
-#       step = 0.01
-#     ) )
-#   }
-#   if(op@type=="character"){
-#     out<-  div(title= op@help , textInput(
-#       inputId = gsub("-", ".", op@long_flag),
-#       label   = op@long_flag,
-#       value   = op@default
-#     ) )
-#   }
-#   if(is.null(op@type)|| op@type=="logical"){
-#     out<-  div(title= op@help , checkboxInput(
-#       inputId = gsub("-", ".", op@long_flag),
-#       label   =  op@long_flag,
-#       value   = op@default
-#     ) )
-#   }
-#  out
-# })
-
-
+ 
 md_overwrite_ignition <- modalDialog(
   title = "Overwrite",size = "s",
   "Confirm you want to overwrite the selected file?",

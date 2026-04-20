@@ -14,7 +14,8 @@ reading.
 
 ```         
 remotes::install_github("fpirotti/Cell2FireR")
-shiny::runApp('inst/app')
+library(Cell2FireR)
+Cell2FireR::runApp()
 ```
  
 ## Description
@@ -39,7 +40,7 @@ command can be used:
 -   via Rscript call
 
 ```         
-Rscript -e "Cell2FireR::cell2fire_run()" --input-instance-folder ../data/Sub40x40/ --output-folder ../Sub40x40 --ignitions 1 --sim-years 1 --nsims 10 --grids --finalGrid --weather rows --nweathers 1 --Fire-Period-Length 1.0 --output-messages --ROS-CV 0.8 --seed 123 --stats --allPlots --IgnitionRad 1
+Rscript -e "Cell2FireR::run_cell2fire()" --input-instance-folder ../data/Sub40x40/ --output-folder ../Sub40x40 --ignitions 1 --sim-years 1 --nsims 10 --grids --finalGrid --weather rows --nweathers 1 --Fire-Period-Length 1.0 --output-messages --ROS-CV 0.8 --seed 123 --stats --allPlots --IgnitionRad 1
 ```
 
 -   directly
@@ -47,16 +48,40 @@ Rscript -e "Cell2FireR::cell2fire_run()" --input-instance-folder ../data/Sub40x4
 ```         
 library(Cell2FireR)
 
-cell2fire_run(c("--input-instance-folder", "../data/Sub40x40/",
-                "--output-folder", "../Sub40x40", 
-                "--ignitions", "1",
-                "--sim-years", "1"))
+# Example wrapper or user call
+template_location <- system.file("templates", package = "Cell2FireR")
+
+# Choose binary based on OS automatically... or assign path of Cell2Fire to 
+# bin_location variable
+# 
+# if (.Platform$OS.type == "windows") {
+#   bin_location <- system.file("bin", "C2F", "Cell2Fire.exe", package = "Cell2FireR")
+# } else {
+#   bin_location <- system.file("bin", "C2F", "Cell2Fire", package = "Cell2FireR")
+# }
+
+bin_location <- "path to your cell2fire executable downloaded from https://github.com/fire2a/C2F-W/releases"
+# Run the simulator
+process_obj <- run_cell2fire(
+  fuel = "path/to/fuel.tif",
+  fuel_model = "0. Scott & Burgan",
+  input_folder = "path/to/inputs",
+  out_folder = "path/to/outputs",
+  elevation = "path/to/elevation.tif",
+  c2f_bin_path = bin_location,
+  template_dir = template_location
+)
+
+# You can now monitor `process_obj` using processx methods like:
+# process_obj$wait()
+# process_obj$read_output_lines()
+
 ```
 
 For the full list of arguments and their explanation use:
 
 ```         
-cell2fire_run()
+run_cell2fire()
 ```
 
 ## Web app

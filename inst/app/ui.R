@@ -36,45 +36,44 @@ ui <-  shinydashboardPlus::dashboardPage(
   #   left =  HTML("<a href='www.cirgeo.unipd.it' >CIRGEO - University of Padova</a> "),
   #   right = HTML("<a href='mailto:francesco.pirotti@unipd.it' >MAIL<span style='font-size:22px'>📧</span></a> ")
   # ),
+  # SIDEBAR ----
   sidebar = shinydashboardPlus::dashboardSidebar(minified = FALSE, collapsed = FALSE,
-                                                 shiny::selectInput(
-                                                   "simulator",
-                                                   "Fire Spread Simulator",
-                                                   choices = c("Cell2Fire"="Cell2Fire", 
-                                                               "FlamMap"="FlamMap",
-                                                               "..."="others")
-                                                 ),
+
                                                  shiny::selectInput(
                                                    "inputfolder",
                                                    "Choose dataset",
                                                    choices = c("")
                                                  ),
-                                                 shiny::fluidRow(
-                                                   
-                                                   shiny::column(4,    div(
-                                                     shiny::fileInput("zipfileload", label=NULL, buttonLabel =  icon("upload") ), 
-                                                     title="add a zip file with all necessary files - please see <a href=https://github.com/fpirotti/Cell2FireR/blob/master/README.md target=_blank> 📖 documentation HERE</a> on how to prepare it"
-                                                   ) ), 
-                                                    shiny::column(3,   div(
-                                                     shiny::actionButton("downloadfolder" ,   NULL,
-                                                                               icon = icon("download") ),  title="Download dataset") ),
-                                                   shiny::column(3, div(
-                                                     shiny::actionButton("deletefolder", NULL,
-                                                                              icon=icon("trash") ), title="Delete dataset") ) 
-                                                  ), 
-                                                 shiny::actionButton("runsim", "Run", icon=icon("fire"),  
+                                                 
+                                                 div(title="Simulation outputs will create a folder which can be post-processed", 
+                                                     shiny::selectInput(
+                                                       "outputInstanceFolder",
+                                                       "Choose Output Instance",
+                                                       choices = c("")
+                                                     )
+                                                 ),
+                                                 
+                                                 shiny::actionButton("runsim", "Run",    
                                                                      title="From the  Fire2a research group at University of Chile, a big-scale, grid, forest fire simulator; parallel and fast (c++)  " ),
-                                                 shiny::actionButton("ignitionsTable", "Ignitions Table", icon=tags$i("🔥") ), 
+
                                                  shinydashboard::sidebarMenu(id="tabs",
                                                    shinydashboard::menuItem("Map", tabName = "dashboardMap", icon = icon("dashboard")),
                                                    shinydashboard::menuItem("Process Log", icon = icon("gear"), tabName = "processLogTab"),
-                                                   shinydashboard::menuItem("Inputs", icon = icon("table"),
+                                                   # shinydashboard::menuItem("Inputs", icon = icon("table"),
                                                                             shinydashboard::menuItem("Input Args", icon = icon("sliders-h"), tabName = "inputInstancesInputArgs"),
                                                                            # shinydashboard::menuItem("Input Args2", icon = icon("sliders-h"), tabName = "inputInstancesInputArgs2"),
-                                                                            shinydashboard::menuItem("Weather File", icon = icon("cloud-rain"), tabName = "inputInstancesWeather"),
-                                                                            
-                                                                            shinydashboard::menuItem("LUT FUEL Model", icon = icon("fire"), tabName = "inputInstancesLUT")
-                                                                            ),
+                                                                            shinydashboard::menuItem("Weather Table", icon = icon("cloud-rain"), tabName = "inputInstancesWeather"),
+                                                                            # shinydashboard::menuItem("Ignitions Table", icon=icon("fire"), tabName="ignitionsTable" ), 
+                                                   tags$li(
+                                                     tags$a( 
+                                                       onclick = "Shiny.setInputValue('ignitionsTable', 1, {priority: 'event'});",
+                                                       href = "#",                 # Keeps the cursor as a pointer
+                                                       icon("fire"),               # Add your icon
+                                                       tags$span("Ignitions Table") # Add your text
+                                                     )
+                                                   ),
+                                                                            # shinydashboard::menuItem("LUT FUEL Model", icon = icon("fire"), tabName = "inputInstancesLUT")
+                                                                            # ),
                                                    shinydashboard::menuItem("Outputs", icon = icon("table"), tabName = "outputInstances"),
                                                    shinydashboard::menuItem("Information", icon = icon("info"), tabName = "infoBox")
                                                  ),
@@ -84,6 +83,8 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                    tags$img(src = "wildfireLogo.png", style = "width:100%; padding:10px;")
                                                  )
                                               ),
+  
+  # BODY ----
   body = dashboardBody( 
     useShinyjs(),
     # use_theme(mytheme),
@@ -207,7 +208,14 @@ ui <-  shinydashboardPlus::dashboardPage(
       ),
 
       shinydashboard::tabItem(tabName = "inputInstancesInputArgs",
-                              
+                              tags$div(class="code-box", 
+                                       tags$span(
+                                         class = "copy-btn", 
+                                         onclick = "copyToClipboard('code1')", 
+                                         "Copy"
+                                       ),
+                                      tags$div(id="code1") 
+                              ),
                               tags$div(
                                 class = "masonry",
                                 uiInputsArgs
@@ -217,7 +225,46 @@ ui <-  shinydashboardPlus::dashboardPage(
      )
 
   ),
-  controlbar = shinydashboardPlus::dashboardControlbar(),
+  
+  
+  
+  # CONTROLBAR ----
+  controlbar = dashboardControlbar(
+    id = "my_controlbar",
+    controlbarMenu(
+      id = "controlbar_tabs",
+      controlbarItem(
+        title = "Software",
+        icon = icon("desktop"),
+        shiny::selectInput(
+          "simulator",
+          "Fire Spread Simulator",
+          choices = c("Cell2Fire"="Cell2Fire", 
+                      "FlamMap"="FlamMap",
+                      "..."="others")
+        )
+      ),
+      controlbarItem(
+        title = "Dataset",
+        icon = icon("desktop"),
+        h4("Manage Dataset"),
+        shiny::fluidRow(
+          
+          shiny::column(4,    div(
+            shiny::fileInput("zipfileload", label=NULL, buttonLabel =  icon("upload") ), 
+            title="add a zip file with all necessary files - please see <a href=https://github.com/fpirotti/Cell2FireR/blob/master/README.md target=_blank> 📖 documentation HERE</a> on how to prepare it"
+          ) ), 
+          shiny::column(3,   div(
+            shiny::actionButton("downloadfolder" ,   NULL,
+                                icon = icon("download") ),  title="Download dataset") ),
+          shiny::column(3, div(
+            shiny::actionButton("deletefolder", NULL,
+                                icon=icon("trash") ), title="Delete dataset") ) 
+        )
+      )
+    )
+  ),
+  
   title = "Cell2Fire R bindings Demo App"
 )
 

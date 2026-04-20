@@ -2,19 +2,23 @@
 % Please edit documentation in R/getCell2Fire.R
 \name{getCell2Fire}
 \alias{getCell2Fire}
-\title{Title}
+\title{getCell2Fire}
 \usage{
-getCell2Fire(outdir)
+getCell2Fire(
+  outdir = file.path(tools::R_user_dir("Cell2FireR", which = "data"), "C2F"),
+  quiet = FALSE
+)
 }
 \arguments{
-\item{outdir}{output directory}
+\item{outdir}{output directory where the executables will be copied.
+Defaults to the user's specific data directory for this package.}
+
+\item{quiet}{logical; whether to suppress download messages. Default is FALSE.}
 }
 \value{
-Nothing
+TRUE if successful, FALSE otherwise (invisibly).
 }
 \description{
-Title
-}
-\examples{
-#none
+Downloads cell2fire from the GitHub release, extracts it, and installs
+the binaries into the target directory.
 }

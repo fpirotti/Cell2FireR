@@ -1,51 +1,83 @@
-#' Title
+#' getCell2Fire
+#' @description
+#' Downloads cell2fire from the GitHub release, extracts it, and installs 
+#' the binaries into the target directory.
+#' 
+#' @param outdir output directory where the executables will be copied.
+#'  Defaults to the user's specific data directory for this package.
+#' @param quiet logical; whether to suppress download messages. Default is FALSE.
 #'
-#' @param outdir output directory
-#'
-#' @returns Nothing
-#'
-#' @examples #none
-getCell2Fire <- function(outdir) {
-  dest <- file.path(tempdir(), "Cell2FireR")
+#' @returns TRUE if successful, FALSE otherwise (invisibly).
+#' @export
+getCell2Fire <- function(
+    outdir=file.path(tools::R_user_dir("Cell2FireR", which = "data"), "C2F"),
+    quiet = FALSE) {
+  zip_path <- file.path(tempdir(), "Cell2FireW_v1.0.3.zip")
+  extract_dir <- file.path(tempdir(), "Cell2FireR")
+   
   out <- tryCatch({
     
-    if (!dir.exists(dest)) {
-      utils::download.file( 
-        "https://github.com/fpirotti/C2F-W/releases/download/v1.0.1/Cell2FireW_v1.0.1.zip",
-        destfile = paste0(dest, ".zip")
-      )
-      utils::unzip(paste0(dest, ".zip"), exdir = dest)
-    }
+    # 1. Download the file
+    # mode = "wb" is absolutely critical on Windows for binary/zip files
+    if (!quiet) message("Downloading Cell2Fire binary (10.2 MB)...")
+    utils::download.file(
+      "https://github.com/fire2a/C2F-W/releases/download/v1.0.3/Cell2FireW_v1.0.3.zip",
+      destfile = zip_path,
+      mode = "wb", 
+      quiet = quiet
+    )
     
-    fp <- file.path(dest, "C2F","Cell2Fire")
-    exe.linux <- file.path(fp,"Cell2Fire")
+    # 2. Extract the file
+    if (!quiet) message("Extracting binaries...")
+    utils::unzip(zipfile = zip_path, exdir = extract_dir)
+    
+    # 3. Define paths
+    fp <- file.path(extract_dir, "C2F", "Cell2Fire")
+    exe.linux <- file.path(fp, "Cell2Fire")
     exe.win <- file.path(fp, "Cell2Fire.exe")
     
-    if(!file.exists(exe.linux) ){
-      warning("Linux compiled Cell2Fire does not exist")
+    # Check for missing files
+    if (!file.exists(exe.linux)) {
+      warning("Linux compiled Cell2Fire does not exist in the downloaded archive.")
+    }
+    if (!file.exists(exe.win)) {
+      warning("Windows compiled Cell2Fire does not exist in the downloaded archive.")
+    }
+     
+    # Ensure the destination directory exists
+    if (!dir.exists(outdir)) {
+      dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
     }
     
-    if( !file.exists(exe.win)){
-      warning("Windows compiled Cell2Fire does not exist")
-    }
-    Sys.chmod(exe.linux, mode = "0777", use_umask = TRUE)
-    Sys.chmod(exe.win, mode = "0777", use_umask = TRUE)
-    file.copy( list.files(fp, pattern="*\\.so$|^Cell2Fire$", full.names = T ) ,
-               to = outdir, overwrite = T )
-    file.copy( list.files(fp, pattern="*\\.dll$|*\\.exe$", full.names = T ) ,
-               to = outdir, overwrite = T )
+    # 4. Copy files to the persistent user directory
+    # Linux/Mac files
+    Sys.chmod(list.files(fp, pattern = "*\\.so$|^Cell2Fire$", full.names = TRUE), mode = "0777", use_umask = TRUE)
+    Sys.chmod(list.files(fp, pattern = "*\\.dll$|*\\.exe$", full.names = TRUE), mode = "0777", use_umask = TRUE)
+    
+    file.copy(list.files(fp, pattern = "*\\.so$|^Cell2Fire$", full.names = TRUE),
+              to = outdir, overwrite = TRUE)
+    # Windows files
+    file.copy(list.files(fp, pattern = "*\\.dll$|*\\.exe$", full.names = TRUE),
+              to = outdir, overwrite = TRUE)
+    
     TRUE
-  },
-  error = function(e) { message("  Error reading ground: ", e$message); return(FALSE) }
-  )
+    
+  }, error = function(e) { 
+    message("Error installing Cell2Fire: ", e$message) 
+    return(FALSE) 
+  }, finally = {
+    # 5. CRAN requirement: Clean up temporary workspace
+    if (file.exists(zip_path)) unlink(zip_path, force = TRUE)
+    if (dir.exists(extract_dir)) unlink(extract_dir, recursive = TRUE, force = TRUE)
+  })
   
-  if(out){ 
-    packageStartupMessage("Installation of the Cell2Fire C2F package,
-successful")
+  # 6. Success/Failure messaging
+  # Use message() instead of packageStartupMessage() since this is a manual function call
+  if (out) { 
+    if (!quiet) message("Installation of the Cell2Fire executable was successful!")
   } else { 
-    packageStartupMessage("Something went wrong in installation of Cell2Fire,
-contact the developers")
+    warning("Something went wrong in the installation of Cell2Fire, contact the developers.")
   }
-  
-
+  browser()
+  return(invisible(out))
 }

@@ -1,11 +1,22 @@
-#logbox, #logSimErr {
-  max-height: 400px;
-  overflow-y: auto;
-  font-family: monospace;
-  background: #111111dd;
-  padding: 10px;
-  color:white;
-  border-radius: 6px;
+#logbox, #logSim, #logSimErr {
+    max-height: 400px;
+    overflow-y: auto;
+    font-family: monospace;
+    background: #ffffff;
+    padding: 10px;
+    color: #000000;
+    border-radius: 6px;
+    /* border: 1px solid gray; */
+    box-shadow: 0px 0px 11px black;
+}
+.spin {
+  animation: spin-animation 1s linear infinite;
+  display: inline-block; 
+}
+
+@keyframes spin-animation {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 .masonry {
   column-count: 2;

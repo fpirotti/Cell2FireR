@@ -1,7 +1,7 @@
 #' detectCores
 #'
-#' @param all.tests 
-#' @param logical 
+#' @param all.tests  do all tests
+#' @param logical do logical tests
 #'
 #' @returns number of cores
 #' @export

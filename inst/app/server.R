@@ -60,48 +60,82 @@ server <- function(input, output, session) {
   ## reactive Polling
   observe({
     invalidateLater(1000) 
-    if (is.null(simProcess)) return()    
     
-    out <- simProcess$read_output_lines()
-    err <- simProcess$read_error_lines()
+    if (is.null(simProcess)) return()  
     
-    if (length(out) > 0 || length(err) > 0) {
-      
-      msgs <-  list("out" = lapply(out, \(x) list(type="out", text=x)),
-                    "err" = lapply(err, \(x) list(type="err", text=x)) 
-                       )
-      
-      session$sendCustomMessage("appendLog", msgs)
+    # 1. Smarter safe read functions
+    # These check if the connection is actually valid BEFORE reading
+    read_out_safe <- function(proc) {
+      if (proc$has_output_connection() && proc$is_incomplete_output()) {
+        res <- tryCatch(proc$read_output_lines(), error = function(e) NULL)
+        if (is.null(res)) return(character(0)) else return(res)
+      }
+      return(character(0))
     }
-      
+    
+    read_err_safe <- function(proc) {
+      if (proc$has_error_connection() && proc$is_incomplete_error()) {
+        res <- tryCatch(proc$read_error_lines(), error = function(e) NULL)
+        if (is.null(res)) return(character(0)) else return(res)
+      }
+      return(character(0))
+    }
+    
+    # 2. Helper function to format the payload
+    build_payload <- function(out_lines, err_lines) {
+      payload <- list()
+      if (length(out_lines) > 0) {
+        payload$out <- lapply(out_lines, function(x) list(type = "out", text = x))
+      }
+      if (length(err_lines) > 0) {
+        payload$err <- lapply(err_lines, function(x) list(type = "err", text = x))
+      }
+      return(payload)
+    }
+    
+    # Read standard out and standard error safely
+    out <- read_out_safe(simProcess)
+    err <- read_err_safe(simProcess)
+    
+    # Send payload if there's anything to send
+    payload <- build_payload(out, err)
+    if (length(payload) > 0) {
+      session$sendCustomMessage("appendLog", payload)
+    }
     
     # ---- process finished? ----
     if (!simProcess$is_alive()) {
       
-      # IMPORTANT: final drain loop
+      # Final drain loop with Safety Limit
+      max_drains <- 50 
+      drain_count <- 0
+      
       repeat {
-        out <- simProcess$read_output_lines()
-        err <- simProcess$read_error_lines()
+        drain_count <- drain_count + 1
+        if (drain_count > max_drains) break
         
-        if (length(out) == 0 && length(err) == 0)
+        drain_out <- read_out_safe(simProcess)
+        drain_err <- read_err_safe(simProcess)
+        
+        if (length(drain_out) == 0 && length(drain_err) == 0) {
           break
+        }
         
-        session$sendCustomMessage("appendLog",
-                                  list("out" = lapply(out, \(x) list(type="out", text=x)),
-                                       "err" = lapply(err, \(x) list(type="err", text=x)) 
-                                  )
-        )
+        drain_payload <- build_payload(drain_out, drain_err)
+        if (length(drain_payload) > 0) {
+          session$sendCustomMessage("appendLog", drain_payload)
+        }
       }
       
-      session$sendCustomMessage("appendLog", list( "out"=
-        list( list(type="out", text="--- process finished ---") ),
-        "err"=
-        list( list(type="out", text="--- process finished ---") )
+      # Send termination message
+      session$sendCustomMessage("appendLog", list( 
+        "out" = list(list(type = "out", text = "--- process finished ---"))
       ))
       
+      # Clean up state
       simProcess <<- NULL
+      updateActionButton(inputId = "runsim",label = paste("🔥 Run ", input$simulator)  )
     }
-       
   })
 
   
@@ -190,7 +224,7 @@ software in your MS Windows machine (the same where you are running your R app).
 Work in progress....",  input="textarea")
       }    
     
-    updateActionButton(inputId = "runsim",label = paste("Run ", input$simulator)  )
+    updateActionButton(inputId = "runsim",label = paste("🔥 Run ", input$simulator)  )
     
   })
   
@@ -273,6 +307,8 @@ Work in progress....",  input="textarea")
   # change RASTER stack -----
   observeEvent(rasterFiles(),{
     req(rasterFiles()) 
+    
+    
     ### READ RASTERS ----
     withProgress(message = 'Adding layers',  value = 0, {
       ## UPDATE LEAFLET ------
@@ -527,6 +563,8 @@ and raster %s",
   # change dataset folder ----
   observeEvent(input$inputfolder, {
     req(input$inputfolder) 
+    
+    
     showNotification(text=paste0("
 ========================================
 ====== DATASET:  ", basename(input$inputfolder) ," 
@@ -534,6 +572,10 @@ and raster %s",
     outfolder <<- file.path(input$inputfolder, "output")
     dir.create(outfolder, recursive = TRUE, showWarnings = FALSE) 
 
+    
+    shiny::updateSelectInput(inputId = "outputInstanceFolder", choices = 
+                               c("", basename(list.dirs(outfolder,recursive = F))) )
+    
     ip <- NULL
     currentRasterStack <<- NULL
 
@@ -595,6 +637,7 @@ and raster %s",
   # tooltips  ----
   observeEvent(list(input$tooltips, 
                     input$tooltipsSize), {
+    print(input$tooltips)
     if(input$tooltips){ 
       shinyjs::runjs( sprintf("   makeTooltips(%d); ttinstances.forEach(i => i.enable());", input$tooltipsSize )  )
     } else {  
@@ -832,6 +875,7 @@ and raster %s",
   
   ## updates side bar ignition ----
   observeEvent(input$ignitionsTable, {
+    print("Ignitions Table")
     updateTabsetPanel(session, "tabs", selected = "dashboardMap")
     updateBoxSidebar("ignitionSideBar")
   })
@@ -1047,24 +1091,47 @@ and raster %s",
   # RUN CELL2FIRE ------
   observeEvent(input$runsim, {
  
-    cmd <- "FlamMap.exe /in:input.fmp /out:output /log:log.txt"
+    # cmd <- "FlamMap.exe /in:input.fmp /out:output /log:log.txt"
     if(!isTruthy(input$inputfolder)){
       shinyWidgets::sendSweetAlert(
         title=NULL, 
         text="Please choose a dataset to run simulations!", 
                                    status = "warning")
+      return(NULL)
        
     }
     
-    proc(F)
-    
-    # Cell2FireR::cell2fire_run(input)
-    # cell2fire_run(c("--input-instance-folder", input$inputfolder,
-    #                 "--output-folder", "../Sub40x40", 
-    #                 "--ignitions", "1",
-    #                 "--sim-years", "1") )             
+    if(!is.null(simProcess)){ 
+      shinyWidgets::ask_confirmation("confirmKillProc", 
+        text="Process is running, do you want to stop it?", 
+        status = "warning")
+    } else { 
+      proc(F)  
+      updateActionButton(inputId = "runsim",label = paste("<span class=spin>🔥</span> Running ", input$simulator)  )
+    }           
   })
   
+  observeEvent(input$confirmKillProc,
+               {
+                 if(input$confirmKillProc) {
+                   simProcess$kill()
+                   updateActionButton(inputId = "runsim",label = paste("🔥 Run ", input$simulator)  )
+                 
+                   
+                    session$sendCustomMessage("appendLog", list( "out"=
+                                                                  list( list(type="out", text="--- process finished by user ---") ),
+                                                                "err"=
+                                                                  list( list(type="out", text="--- process finished by user ---") )
+                   ))
+                   
+                   simProcess <<- NULL
+                   showNotification(
+                     "Simulation stopped!",
+                     type = "info",
+                     duration = 10
+                   )
+                 }
+               })
   ## data folder observe -----
   observeEvent(folders(), {
 
@@ -1079,6 +1146,16 @@ and raster %s",
 
   }, ignoreNULL = FALSE)
 
+  
+  observeEvent({ 
+    all_input_names <- unlist(lapply(PANELS, names), use.names = FALSE) 
+    lapply(all_input_names, function(inp) {  
+      input[[inp]]
+      })
+  }, {
+     print(proc(TRUE))
+  })
+  
 
   ## END SESSION ----
   # observe({

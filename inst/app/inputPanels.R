@@ -189,9 +189,9 @@ simoutf <- sapply(SIM_OUTPUTS, function(x)  x$arg)
 names(simoutf) <- simout
 ## OUTPUTS & DIREsimout## OUTPUTS & DIRECTORIES ----
 PANELS[["OUTPUTS OPTIONS"]] <- list(
-  shinyWidgets::prettySwitch("VERBOSE", "Verbose", value = TRUE, status = "danger"),
+  VERBOSE=shinyWidgets::prettySwitch("VERBOSE", "Verbose", value = TRUE, status = "danger"),
  
-  shiny::selectizeInput(
+  OUTPUTS=shiny::selectizeInput(
     inputId = "OUTPUTS", multiple=T,
     label = "Select desired outputs / options:",
     choices = simoutf,
@@ -206,75 +206,77 @@ PANELS[["OUTPUTS OPTIONS"]] <- list(
 
 )
 
-## IGNITION SECTION ----
-PANELS[["IGNITION SECTION"]] <- list(
-  shiny::numericInput("NSIM", "Number of simulations", value = 3, min = 1),
-  
-  shiny::selectInput("IGNITION_MODE", "Generation mode", choices = NAME$ignition_modes),
-  
-  shiny::selectInput("IGNITIONFILE", "Probability map [0,1]", paste0(SIM_INPUTS$ignitionfile$description, " [", SIM_INPUTS$ignitionfile$units, "]"),
-                     choices = get_existing_files()),
-  
-  shiny::div( title="", enabled=FALSE,
-              shiny::selectInput("IGNIPOINT", "Single points  layer", choices = get_existing_files())
-  ) ,
-  
-  shiny::sliderInput("IGNIRADIUS", "Radius around single point", min = 0, max = 11, value = 1)
-  
-  
-)
-
 ## LANDSCAPE ----
 PANELS[["LANDSCAPE"]] <- list(
  
-  shiny::selectInput("FUEL_MODEL", "Surface fuel model", choices = NAME$fuel_models),
+  FUEL_MODEL=shiny::selectInput("FUEL_MODEL", "Surface fuel model", choices = NAME$fuel_models),
 
-  shiny::selectInput("FUEL", SIM_INPUTS$fuel$description,
-              choices = get_existing_files() ),
+  FUEL=div(title="Fuel raster - this file  is mandatory and should be available as 32 or 64 bit raster in your dataset. 
+ This file will be soft-linked to the temporary input instance directory as fuel.asc or fuel.tif depending on the format.
+ This is not an argument to cell2fire, it is implicitly present in the input instance directory (--input-instance-folder argument) ", shiny::selectInput("FUEL", SIM_INPUTS$fuel$description,
+              choices = get_existing_files() )
+           ),
 
   # prettyCheckbox("PAINTFUELS", "Style (paint) fuel raster", value = FALSE, status = "info"),
 
-  shiny::selectInput("ELEVATION", paste0(SIM_INPUTS$elevation$description, " [", SIM_INPUTS$elevation$units, "]"),
+  ELEVATION=shiny::selectInput("ELEVATION", paste0(SIM_INPUTS$elevation$description, " [", SIM_INPUTS$elevation$units, "]"),
               choices = get_existing_files()),
 
-  shiny::selectInput("CBH", paste0(SIM_INPUTS$cbh$description, " [", SIM_INPUTS$cbh$units, "]"),
+  CBH=shiny::selectInput("CBH", paste0(SIM_INPUTS$cbh$description, " [", SIM_INPUTS$cbh$units, "]"),
               choices = get_existing_files()),
 
-  shiny::selectInput("CBD", paste0(SIM_INPUTS$cbd$description, " [", SIM_INPUTS$cbd$units, "]"),
+  CBD=shiny::selectInput("CBD", paste0(SIM_INPUTS$cbd$description, " [", SIM_INPUTS$cbd$units, "]"),
               choices = get_existing_files()),
 
-  shiny::selectInput("CCF", paste0(SIM_INPUTS$ccf$description, " [", SIM_INPUTS$ccf$units, "]"),
+  CCF=shiny::selectInput("CCF", paste0(SIM_INPUTS$ccf$description, " [", SIM_INPUTS$ccf$units, "]"),
               choices = get_existing_files()),
 
-  shiny::selectInput("CHM", paste0(SIM_INPUTS$chm$description, " [", SIM_INPUTS$chm$units, "] (only Scott & Burgan)"),
+  CHM=shiny::selectInput("CHM", paste0(SIM_INPUTS$chm$description, " [", SIM_INPUTS$chm$units, "] (only Scott & Burgan)"),
               choices = get_existing_files()),
 
-  shinyWidgets::prettySwitch("CROWN", "Enable Crown Fire behavior", value = FALSE, status = "danger"),
+  CROWN=shinyWidgets::prettySwitch("CROWN", "Enable Crown Fire behavior", value = FALSE, status = "danger"),
 
-  shiny::selectInput("FIREBREAKS", "Firebreaks raster (1=firebreak)", choices = get_existing_files())
+  FIREBREAKS=shiny::selectInput("FIREBREAKS", "Firebreaks raster (1=firebreak)", choices = get_existing_files())
 )
 
+
+## IGNITION SECTION ----
+PANELS[["IGNITION SECTION"]] <- list(
+  NSIM=shiny::numericInput("NSIM", "Number of simulations", value = 3, min = 1),
+  
+  IGNITION_MODE=shiny::selectInput("IGNITION_MODE", "Generation mode", choices = NAME$ignition_modes),
+  
+  IGNITIONFILE=shiny::selectInput("IGNITIONFILE", "Probability map [0,1]", paste0(SIM_INPUTS$ignitionfile$description, " [", SIM_INPUTS$ignitionfile$units, "]"),
+                                  choices = get_existing_files()),
+  
+  IGNIPOINT=shiny::div( title="", enabled=FALSE,
+                        shiny::selectInput("IGNIPOINT", "Single points  layer", choices = get_existing_files())
+  ) ,
+  
+  IGNIRADIUS=shiny::sliderInput("IGNIRADIUS", "Radius around single point", min = 0, max = 11, value = 1)
+  
+  
+)
 
 
 ## WEATHER & CONFIG ----
 PANELS[["WEATHER & CONFIG"]] <- list(
 
-  div(title="for Single Weather File you must pick a file, for random choice 
+  WEATHER_MODE = div(title="for Single Weather File you must pick a file, for random choice 
  from directory it will look into the directory of the selected dataset.",
       shiny::selectInput("WEATHER_MODE", "Source mode", choices = NAME$weather_modes) ),
 
-  shiny::selectInput("WEAFILE", "Single weather file (.csv)", choices = get_existing_files("\\.csv$")),
+  WEAFILE=shiny::selectInput("WEAFILE", "Single weather file (.csv)", choices = get_existing_files("\\.csv$")),
 
   # shiny::textInput("WEADIR", "Weather directory path", placeholder = "/path/to/weather/"),
 
-  shiny::numericInput("FMC", "Foliar Moisture Content [40-200]", value = 66, min = 40, max = 200),
+  FMC=shiny::numericInput("FMC", "Foliar Moisture Content [40-200]", value = 66, min = 40, max = 200),
 
-  shiny::sliderInput("LDFMCS", "Fuel Moisture Scenario [1-4]", min = 1, max = 4, value = 2),
-
-  shiny::hr(),
-  shiny::numericInput("SIM_THREADS", sprintf("CPU Threads (%d available)", Cell2FireR::detectCores()), 
+  LDFMCS= shiny::sliderInput("LDFMCS", "Fuel Moisture Scenario [1-4]", min = 1, max = 4, value = 2),
+ 
+  SIM_THREADS=shiny::numericInput("SIM_THREADS", sprintf("CPU Threads (%d available)", Cell2FireR::detectCores()), 
                       value = ceiling(Cell2FireR::detectCores()/4), min = 1, max=Cell2FireR::detectCores()),
-  shiny::numericInput("RNG_SEED", "Random Seed", value = 123)
+  RNG_SEED=shiny::numericInput("RNG_SEED", "Random Seed", value = runif(n=1, min=100, max=999))
 
 )
 

@@ -34,11 +34,16 @@ function runToolTipsEdu(){
 }
 
 
-function makeTooltips(size=12){
+function makeTooltips(size=13){
   
   $('[title]').each(function() {
      $(this).attr('data-tippy-content', $(this).attr('title'));
      $(this).removeAttr('title');
+   }); 
+   
+   
+  $('[data-value]').each(function() {
+     $(this).attr('data-tippy-content', $(this).attr('data-value'));
    }); 
         
   ttinstances = tippy('[data-tippy-content]', {
@@ -336,6 +341,7 @@ Shiny.addCustomMessageHandler('appendLog', function(msg) {
   var $boxErr = $('#logSimErr');
   if ($box.length === 0) return;
   if ($boxErr.length === 0) return;
+  if (msg === null) return;
 
   if(msg.out !== null) msg.out.forEach(function(line) { 
                                           var $div = $('<div/>')

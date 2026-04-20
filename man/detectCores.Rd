@@ -7,9 +7,9 @@
 detectCores(all.tests = FALSE, logical = TRUE)
 }
 \arguments{
-\item{all.tests}{}
+\item{all.tests}{do all tests}
 
-\item{logical}{}
+\item{logical}{do logical tests}
 }
 \value{
 number of cores
