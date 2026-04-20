@@ -335,6 +335,26 @@ var updateControl = function() {
     }
 };
 
+var runContainer = null;
+var stopSimlog = function(){
+  var $box = $('#logSim');
+  runContainer = $('<div class="run-card"/>');
+  $box.append(runContainer);
+  var timestamp = new Date().toLocaleTimeString();
+  runContainer.append($('<div class="run-id-header"/>').text("Run Triggered at " + timestamp));
+
+}
+var startSimlog = function(){
+  var $box = $('#logSim');
+  runContainer = $('<div class="run-card"/>');
+  $box.append(runContainer);
+  var timestamp = new Date().toLocaleTimeString();
+  runContainer.append($('<div class="run-id-header"/>').text("Run Triggered at " + timestamp));
+
+}
+
+
+// 2. Add a timestamp or title so you know when this run happened
 
 Shiny.addCustomMessageHandler('appendLog', function(msg) {
   var $box = $('#logSim');
@@ -343,13 +363,42 @@ Shiny.addCustomMessageHandler('appendLog', function(msg) {
   if ($boxErr.length === 0) return;
   if (msg === null) return;
 
-  if(msg.out !== null) msg.out.forEach(function(line) { 
-                                          var $div = $('<div/>')
-                                            .text(line.text) 
-                                          $box.append($div);
-                                        });
+  if(msg.out &&   Array.isArray(msg.out)) msg.out.forEach(function(line) { 
+    var text = line.text.trim();
+    var $div = $('<div/>');
+    // 1. Detect Section Headers: ------ Text ------
+    if (text.startsWith('---')) {
+        $div.addClass('log-section').text(text.replace(/-/g, ''));
+    } 
+    // 2. Detect Warnings: No file found...
+    else if (text.startsWith('No ') && text.includes('.tif')) {
+        $div.addClass('log-warning').text('⚠ ' + text);
+    }
+    // 3. Detect Table Rows: Available, Burnt, etc.
+    else if (["Available", "Burnt", "Non-Burnable", "Firebreak", "Total"].some(word => text.startsWith(word))) {
+        // Split by multiple spaces to create a grid-like row
+        var parts = text.split(/\s{2,}/); 
+        $div.addClass('log-table-row');
+        parts.forEach(part => $div.append($('<span/>').text(part)));
+    }
+    // 4. Detect Key-Value pairs: InFolder: data/...
+    else if (text.includes(':') && !text.includes('http')) {
+        var parts = text.split(':');
+        var key = parts.shift();
+        var val = parts.join(':');
+        $div.addClass('log-entry')
+            .append($('<span class="log-key"/>').text(key + ':'))
+            .append($('<span class="log-value"/>').text(val));
+    } 
+    // 5. Default fallback
+    else {
+        $div.addClass('log-default').text(text);
+    }
+    
+    runContainer.append($div);
+  });
 
-if(msg.err !== null) {
+if(msg.err &&   Array.isArray(msg.err)) {
     msg.err.forEach(function(line) { 
       var $div = $('<div/>')
         .text(line.text) 

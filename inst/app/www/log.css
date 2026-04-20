@@ -1,13 +1,16 @@
-#logbox, #logSim, #logSimErr {
+#logbox, #logSimErr {
     max-height: 400px;
-    overflow-y: auto;
-    font-family: monospace;
-    background: #ffffff;
+    overflow-y: auto; 
     padding: 10px;
-    color: #000000;
-    border-radius: 6px;
-    /* border: 1px solid gray; */
+    color: #000000; 
     box-shadow: 0px 0px 11px black;
+    background-color: #f8f9fa; /* Very light gray to distinguish from pure white */
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    color: #333;
+    
 }
 .spin {
   animation: spin-animation 1s linear infinite;
@@ -81,15 +84,15 @@
       width: 200px; 
 }
 #zipfileload-label + div {
-   margin-top: -6px;
+   margin-top: 0px;
  }
+ 
+ 
 #shiny-tab-dashboardMap .direct-chat-contacts{
   z-index: 9999 !important;
   border:1px solid black;
 }
-.log-info {
-  color: #9cdcfe;
-}
+ 
 .info.legend.rastervals.leaflet-control {
   all: unset;
   float:right;
@@ -103,24 +106,13 @@
   padding: 5px;
   display:none;
 }
-
-.log-warn {
-  color: #f9d423;
-}
-
+ 
 #showLegendCLS{
  font-size: large;
  cursor: pointer;
 }
 
-.log-error {
-  color: #ff6b6b;
-  font-weight: bold;
-}
-
-.log-default {
-  color: #cccccc;
-}
+ 
 
 .layers-subtitle {
   font-weight: 600;

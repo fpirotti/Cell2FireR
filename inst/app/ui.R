@@ -42,7 +42,8 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                  shiny::selectInput(
                                                    "inputfolder",
                                                    "Choose dataset",
-                                                   choices = c("")
+                                                   choices = c("",  basename(
+                                                     list.dirs("data", recursive = F)) )
                                                  ),
                                                  
                                                  div(title="Simulation outputs will create a folder which can be post-processed", 
@@ -91,6 +92,7 @@ ui <-  shinydashboardPlus::dashboardPage(
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = sprintf("log.css?%s", Sys.time()) ),
       tags$link(rel = "stylesheet", type = "text/css", href = sprintf("tippy.css?%s", Sys.time()) ),
+      tags$link(rel = "stylesheet", type = "text/css", href = sprintf("cell2fire_log.css?%s", Sys.time()) ),
       tags$script(src = sprintf("log.js?%s", Sys.time())),
       tags$script(src = sprintf("makeWindWidget.js?%s", Sys.time())),
       tags$link(rel="stylesheet", href="https://unpkg.com/tippy.js@6/dist/tippy.css"),

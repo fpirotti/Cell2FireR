@@ -42,6 +42,7 @@ proc <- function(dry = TRUE) {
 
       # 3. Call the Agnostic Function
       # We map the Shiny input$ variables directly to the function arguments
+      if(!dry) runjs("startSimlog();")
       sim_result <- run_cell2fire(
         fuel = input$FUEL,
         fuel_model = input$FUEL_MODEL,
@@ -76,15 +77,14 @@ proc <- function(dry = TRUE) {
     # If it's a dry run, run_cell2fire returns the command-line arguments.
     # We can print these to the log interface just like the original script.
     if (dry) { 
-      flush(logs$log_con)
-      writeLines(c("INFO - this is the command line used...",
-                   paste0("<br><div class=code-box><span class =copy-btn onclick =\"copyToClipboard('code1')\">Copy</span><div id=code1>", 
-                          basename(c2f_bin), " ", paste(sim_result, collapse = " "), "</div></div><br>")), 
-                 con = logs$log_con)
-      flush(logs$log_con)
+      # flush(logs$log_con)
+      # writeLines(c("INFO - this is the command line used...",
+      #              paste0("<br><div class=code-box><span class =copy-btn onclick =\"copyToClipboard('code1')\">Copy</span><div id=code1>", 
+      #                     basename(c2f_bin), " ", paste(sim_result, collapse = " "), "</div></div><br>")), 
+      #            con = logs$log_con)
+      # flush(logs$log_con)
       shinyjs::runjs(paste0("$('#code1').text('",
-                     basename(c2f_bin), 
-                     " ", 
+                 
                      paste(sim_result, collapse = " "),
                      "')") )
       # updateTabsetPanel(session, "tabs", selected = "processLogTab")

@@ -198,7 +198,7 @@ server <- function(input, output, session) {
     }
      
     if(duration>10) {
-      shinyWidgets::sendSweetAlert(HTML(text), title=type,html = T)
+      shinyWidgets::sendSweetAlert(text = HTML(text), title=type,html = T)
     } 
     if(!is.null(logs$logfile)   ){
       writeLines(
@@ -240,11 +240,11 @@ Work in progress....",  input="textarea")
      
     if(length(ign)>0){ 
       ip <- read.csv(ign[[1]] )
-      if(nrow(ip)!=0){
+      if(nrow(ip)!=0){ 
         ## DOES NOT HAVE coordinates -> get THEM FROM Cell index IP
         if(!is.element("X", names(ip)) ){
           ncell <- ip$Ncell
-          r2 <- terra::rast(raster$FUEL)
+          r2 <- terra::rast(rasters$FUEL)
           cr <- terra::xyFromCell(r2, ncell)
           crv <- terra::vect(cr)
           terra::crs(crv) <- terra::crs(r2) 
@@ -559,8 +559,15 @@ and raster %s",
   })
   
   
+  # change INSTANCE folder ----
+  observeEvent(input$outputInstanceFolder, {
+    req(input$outputInstanceFolder) 
+    
+    
+    
+  })
   
-  # change dataset folder ----
+  # change DATASET folder ----
   observeEvent(input$inputfolder, {
     req(input$inputfolder) 
     
@@ -1021,8 +1028,7 @@ and raster %s",
       showNotification("Please select a dataset from the drop down menu",
                        type="warning")
       return(NULL)
-    }
-    print("here")
+    } 
         shinyWidgets::confirmSweetAlert(session=session,
                                         "confirmDelete",
                                         "Confirm",
@@ -1034,6 +1040,8 @@ and raster %s",
       req(input$inputfolder)
       showNotification("Removing folder " )
       unlink( file.path("data", input$inputfolder) )
+      loadInstances()
+ 
   })
   ## download dataset -----
   observeEvent(input$downloadfolder, {
@@ -1045,8 +1053,7 @@ and raster %s",
   ## upload dataset -----
   observeEvent(input$zipfileload, {
     req(input$zipfileload)
- 
-    print(input$zipfileload$name)
+   
    
     path <- file.path("data", tools::file_path_sans_ext(input$zipfileload$name) )
     if(dir.exists(path)){
@@ -1061,31 +1068,49 @@ and raster %s",
       )
 
     unzip(input$zipfileload$datapath, exdir=path )
+
     showNotification(
       paste("Finished unzipping  to ", input$zipfileload$name)
     )
+    
+    if( length( list.files(path=path, pattern = "fuel.*\\.(asc|tif)$") )==0 ){
+      # browser()
+      showNotification(
+        "<b>No fuel raster found!</b> - make sure that   your zip does not have subfolders and  a TIF or ASC file with the word  fuel  e.g. myfuel.tif or fuelINT.asc is available in the instance.",
+        type = "error", duration = 15
+      )
+      
+      if(nchar(path)>4) unlink(path, recursive = TRUE)
+      
+    } else { 
+      showNotification(
+        paste("LOADING TO ", input$zipfileload$name)
+      )
+      
+      loadInstances()
+    }
   })
 
   ## monitor DATA FOLDER -----
-  folders <- reactivePoll(
-    intervalMillis = 10000,   # check every 10 seconds
-    session,
-
-    # Check function (fast, lightweight)
-    checkFunc = function() {
-      if (!dir.exists(base_path)) return(NULL)
-      file.info(base_path)$mtime   # modification time
-    },
-
-
-    # Value function (runs only if check changes)
-    valueFunc = function() {
-      if (!dir.exists(base_path)) return(character(0))
-      dirs <- list.dirs("data",full.names = T,recursive = F)
-      names(dirs) <- gsub("_", " ", basename(dirs))
-      dirs
-    }
-  )
+  # folders <- reactivePoll(
+  #   intervalMillis = 10000,   # check every 10 seconds
+  #   session,
+  # 
+  #   # Check function (fast, lightweight)
+  #   checkFunc = function() {
+  #     if (!dir.exists(base_path)) return(NULL)
+  #     file.info(base_path)$mtime   # modification time
+  #   },
+  # 
+  # 
+  #   # Value function (runs only if check changes)
+  #   valueFunc = function() {
+  #     if (!dir.exists(base_path)) return(character(0))
+  #     dirs <- list.dirs("data",full.names = T,recursive = F)
+  #     names(dirs) <- gsub("_", " ", basename(dirs))
+  #     dirs
+  #   }
+  # )
   
  
   # RUN CELL2FIRE ------
@@ -1133,18 +1158,20 @@ and raster %s",
                  }
                })
   ## data folder observe -----
-  observeEvent(folders(), {
-
-    current <- input$inputfolder
+  # observeEvent(folders(), {
     
+  loadInstances <- function()  {
+    current <- isolate(input$inputfolder)
+    dirs <- list.dirs("data",full.names = T,recursive = F)
+    names(dirs) <- gsub("_", " ", basename(dirs))
     updateSelectInput(
       session,
       "inputfolder",
-      choices = c("", folders()),
-      selected = if (current %in% folders()) current else NULL
+      choices = c("", dirs),
+      selected = if (current %in% dirs) current else NULL
     )
 
-  }, ignoreNULL = FALSE)
+  } 
 
   
   observeEvent({ 
@@ -1159,12 +1186,12 @@ and raster %s",
 
   ## END SESSION ----
   # observe({
-    onSessionEnded(function() {  
-      if (!is.null(logs$log_con)) close(logs$log_con) 
-      saveState()
-      # cleanup qui
-    # })
+  onSessionEnded(function() {
+    if (!is.null(logs$log_con)) close(logs$log_con)
+    saveState()
+    # cleanup qui
   })
+  # })
 
-  
+  loadInstances()
 }

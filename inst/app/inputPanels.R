@@ -191,12 +191,13 @@ names(simoutf) <- simout
 PANELS[["OUTPUTS OPTIONS"]] <- list(
   VERBOSE=shinyWidgets::prettySwitch("VERBOSE", "Verbose", value = TRUE, status = "danger"),
  
-  OUTPUTS=shiny::selectizeInput(
+  OUTPUTS= div(title="Disabled as only advanced users have access - modifying outputs might jeopardize correct postprocessing",
+    disabled(shiny::selectizeInput(
     inputId = "OUTPUTS", multiple=T,
     label = "Select desired outputs / options:",
     choices = simoutf,
-    selected = c("finalscar", "ignitionpoints")
-  )
+    selected = simoutf
+  ) ) )
 
   # shinyWidgets::materialSwitch("INSTANCE_IN_PROJECT", "Override instance directory", value = FALSE, status = "primary"),
   #
