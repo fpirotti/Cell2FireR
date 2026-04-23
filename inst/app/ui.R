@@ -29,7 +29,19 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                                   inline = T,
                                                                   style = "simple",
                                                                  label="🎓 overview"  ) 
-                                                   )
+                                                   ),
+                                                  div(  # style="margin-bottom:-15px;", 
+                                                    title="Quick overview of functionalities (not yet active)",
+                                                    # shinydashboard::menuItem("Information", icon = icon("info"), tabName = "infoBox")
+                                                    actionBttn("infoBoxButton" , 
+                                                               size = "sm", 
+                                                                 icon = icon("info"), 
+                                                               inline = T,
+                                                               style = "simple",
+                                                               label="Information"  ) 
+                                                  )
+                                                  
+                                                 
                                                )
                                                ),
   # footer = shinydashboardPlus::dashboardFooter(
@@ -46,19 +58,14 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                      list.dirs("data", recursive = F)) )
                                                  ),
                                                  
-                                                 div(title="Simulation outputs will create a folder which can be post-processed", 
-                                                     shiny::selectInput(
-                                                       "outputInstanceFolder",
-                                                       "Choose Output Instance",
-                                                       choices = c("")
-                                                     )
-                                                 ),
                                                  
-                                                 shiny::actionButton("runsim", "Run",    
-                                                                     title="From the  Fire2a research group at University of Chile, a big-scale, grid, forest fire simulator; parallel and fast (c++)  " ),
-
-                                                 shinydashboard::sidebarMenu(id="tabs",
+                                                 shinydashboard::sidebarMenu(id="tabs",             
                                                    shinydashboard::menuItem("Map", tabName = "dashboardMap", icon = icon("dashboard")),
+                                                   
+                                                   div(style="display:none;", 
+                                                       shinydashboard::menuItem("Information", icon = icon("info"), tabName = "infoBox")
+                                                   ),
+                                                   
                                                    shinydashboard::menuItem("Process Log", icon = icon("gear"), tabName = "processLogTab"),
                                                    # shinydashboard::menuItem("Inputs", icon = icon("table"),
                                                                             shinydashboard::menuItem("Input Args", icon = icon("sliders-h"), tabName = "inputInstancesInputArgs"),
@@ -75,9 +82,24 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                    ),
                                                                             # shinydashboard::menuItem("LUT FUEL Model", icon = icon("fire"), tabName = "inputInstancesLUT")
                                                                             # ),
-                                                   shinydashboard::menuItem("Outputs", icon = icon("table"), tabName = "outputInstances"),
-                                                   shinydashboard::menuItem("Information", icon = icon("info"), tabName = "infoBox")
+                                                   shinydashboard::menuItem("Outputs", icon = icon("table"), tabName = "outputInstances")
                                                  ),
+                                                 
+                                                 
+                                                 shiny::actionButton("runsim", "Run",    
+                                                                     title="From the  Fire2a research group at University of Chile, a big-scale, grid, forest fire simulator; parallel and fast (c++)  " ),
+                                                 
+                                                 div(title="Simulation outputs will create a folder which can be post-processed", 
+                                                     shiny::selectInput(
+                                                       "outputInstanceFolder",
+                                                       "Choose Output Instance",
+                                                       choices = c("")
+                                                     )
+                                                 ),
+                                                 
+                                                 
+                                                 shiny::actionButton("postsim", "PostProcessing",    
+                                                                     title="After simulation is finished, you can run a <b>postprocess</b> to extract information from results - requires an output instance" ),
                                                  
                                                  tags$div(
                                                    class = "sidebar-logo",
@@ -151,15 +173,14 @@ ui <-  shinydashboardPlus::dashboardPage(
 
       ),
 
-      shinydashboard::tabItem(tabName = "infoBox",
-
+      shinydashboard::tabItem(tabName = "infoBox", 
         box(
           title = "Information",
           width = 12,
           solidHeader = TRUE,
           status = "primary",
-          collapsible = TRUE,
-          shiny::includeMarkdown("../../README.md")
+          collapsible = TRUE ,
+          shiny::includeMarkdown(file.path( this.path::this.dir(),   "../../README.md"))
         )
       ),
       shinydashboard::tabItem(tabName = "inputInstancesWeather",
@@ -167,15 +188,23 @@ ui <-  shinydashboardPlus::dashboardPage(
                                   title = tags$div(
                                     style = "display:flex; align-items:center; gap:6px;",
                                     span("Weather CSV File"),
-                                    div(title="Select an ignition file", style="margin-bottom:-15px", 
-                                        shinyWidgets::pickerInput("chooseWeatherFile", NULL,width = "100px", 
-                                                                  inline = F, choices = c()) ),
+                                    div(title="Select a weather file", style="margin-bottom:-15px", 
+                                       selectInput("chooseWeatherFile",
+                                                   label =  NULL,
+                                                   width = "200px",
+                                                                  choices = c())
+                                      ),
                                     actionButton("save_table_weather", label = NULL, icon = icon("save"), class="btn-sm", title="Save changes to be used in the Cell2Fire process (only valid for this session)"),
                                     downloadButton("download_table_weather", label = NULL, icon = icon("download"), class="btn-sm", title="Download table in CSV file format"),
-                                    actionButton("upload_table_weather", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
+                                    # actionButton("upload_table_weather", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
                                     div( title="Click here to get values at center of map using  <b>open-meteo</b> API and EFFIS Web Services (NB this is experimental and not to be used for production environments or decision making!). <br><a href='https://forest-fire.emergency.copernicus.eu/' target=_blank>👉 Learn more about EFFIS, the European Forest Fire Information System from Copernicus</a><br><a href=https://open-meteo.com/ target=_blank>👉 Learn more about meteo data and fire behaviour</a>",
-                                         onclick="getFromOpenMeteo(); queryWMS(); ", actionButton("create_table_weather", label = NULL, icon = icon("cloud"), class="btn-sm") ),
-                                    div(style="display:none;", fileInput("upload_table_weather_input", label = NULL, buttonLabel = NULL, width = 10,  accept = c(".csv", ".xlsx", ".xls")  ) )
+                                         onclick="getFromOpenMeteo(); queryWMS(); ", 
+                                         actionButton("create_table_weather", label = NULL, icon = icon("cloud"), class="btn-sm") ),
+                                    div( title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)",
+                                         # style="display:none;", 
+                                         fileInput("upload_table_weather_input", label = NULL, 
+                                                   buttonLabel = icon("upload"), width = 50, 
+                                                   accept = c(".csv", ".xlsx", ".xls")  ) )
                                   ),
                                   status = "primary",
                                   solidHeader = TRUE, collapsible=TRUE,

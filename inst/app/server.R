@@ -274,16 +274,15 @@ Work in progress....",  input="textarea")
                                     selected = sel  )
      
   })
-  
+  ## WEATHER FILES OBSERVE -----
   observeEvent(weatherFiles(),{ 
     wf <- weatherFiles()
     if(length(wf)!=0) { 
       df <-  read.csv(wf[[1]] ) 
       weatherDataTable(df) 
       names(wf) <- basename(wf)
-      shinyWidgets::updatePickerInput(inputId = "chooseWeatherFile",
-                                      choices = wf,
-                                      clearOptions = T  )
+      shiny::updateSelectInput(inputId = "chooseWeatherFile",
+                                      choices = wf   )
       sel <- wf[[1]] 
       if(isTruthy(input$WEAFILE)) sel <- input$WEAFILE
       shinyWidgets::updatePickerInput(inputId = "WEAFILE",
@@ -300,10 +299,24 @@ Work in progress....",  input="textarea")
       df <- read.csv("templates/Weather.csv", nrows = 1)
       write.csv(df,   f, row.names = FALSE )
       weatherDataTable(df)
-    }
-
-    
+    } 
   })
+  ## WEATHER UPLOAD -----
+  observeEvent(input$upload_table_weather_input, {
+     
+    browser()
+  },ignoreInit = T)
+  
+  output$download_table_weather <- downloadHandler(
+    filename = function() {
+      # Use the selected dataset as the suggested file name
+      paste0( basename(input$chooseWeatherFile) )
+    },
+    content = function(file) {
+      # Write the dataset to the `file` that will be downloaded
+      write.csv( read.csv(input$chooseWeatherFile), file, row.names = FALSE)
+    }
+  )
   # change RASTER stack -----
   observeEvent(rasterFiles(),{
     req(rasterFiles()) 
@@ -327,6 +340,8 @@ Work in progress....",  input="textarea")
                                         choices =  rfiles, selected=""  )
       }
       strt <- 0 
+      
+      terra.rasters <<- list()
       for(fi in rfiles){
         strt <- strt + 1  
         layerName <- paste0(basename(input$inputfolder), " - ", toupper(tools::file_path_sans_ext(basename(fi))))
@@ -726,8 +741,9 @@ and raster %s",
   
   ## TABLE WEATHER table -----
   output$weather.table <- renderDT({ 
+    dt <- weatherDataTable()
     datatable( 
-              weatherDataTable() , 
+              dt, 
               editable = TRUE, 
               options = list(
                 initComplete = JS(
@@ -741,11 +757,12 @@ and raster %s",
                )
               )
               )|> formatRound(
-      columns = c('DC', 'FWI', 'DMC', 'ISI', 'BUI', 'FFMC'),
+      columns = intersect(names(weatherDataTable()), c('DC', 'FWI', 'DMC', 'ISI', 'BUI', 'FFMC')),
       digits = 2
     )
   })
-  observeEvent(input$chooseWeatherFile, {   
+  observeEvent(input$chooseWeatherFile, {  
+    req(input$chooseWeatherFile)
     df <- read.csv(input$chooseWeatherFile) 
     weatherDataTable(df)
     shinyWidgets::updatePickerInput(inputId = "WEAFILE",
@@ -878,6 +895,11 @@ and raster %s",
   observeEvent(input$overwrite_file_confirm_newFile, {
     save_table_ignition_final(F)
     removeModal() 
+  })
+  
+  ## updates tab info ----
+  observeEvent(input$infoBoxButton, { 
+    updateTabsetPanel(session, "tabs", selected = "infoBox") 
   })
   
   ## updates side bar ignition ----
@@ -1050,6 +1072,9 @@ and raster %s",
     req(fp!="data")
     zip(sprintf("%s.zip", fp), list.files(fp, full.names = T) )
   })
+  
+
+  
   ## upload dataset -----
   observeEvent(input$zipfileload, {
     req(input$zipfileload)

@@ -10,20 +10,20 @@ restore_inputs <- function() {
     try({ 
        if (is.character(value) && length(value) == 1) {
         updateTextInput(session, id, value = value)
-        message("Update updateTextInput ", id) 
+        # message("Update updateTextInput ", id) 
       } else if (is.numeric(value) && length(value) == 1) {
         updateNumericInput(session, id, value = value)
-        message("Update updateNumericInput ", id)  
+        # message("Update updateNumericInput ", id)  
       } else if (is.logical(value) && length(value) == 1) {
         updateCheckboxInput(session, id, value = value)
-        message("Update updateCheckboxInput ", id)   
+        # message("Update updateCheckboxInput ", id)   
       } else if (is.numeric(value) && length(value) == 2) {
         updateSliderInput(session, id, value = value)
-        message("Update updateSliderInput ", id)   
+        # message("Update updateSliderInput ", id)   
         
       } else if (is.character(value)) {
         updateSelectInput(session, id, selected = value) 
-        message("Update char updateSelectInput ", id)   
+        # message("Update char updateSelectInput ", id)   
       }
     }, silent = TRUE)
   }

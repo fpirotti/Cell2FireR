@@ -301,6 +301,7 @@ Shiny.addCustomMessageHandler('scrollLog', function(id) {
 
 $(document).on('click', '#upload_table_weather', function(e) {
   $('#upload_table_weather_input, input[type=file]').click();
+    e.stopPropagation();
 });
 $(document).on('click', '#upload_table_FBP', function(e) {
   $('#upload_table_FBP_input, input[type=file]').click();

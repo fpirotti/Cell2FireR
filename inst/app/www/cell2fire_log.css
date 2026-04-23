@@ -1,0 +1,62 @@
+/* Container for the logs */
+.run-id-header{
+  font-size: large;
+}
+
+#logSim {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  font-family: 'Fira Code', monospace;
+  padding: 20px;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+/* Section Headers (e.g., ------ Command line values ------) */
+.log-section {
+  color: #4fc1ff;
+  font-weight: bold;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #333;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Key-Value Pairs (e.g., InFolder: data/...) */
+.log-entry {
+  display: flex;
+  padding-left: 15px;
+}
+
+.log-key {
+  color: #ce9178; /* Warm orange for keys */
+  font-weight: 600;
+  min-width: 180px;
+}
+
+.log-value {
+  color: #b5cea8; /* Greenish for values */
+  word-break: break-all;
+}
+
+/* Simulation Results (The Tables) */
+.log-table-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.log-table-header {
+  background: #333;
+  color: #fff;
+  font-weight: bold;
+}
+
+/* Highlight specific alerts or missing files */
+.log-warning {
+  color: #d7ba7d;
+  font-style: italic;
+  padding-left: 15px;
+}
