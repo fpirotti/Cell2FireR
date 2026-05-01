@@ -31,7 +31,8 @@ run_cell2fire(
   outputs = NULL,
   c2f_bin_path = c2f_bin_pathEnv(),
   template_dir,
-  dry = FALSE
+  dry = FALSE,
+  verbose = TRUE
 )
 }
 \arguments{
@@ -88,10 +89,23 @@ run_cell2fire(
 \item{template_dir}{Path to the directory containing lookup tables and default weather.}
 
 \item{dry}{Logical; if TRUE, only prepares files and returns the command arguments.}
+
+\item{verbose}{Logical; if TRUE, provides many messages.}
 }
 \value{
-A processx process object (if dry = FALSE) or the command line arguments (if dry = TRUE).
+A list object containing the process handle and metadata
+for a fire spread simulation from cell2fire.
 }
 \description{
 Run Cell2Fire Simulation
 }
+\section{Fields}{
+
+\describe{
+\item{\code{process}}{A \code{processx::process} object.}
+
+\item{\code{command}}{Character string. Path to the binary.}
+
+\item{\code{args}}{Character vector. The CLI arguments used.}
+}}
+

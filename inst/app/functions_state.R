@@ -44,9 +44,9 @@ saveState <- function(){
     tryCatch({
       save(state, file = file.path(this.path::this.dir(), isolate(input$inputfolder), "state.rda") )
     }, warning=function(e){
-      browser() 
+      # browser() 
     }, error=function(e){
-      browser()
+      # browser()
       
     }) 
     cat("Session ended\n")

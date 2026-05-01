@@ -78,6 +78,6 @@ getCell2Fire <- function(
   } else { 
     warning("Something went wrong in the installation of Cell2Fire, contact the developers.")
   }
-  browser()
+  # browser()
   return(invisible(out))
 }
