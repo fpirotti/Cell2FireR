@@ -23,8 +23,8 @@ var tooltipsStrings = {
   DC:   "🏜️ DC: Drought Code (0–800+) — deep layer dryness, longer lasting fires — see EFFIS FWI system <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast target=_blank >LINK HERE</a>",
   ISI:  "🌬️ ISI: Initial Spread Index (0–15+) — expected potential fire spread combining wind & FFMC — see EFFIS FWI description <a href=https://docs.argos-emergency.com/en/docs/data/hazard/nwp/effis.html target=_blank >LINK HERE</a>",
   BUI:  "🌲 BUI: Buildup Index (0–180+) — total fuel available combining DMC+DC — see EFFIS FWI description <a href=https://docs.argos-emergency.com/en/docs/data/hazard/nwp/effis.html  target=_blank>LINK HERE</a>",
-  FWI:  "🔥📈 FWI: Fire Weather Index (0–50+) — overall fire danger rating combining ISI & BUI — see EFFIS overview <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast  target=_blank>LINK HERE</a>"
-
+  FWI:  "🔥📈 FWI: Fire Weather Index (0–50+) — overall fire danger rating combining ISI & BUI — see EFFIS overview <a href=https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast  target=_blank>LINK HERE</a>",
+  FireScenario: "For Scott&Burgan can be from 1 to 4 ....."
 };
 
 
@@ -35,7 +35,7 @@ function runToolTipsEdu(){
 
 
 function makeTooltips(size=13){
-  
+  assignTitles();  
   $('[title]').each(function() {
      $(this).attr('data-tippy-content', $(this).attr('title'));
      $(this).removeAttr('title');
@@ -72,7 +72,7 @@ $(document).ready(function () {
   makeTooltips();
   ttinstances.forEach(i => i.disable());
  
-        
+   assignTitles();       
 });
 
 Shiny.addCustomMessageHandler("layersControlReady", function(message) {
@@ -178,7 +178,7 @@ var   queryWMS = function(lat=null, lon=null,   pop=false)  {
     });
 }
 
-var autoGroupLeafletLayers = function (controlSelector) {
+autoGroupLeafletLayers = function (controlSelector) {
   console.log("grouping layers");
   /*
     Groups layers by text before the first dash "-"
@@ -351,9 +351,14 @@ var startSimlog = function(){
   $box.append(runContainer);
   var timestamp = new Date().toLocaleTimeString();
   runContainer.append($('<div class="run-id-header"/>').text("Run Triggered at " + timestamp));
-
 }
 
+var assignTitles = function(){
+ $(".text").each(function() {
+   console.log($(this).text());
+     $(this).attr('data-tippy-content',  cell2fireArgumentVoc[$(this).text()] ); 
+   }); 
+}
 
 // 2. Add a timestamp or title so you know when this run happened
 

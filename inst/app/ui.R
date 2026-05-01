@@ -58,7 +58,13 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                      list.dirs("data", recursive = F)) )
                                                  ),
                                                  
-                                                 
+                                                 div(title="Simulation outputs will create a folder which can be post-processed", 
+                                                     shiny::selectInput(
+                                                       "outputInstanceFolder",
+                                                       "Choose Output Instance",
+                                                       choices = c("")
+                                                     )
+                                                 ),
                                                  shinydashboard::sidebarMenu(id="tabs",             
                                                    shinydashboard::menuItem("Map", tabName = "dashboardMap", icon = icon("dashboard")),
                                                    
@@ -89,13 +95,7 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                  shiny::actionButton("runsim", "Run",    
                                                                      title="From the  Fire2a research group at University of Chile, a big-scale, grid, forest fire simulator; parallel and fast (c++)  " ),
                                                  
-                                                 div(title="Simulation outputs will create a folder which can be post-processed", 
-                                                     shiny::selectInput(
-                                                       "outputInstanceFolder",
-                                                       "Choose Output Instance",
-                                                       choices = c("")
-                                                     )
-                                                 ),
+
                                                  
                                                  
                                                  shiny::actionButton("postsim", "PostProcessing",    
@@ -112,6 +112,7 @@ ui <-  shinydashboardPlus::dashboardPage(
     useShinyjs(),
     # use_theme(mytheme),
     tags$head(
+       tags$script(HTML(vocsJS)),
       tags$link(rel = "stylesheet", type = "text/css", href = sprintf("log.css?%s", Sys.time()) ),
       tags$link(rel = "stylesheet", type = "text/css", href = sprintf("tippy.css?%s", Sys.time()) ),
       tags$link(rel = "stylesheet", type = "text/css", href = sprintf("cell2fire_log.css?%s", Sys.time()) ),
@@ -144,9 +145,9 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                                     actionButton("delete_table_ignition_row", label = NULL, icon = icon("cancel"),
                                                                                  class="btn-sm", title="Delete Row"),
                                                                     span("|", style="color:black;"),
-                                                                    div(title="Select an ignition file", style="margin-bottom:-15px", 
+                                                                    div(title="Select an ignition file to modify - this layer can be used as <u>ignitions points</u> input argument. To add rows, use the button <span>🔥 </span> in the map, coordinates will be converted to Ncell values.", style="margin-bottom:-15px", 
                                                                         shinyWidgets::pickerInput("chooseIgnitionFile", NULL,width = "100px", 
-                                                                                                  inline = F, choices = c()) ),
+                                                                                                  choices = c()) ),
                                                                     actionButton("save_table_ignition", label = NULL, icon = icon("save"), class="btn-sm", title="Save changes to be used in the Cell2Fire process (only valid for this session)"),
                                                                     actionButton("delete_table_ignition", label = NULL, icon = icon("trash"),
                                                                                  class="btn-sm", title="Remove file (cannot be undone)"),

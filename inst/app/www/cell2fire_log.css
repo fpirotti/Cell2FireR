@@ -1,8 +1,14 @@
 /* Container for the logs */
 .run-id-header{
-  font-size: large;
+    font-size: larger;
+    font-weight: bold;
+    background: green; 
 }
-
+.run-card{
+    border: 1px solid grey;
+    margin: 15px;
+    padding: 5px; 
+}
 #logSim {
   background-color: #1e1e1e;
   color: #d4d4d4;

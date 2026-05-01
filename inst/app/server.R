@@ -5,6 +5,7 @@ server <- function(input, output, session) {
   # source("functions_auth.R", local=T)
   ## LOAD STATE ------
   source("functions_state.R", local=T)
+  source("functions_server.R", local=T)
   uniqueId <- paste0(format(Sys.time(), "%H%M%S"),substr(session$token, 1, 6))
   outfolder<-NULL
   
@@ -31,21 +32,14 @@ server <- function(input, output, session) {
   lut_fbp_local <- reactiveVal(NULL)
   logs <- list( logfile = file.path(this.path::this.dir(), "sessionLogs",  
                        paste0(uniqueId, "Logfile.log") ) ,
-                logfileLn = 0,
-                logfileSim = file.path(this.path::this.dir(), "sessionLogs",  
-                                       paste0(uniqueId, "LogfileSim.log") ),
-                loffileSimLn = 0)
+                logfileLn = 0 )
   
    
   logs$log_con = file(logs$logfile, "a")
   
   ## dummy start/stop process
   simProcess <- NULL
- 
   
-  file.create(logs$logfileSim, showWarnings = FALSE)
-  logs$t
-  ignitionFiles <- NULL
   weatherFiles <- NULL
   rasters <- list()
   terra.rasters <- list()
@@ -60,22 +54,29 @@ server <- function(input, output, session) {
   ## reactive Polling
   observe({
     invalidateLater(1000) 
-    
+
     if (is.null(simProcess)) return()  
-    
+
+    if(!file.exists(file.path(simProcess$outputFolder, "simLog.log"))){
+      cat( "  ============= COMMAND LINE ==============\n", paste(c(simProcess$command, simProcess$args), collapse=" ") , 
+           "\n=========================================\n\n", 
+           file=file.path(simProcess$outputFolder, "simLog.log"), append = T)
+    }
     # 1. Smarter safe read functions
     # These check if the connection is actually valid BEFORE reading
-    read_out_safe <- function(proc) {
-      if (proc$has_output_connection() && proc$is_incomplete_output()) {
-        res <- tryCatch(proc$read_output_lines(), error = function(e) NULL)
+    read_out_safe <- function(simProcess) {
+      if (simProcess$has_output_connection() && simProcess$is_incomplete_output()) {
+        res <- tryCatch(simProcess$read_output_lines(), error = function(e){
+          print(e)
+        } )
         if (is.null(res)) return(character(0)) else return(res)
       }
       return(character(0))
     }
     
-    read_err_safe <- function(proc) {
-      if (proc$has_error_connection() && proc$is_incomplete_error()) {
-        res <- tryCatch(proc$read_error_lines(), error = function(e) NULL)
+    read_err_safe <- function(simProcess) {
+      if (simProcess$has_error_connection() && simProcess$is_incomplete_error()) {
+        res <- tryCatch(simProcess$read_error_lines(), error = function(e) NULL)
         if (is.null(res)) return(character(0)) else return(res)
       }
       return(character(0))
@@ -94,17 +95,19 @@ server <- function(input, output, session) {
     }
     
     # Read standard out and standard error safely
-    out <- read_out_safe(simProcess)
-    err <- read_err_safe(simProcess)
+    out <- read_out_safe(simProcess$process)
+    err <- read_err_safe(simProcess$process)
     
     # Send payload if there's anything to send
     payload <- build_payload(out, err)
     if (length(payload) > 0) {
+      cat( paste(out, collapse="\n") , "\n", file=file.path(simProcess$outputFolder, "simLog.log"), append = T)
+      cat( paste(err, collapse="\n") , "\n", file=file.path(simProcess$outputFolder, "simErr.log"), append = T)
       session$sendCustomMessage("appendLog", payload)
     }
     
     # ---- process finished? ----
-    if (!simProcess$is_alive()) {
+    if (!simProcess$process$is_alive()) {
       
       # Final drain loop with Safety Limit
       max_drains <- 50 
@@ -114,8 +117,8 @@ server <- function(input, output, session) {
         drain_count <- drain_count + 1
         if (drain_count > max_drains) break
         
-        drain_out <- read_out_safe(simProcess)
-        drain_err <- read_err_safe(simProcess)
+        drain_out <- read_out_safe(simProcess$process)
+        drain_err <- read_err_safe(simProcess$process)
         
         if (length(drain_out) == 0 && length(drain_err) == 0) {
           break
@@ -133,6 +136,8 @@ server <- function(input, output, session) {
       ))
       
       # Clean up state
+      
+      loadInstancesSimulationOutputs(TRUE)
       simProcess <<- NULL
       updateActionButton(inputId = "runsim",label = paste("🔥 Run ", input$simulator)  )
     }
@@ -228,52 +233,50 @@ Work in progress....",  input="textarea")
     
   })
   
-  # IGNITION files stack -----
+  # IGNITION FILES OBSERVE -----
   observeEvent(ignitionFiles(),{
     ign <- ignitionFiles()
     names(ign) <- basename(ign)
-
-    
-    shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile",
-                                    choices = ign,
-                                    clearOptions = T  )
+ 
      
     if(length(ign)>0){ 
-      ip <- read.csv(ign[[1]] )
-      if(nrow(ip)!=0){ 
-        ## DOES NOT HAVE coordinates -> get THEM FROM Cell index IP
-        if(!is.element("X", names(ip)) ){
-          ncell <- ip$Ncell
-          r2 <- terra::rast(rasters$FUEL)
-          cr <- terra::xyFromCell(r2, ncell)
-          crv <- terra::vect(cr)
-          terra::crs(crv) <- terra::crs(r2) 
-          crv2 <- crv |> terra::project("EPSG:4326")
-          crvc <-  as.data.frame(crv2@pntr$coordinates())
-          names(crvc) <- c("X","Y")
-          ignitionPointsCoords(cbind(ip, crvc) )
-        } else{
-          ignitionPointsCoords(ip )
-        } 
-      }
-      if(anyNA(ip$Ncell)){
-        showNotification(
-          paste0("In file ", ignitionFiles[[1]] , " some invalid ignition points found, please check file format."),
-          type = "warning",
-          duration = 2
-        )
-      } 
-      
+      checkIgnitionFile(ign[[length(ign)]])
+      shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile",
+                                      choices = ign  )
+      sel <- ign[[1]] 
+      if(isTruthy(input$IGNIPOINT)) sel <- input$IGNIPOINT
+      print(sel)
+      shiny::updateSelectInput(inputId = "IGNIPOINT",
+                               choices = ign, 
+                               selected = sel  )
+    } else {
+      shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile",
+                                      choices = c()  )
+      shiny::updateSelectInput(inputId = "IGNIPOINT",
+                               choices = c()  )
     }
     
-    
-    sel <- ign[[1]] 
-    if(isTruthy(input$IGNIPOINT)) sel <- input$IGNIPOINT
-    shinyWidgets::updatePickerInput(inputId = "IGNIPOINT",
-                                    choices = ign, 
-                                    selected = sel  )
-     
   })
+  ## IGNITION UPLOAD -----
+  observeEvent(input$upload_table_ignition_input, { 
+    write.csv(read.csv(input$upload_table_ignition_input$datapath), 
+              file.path(input$inputfolder, 
+                        sprintf("Ignitions_%s.csv", 
+                                format(Sys.time(), 
+                                       "%Y-%m-%d_%H-%M-%S" ) )), 
+              quote=FALSE, 
+              row.names = F)
+    
+    ignitionFiles(
+      list.files(
+        path = input$inputfolder,
+        pattern = ".*ignitions*\\.(csv)$",
+        full.names = TRUE,
+        ignore.case = TRUE
+      ) 
+    )
+  },ignoreInit = T)
+  
   ## WEATHER FILES OBSERVE -----
   observeEvent(weatherFiles(),{ 
     wf <- weatherFiles()
@@ -285,7 +288,8 @@ Work in progress....",  input="textarea")
                                       choices = wf   )
       sel <- wf[[1]] 
       if(isTruthy(input$WEAFILE)) sel <- input$WEAFILE
-      shinyWidgets::updatePickerInput(inputId = "WEAFILE",
+      
+      updateSelectInput(inputId = "WEAFILE",
                                       choices = wf, 
                                       selected = sel  )
       
@@ -297,14 +301,29 @@ Work in progress....",  input="textarea")
       f<-file.path(input$inputfolder, "Weather.csv")
       weatherFiles(f)
       df <- read.csv("templates/Weather.csv", nrows = 1)
-      write.csv(df,   f, row.names = FALSE )
+      write.csv(df,   f, quote=FALSE, row.names = FALSE )
       weatherDataTable(df)
     } 
   })
   ## WEATHER UPLOAD -----
-  observeEvent(input$upload_table_weather_input, {
-     
-    browser()
+  observeEvent(input$upload_table_weather_input, { 
+    write.csv(read.csv(input$upload_table_weather_input$datapath), 
+              file.path(input$inputfolder, 
+                    sprintf("Weather_%s.csv", 
+                    format(Sys.time(), 
+                           "%Y-%m-%d_%H-%M-%S" ) )), 
+              quote=FALSE, 
+              row.names = F)
+    
+    weatherFiles(
+      list.files(
+        path = input$inputfolder,
+        pattern = ".*weather.*\\.(csv)$",
+        full.names = TRUE,
+        ignore.case = TRUE
+      ) 
+    )
+
   },ignoreInit = T)
   
   output$download_table_weather <- downloadHandler(
@@ -314,7 +333,7 @@ Work in progress....",  input="textarea")
     },
     content = function(file) {
       # Write the dataset to the `file` that will be downloaded
-      write.csv( read.csv(input$chooseWeatherFile), file, row.names = FALSE)
+      write.csv( read.csv(input$chooseWeatherFile), file, quote=FALSE, row.names = FALSE)
     }
   )
   # change RASTER stack -----
@@ -527,18 +546,18 @@ and raster %s",
       
       addLayersControl(
         baseGroups = unlist(unname(base_layers)),
-        overlayGroups = c(layerNames, names(fwi_layers)),
+        overlayGroups = c("Simulation Ignition Points", layerNames, names(fwi_layers)),
         options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)
       )   |>
-      customizeLayersControl(
-        view_settings =view_settings ,
-        # home_btns = TRUE,
-        opacityControl = opacityControl,
-        includelegends = TRUE,
-        addCollapseButton = TRUE,
-        layersControlCSS = list("opacity" = 0.6),
-        increaseOpacityOnHover = TRUE
-      ) |>
+      # customizeLayersControl(
+      #   view_settings =view_settings ,
+      #   # home_btns = TRUE,
+      #   opacityControl = opacityControl,
+      #   includelegends = TRUE,
+      #   addCollapseButton = TRUE,
+      #   layersControlCSS = list("opacity" = 0.6),
+      #   increaseOpacityOnHover = TRUE
+      # ) |>
       leaflet::fitBounds( lng1 =  xmin(r2),
                           lat1 =  ymin(r2),
                           lng2 =  xmax(r2),
@@ -577,7 +596,7 @@ and raster %s",
   # change INSTANCE folder ----
   observeEvent(input$outputInstanceFolder, {
     req(input$outputInstanceFolder) 
-    
+    runPostProcess(input$outputInstanceFolder)
     
     
   })
@@ -594,9 +613,8 @@ and raster %s",
     outfolder <<- file.path(input$inputfolder, "output")
     dir.create(outfolder, recursive = TRUE, showWarnings = FALSE) 
 
-    
-    shiny::updateSelectInput(inputId = "outputInstanceFolder", choices = 
-                               c("", basename(list.dirs(outfolder,recursive = F))) )
+    loadInstancesSimulationOutputs(FALSE)
+ 
     
     ip <- NULL
     currentRasterStack <<- NULL
@@ -765,9 +783,8 @@ and raster %s",
     req(input$chooseWeatherFile)
     df <- read.csv(input$chooseWeatherFile) 
     weatherDataTable(df)
-    shinyWidgets::updatePickerInput(inputId = "WEAFILE",
-                                    # choices = weatherFiles,
-                                    clearOptions = T, 
+    updateSelectInput(inputId = "WEAFILE",
+                                    # choices = weatherFiles, 
                                     selected = input$chooseWeatherFile  )
   })
   ## TABLE FBP table ----
@@ -827,30 +844,24 @@ and raster %s",
   save_table_ignition_final <- function(overwrite=F){
     df <- isolate(ignitionPointsCoords())
     if(overwrite && isTruthy(input$chooseIgnitionFile)) {
-      write.csv(df, input$chooseIgnitionFile, row.names = F)
+      write.csv(df, input$chooseIgnitionFile, quote=FALSE, row.names = F)
     } else {
       write.csv(df, file.path(input$inputfolder, 
                               sprintf("ignitionPoints_%s.csv", 
                                       format(Sys.time(), 
-                                             "%Y-%m-%d_%H-%M-%S" ) )), row.names = F)
+                                             "%Y-%m-%d_%H-%M-%S" ) )),
+                quote=FALSE,
+                row.names = F)
+      ignitionFiles(
+        list.files(
+          path = input$inputfolder,
+          pattern = ".*ignition.*\\.(csv)$",
+          full.names = TRUE,
+          ignore.case = TRUE
+        ) 
+      ) 
     }
     
-
-    
-    ignitionFiles <<- list.files(
-      path = input$inputfolder,
-      pattern = ".*ignition.*\\.(csv)$",
-      full.names = TRUE,
-      ignore.case = TRUE
-    ) 
-    names(ignitionFiles) <<- basename(ignitionFiles)
-    shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile",
-                                    choices = ignitionFiles,
-                                    clearOptions = T  )
-    shinyWidgets::updatePickerInput(inputId = "IGNIPOINT",
-                                    choices = ignitionFiles,
-                                    clearOptions = T, 
-                                    selected = ignitionFiles[[1]]  )
   }
   
   
@@ -866,23 +877,30 @@ and raster %s",
   observeEvent(input$delete_table_ignition_confirm, {
     req(input$chooseIgnitionFile)
     if(input$delete_table_ignition_confirm){
-     file.remove(input$chooseIgnitionFile) 
       
-      ignitionFiles <<- list.files(
-        path = input$inputfolder,
-        pattern = ".*ignition.*\\.(csv)$",
-        full.names = TRUE,
-        ignore.case = TRUE
-      ) 
-      names(ignitionFiles) <<- basename(ignitionFiles)
-      shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile",
-                                      choices = ignitionFiles,
-                                      clearOptions = T  )
-      shinyWidgets::updatePickerInput(inputId = "IGNIPOINT",
-                                      choices = ignitionFiles,
-                                      clearOptions = T, 
-                                      selected = ignitionFiles[[1]]  )
-     ignitionPointsCoords(NULL)
+   
+      if(length(isolate(ignitionFiles()) ) > 1) {
+         file.remove(input$chooseIgnitionFile)
+      } else {
+          showNotification(
+            paste0(
+              "Cannot remove the last ignition file - just modify it  " 
+            ),
+            type = "warning",
+            duration = 10
+          ) 
+        }  
+      
+      ignitionFiles(
+        list.files(
+          path = input$inputfolder,
+          pattern = ".*ignition.*\\.(csv)$",
+          full.names = TRUE,
+          ignore.case = TRUE
+        ) 
+      )
+      
+ 
     } 
   })  
   
@@ -903,8 +921,7 @@ and raster %s",
   })
   
   ## updates side bar ignition ----
-  observeEvent(input$ignitionsTable, {
-    print("Ignitions Table")
+  observeEvent(input$ignitionsTable, { 
     updateTabsetPanel(session, "tabs", selected = "dashboardMap")
     updateBoxSidebar("ignitionSideBar")
   })
@@ -1164,7 +1181,7 @@ and raster %s",
   observeEvent(input$confirmKillProc,
                {
                  if(input$confirmKillProc) {
-                   simProcess$kill()
+                   simProcess$process$kill()
                    updateActionButton(inputId = "runsim",label = paste("🔥 Run ", input$simulator)  )
                  
                    
@@ -1195,17 +1212,29 @@ and raster %s",
       choices = c("", dirs),
       selected = if (current %in% dirs) current else NULL
     )
-
   } 
-
+  
+  loadInstancesSimulationOutputs <- function(uponSimulationFinisched=FALSE)  {
+    req(input$inputfolder)
+    current <- isolate(input$inputfolder)
+    dirs <- list.dirs(outfolder,full.names = T,recursive = F)
+    names(dirs) <- gsub("_", " ", basename(dirs))
+    updateSelectInput(
+      session,
+      "outputInstanceFolder",
+      choices = c("", dirs) ,
+      selected = ifelse(uponSimulationFinisched, dirs[[length(dirs)]], "")
+    )
+   
+  }
   
   observeEvent({ 
     all_input_names <- unlist(lapply(PANELS, names), use.names = FALSE) 
     lapply(all_input_names, function(inp) {  
       input[[inp]]
       })
-  }, {
-     print(proc(TRUE))
+  }, { 
+     proc(TRUE)
   })
   
 

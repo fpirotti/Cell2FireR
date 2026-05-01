@@ -15,7 +15,7 @@ reading.
 ```         
 remotes::install_github("fpirotti/Cell2FireR")
 library(Cell2FireR)
-Cell2FireR::runApp()
+Cell2FireR::runWildfireApp()
 ```
  
 ## Description
@@ -73,8 +73,9 @@ process_obj <- run_cell2fire(
 )
 
 # You can now monitor `process_obj` using processx methods like:
-# process_obj$wait()
-# process_obj$read_output_lines()
+process_obj$process$wait()
+process_obj$process$read_output_lines()
+
 
 ```
 

@@ -36,6 +36,7 @@ STATS <- list(
   ros = list(
     name  = tr("Hit Rate Of Spread"),
     dir   = "RateOfSpread",
+    title = "Generates the Rate of Spread to a asc file",
     file  = "ROSFile",
     ext   = "asc",
     arg   = "out-ros",
@@ -45,6 +46,7 @@ STATS <- list(
   
   flamelen = list(
     name  = tr("Surface Flame Length"),
+    title = "Generates the Flame Length to a asc file ",
     dir   = "SurfaceFlameLength",
     file  = "SurfaceFlameLength",
     ext   = "asc",
@@ -55,6 +57,7 @@ STATS <- list(
   
   surfintensity = list(
     name  = tr("Byram Surface Intensity"),
+    title = "Generates the Byram Intensity to a asc file", 
     dir   = "SurfaceIntensity",
     file  = "SurfaceIntensity",
     ext   = "asc",
@@ -65,6 +68,7 @@ STATS <- list(
   
   crownscar = list(
     name  = tr("Crown Fire Scar"),
+    title = "Generates the Crown behavior to a asc file ",
     dir   = "CrownFire",
     file  = "Crown",
     ext   = "asc",
@@ -75,6 +79,7 @@ STATS <- list(
   
   crownconsumptionratio = list(
     name  = tr("Crown Fire Fuel Consumption Ratio"),
+    title = "Generates the Crown Fraction Burn to a Folder ",
     dir   = "CrownFractionBurn",
     file  = "Cfb",
     ext   = "asc",
@@ -86,6 +91,7 @@ STATS <- list(
   surfaceburnfraction = list(
     name   = tr("Surface Burn Fraction"),
     suffix = tr(" (only Canada FBP)"),
+    title  = "Generates the Surface Fraction Burned to a asc file",
     dir    = "SurfFractionBurn",
     file   = "Sfb",
     ext    = "asc",
@@ -97,6 +103,7 @@ STATS <- list(
   crownintensity = list(
     name   = tr("Crown Intensity"),
     suffix = tr(" (only Spain S&B)"),
+    title  = "Generates the Crown Fire Intensity to a asc file",
     dir    = "CrownIntensity",
     file   = "CrownIntensity",
     ext    = "asc",
@@ -108,6 +115,7 @@ STATS <- list(
   crownflamelen = list(
     name   = tr("Crown Flame Length"),
     suffix = tr(" (only Spain S&B)"),
+    title  = "Generates the Crown Flame Length to a asc file",
     dir    = "CrownFlameLength",
     file   = "CrownFlameLength",
     ext    = "asc",
@@ -119,50 +127,59 @@ STATS <- list(
   maxflamelen = list(
     name   = tr("Max Flame Length"),
     suffix = tr(" (only Spain S&B)"),
+    title  = "Generates the Maximum calculated Flame Length to a asc file",
     dir    = "MaxFlameLength",
     file   = "MaxFlameLength",
     ext    = "asc",
     arg    = "out-fl",
     unit   = "m",
     dtype  = "float32"
-  )
+  ) 
 )
 
 SIM_OUTPUTS <- list(
   finalscar = list(
-    name = tr("Final Fire Scar"),
-    dir  = file.path("Grids", "Grids"),
-    file = "ForestGrid",
-    ext  = "csv",
-    arg  = "final-grid",
-    unit = "bool"
+    name  = tr("Final Fire Scar"),
+    dir   = file.path("Grids", "Grids"),
+    title = tr("Generates the final state of the landscape grid (Burned vs. Unburned) at the end of the simulation"),
+    file  = "ForestGrid",
+    ext   = "csv",
+    arg   = "final-grid",
+    unit  = "bool",
+    dtype = "int16"
   ),
   
   propagationscars = list(
-    name = tr("Propagation Fire Scars"),
-    dir  = file.path("Grids", "Grids"),
-    file = "ForestGrid",
-    ext  = "csv",
-    arg  = "grids",
-    unit = "bool"
+    name  = tr("Propagation Fire Scars"),
+    title = tr("Generates a series of grid snapshots for each time step to track fire growth over time"),
+    dir   = file.path("Grids", "Grids"),
+    file  = "ForestGrid",
+    ext   = "csv",
+    arg   = "grids",
+    unit  = "bool",
+    dtype = "int16"
   ),
   
   propagationdigraph = list(
-    name = tr("Propagation Directed Graph"),
-    dir  = "Messages",
-    file = "MessagesFile",
-    ext  = "csv",
-    arg  = "output-messages",
-    unit = "simtime"
+    name  = tr("Propagation Directed Graph"),
+    title = tr("Generates a detailed log of fire transmission events (who burned whom) between specific cells"),
+    dir   = "Messages",
+    file  = "MessagesFile",
+    ext   = "csv",
+    arg   = "output-messages",
+    unit  = "simtime",
+    dtype = "float32"
   ),
   
   ignitionpoints = list(
-    name = tr("Ignition Points"),
-    dir  = ".",
-    file = "ignition_and_weather_log",
-    ext  = "csv",
-    arg  = "ignitionsLog",
-    unit = "cell_id"
+    name  = tr("Ignition Points"),
+    title = tr("Logs the coordinates and timing of the initial fire start points and the weather conditions at ignition"),
+    dir   = ".",
+    file  = "ignition_and_weather_log",
+    ext   = "csv",
+    arg   = "ignitionsLog",
+    unit  = "cell_id",
+    dtype = "int32"
   )
 )
  
@@ -180,25 +197,67 @@ NAME <- list(
 
 PANELS <- list()
 
-
 simout <- sapply(SIM_OUTPUTS, function(x) {
-  if(!is.null(x$unit)) x$unit <- paste0(" [", x$unit , "]")
-  paste0(x$name, x$unit, x$suffix)
-  })
+   x$name 
+})
+# simout <- sapply(SIM_OUTPUTS, function(x) {
+#   if(!is.null(x$unit)) x$unit <- paste0(" [", x$unit , "]")
+#   paste0(x$name, x$unit, x$suffix)
+#   })
+# browser()
+
+# choices = c("a","b","c")
+# 
+# choicesOpt = list(
+#   content = c(
+#     '<span title="Info A">Option A</span>',
+#     '<span title="Info B">Option B</span>',
+#     '<span title="Info C">Option C</span>'
+#   )
+# )
+
 simoutf <- sapply(SIM_OUTPUTS, function(x)  x$arg)
-names(simoutf) <- simout
+voc <- sapply(names(SIM_OUTPUTS), function(n) {
+  x <- SIM_OUTPUTS[[n]]
+  sprintf("'%s': '%s <br>unit: [%s]<br>argument: --%s'", x$name, x$title, x$unit, x$arg )
+ 
+})
+
+vocsJS <- sprintf("var cell2fireArgumentVoc = {%s};", 
+               paste(unname(unlist(voc)), collapse=",
+"))
 ## OUTPUTS & DIREsimout## OUTPUTS & DIRECTORIES ----
 PANELS[["OUTPUTS OPTIONS"]] <- list(
-  VERBOSE=shinyWidgets::prettySwitch("VERBOSE", "Verbose", value = TRUE, status = "danger"),
+  
+  VERBOSE= div(title="Use with caution, provides MB of output messages! Disable as too many output messages not so useful in an interactive context - please use CLI to turn on verbose messaging", 
+               disabled( shinyWidgets::prettySwitch("VERBOSE", "Verbose (!))", value = FALSE, status = "danger") )
+               ),
  
-  OUTPUTS= div(title="Disabled as only advanced users have access - modifying outputs might jeopardize correct postprocessing",
-    disabled(shiny::selectizeInput(
-    inputId = "OUTPUTS", multiple=T,
-    label = "Select desired outputs / options:",
-    choices = simoutf,
-    selected = simoutf
-  ) ) )
-
+  OUTPUTS= #div(title="Disabled as only advanced users have access - modifying outputs might jeopardize correct postprocessing",
+    # disabled(
+      # shiny::selectizeInput(
+      #   inputId = "OUTPUTS", multiple=T,
+      #   label = "Select desired outputs / options:",
+      #   choices = simoutf,
+      #   selected = simoutf
+      #   ) 
+      # 
+    pickerInput(
+      inputId = "OUTPUTS",
+      label = "Choose output arguments",
+      multiple = TRUE,
+      
+      choices = simoutf,
+      selected = simoutf,
+      choicesOpt = list(
+        content = simout,
+        style = sprintf('background:yellow;'),
+        class =  rep("cell2fireOutputOptions", length(simout)) 
+      ) 
+    )
+      # ) 
+   #   )
+   
   # shinyWidgets::materialSwitch("INSTANCE_IN_PROJECT", "Override instance directory", value = FALSE, status = "primary"),
   #
   # shinyWidgets::materialSwitch("RESULTS_IN_INSTANCE", "Results in instance folder", value = TRUE, status = "primary")
@@ -243,14 +302,21 @@ PANELS[["LANDSCAPE"]] <- list(
 
 ## IGNITION SECTION ----
 PANELS[["IGNITION SECTION"]] <- list(
-  NSIM=shiny::numericInput("NSIM", "Number of simulations", value = 3, min = 1),
+  NSIM=div(title="If generation mode is 0. (Uniformly distributed random ignition) then these are the number of random ignition points. 
+If generation mode is 2. (Single points on a Layer.) then if 'Radius around single point' is set to 0 this will simulate the same point. If radius is not 0, it will randomly put points in the area around the area defined by the radius around each point.",
+           shiny::numericInput("NSIM", "Number of simulations", value = 3, min = 1)
+           ),
   
   IGNITION_MODE=shiny::selectInput("IGNITION_MODE", "Generation mode", choices = NAME$ignition_modes),
   
-  IGNITIONFILE=shiny::selectInput("IGNITIONFILE", "Probability map [0,1]", paste0(SIM_INPUTS$ignitionfile$description, " [", SIM_INPUTS$ignitionfile$units, "]"),
+  IGNITIONFILE=shiny::selectInput("IGNITIONFILE", "Probability map [0,1]", 
+                                  paste0(SIM_INPUTS$ignitionfile$description, " [", SIM_INPUTS$ignitionfile$units, "]"),
                                   choices = get_existing_files()),
   
-  IGNIPOINT=shiny::div( title="", enabled=FALSE,
+  IGNIPOINT=shiny::div( title="Select one of the ignition points layer, usually named Ignitions.csv 
+                        but user can create several scenarios using the interactive map and the ignitions panel 
+                        <a href= >here</a>. Once simulation is run, the selected ignition file, whatever the name, will be converted to 
+                        Ignitions.csv in the input instance. <hr>NB: the format requires either X and Y columns with coordinates in latitude and longitude, or NCell as ", enabled=FALSE,
                         shiny::selectInput("IGNIPOINT", "Single points  layer", choices = get_existing_files())
   ) ,
   

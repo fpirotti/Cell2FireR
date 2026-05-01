@@ -35,11 +35,13 @@
   }
 .code-box {
   background: #f6f8fa;
-  color:black;
+  color: black;
   padding: 10px;
-  border-radius: 6px;
-  font-family: monospace;
+  border-radius: 6px; 
   position: relative;
+  margin: 15px;
+  border: 2px solid black;
+  box-shadow: 3px 3px 6px black;
 }
 .copy-btn {
   position: absolute;

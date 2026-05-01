@@ -179,7 +179,7 @@ GenerateDat <- function(g_fuel_type, elev, ps, saz, curing, in_folder) {
   # Vectorized mapping for GFL (more efficient in R than loops)
   df$gfl <- as.numeric(GFLD[df$fueltype])
 
-  utils::write.csv(df, file.path(in_folder, "Data.csv"), row.names = FALSE, na = "")
+  utils::write.csv(df, file.path(in_folder, "Data.csv"), quote=FALSE, row.names = FALSE, na = "")
   return(df)
 }
 

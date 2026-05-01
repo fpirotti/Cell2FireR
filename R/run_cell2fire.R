@@ -27,8 +27,13 @@
 #' @param c2f_bin_path Path to the Cell2Fire executable. Defaults to the user data path, but user can specify a different path.
 #' @param template_dir Path to the directory containing lookup tables and default weather.
 #' @param dry Logical; if TRUE, only prepares files and returns the command arguments.
+#' @param verbose Logical; if TRUE, provides many messages.
 #' 
-#' @return A processx process object (if dry = FALSE) or the command line arguments (if dry = TRUE).
+#' @returns A list object containing the process handle and metadata 
+#' for a fire spread simulation from cell2fire.
+#' @field process A \code{processx::process} object.
+#' @field command Character string. Path to the binary.
+#' @field args Character vector. The CLI arguments used.
 #' @export
 run_cell2fire <- function(
     fuel, fuel_model, input_folder, out_folder, elevation,
@@ -41,23 +46,25 @@ run_cell2fire <- function(
     outputs = NULL,
     c2f_bin_path  = c2f_bin_pathEnv(),
     template_dir,
-    dry = FALSE
+    dry = FALSE,
+    verbose = TRUE
 ) {
   
-  # Basic validation
-  if (missing(fuel) || is.null(fuel) || fuel == "") stop("Fuel raster is required.")
-  if (missing(fuel_model) || is.null(fuel_model) || fuel_model == "") stop("Fuel model is required.")
-  if (missing(input_folder) || is.null(input_folder) || input_folder == "") stop("Input folder is required.")
-  if (missing(out_folder) || is.null(out_folder)) stop("Output folder is required.")
-  
-  message("\n========================================\n====== SIMULATION STARTING =============\n========================================")
-  
+
   tryCatch({
+    # Basic validation
+    if (missing(fuel) || is.null(fuel) || fuel == "") stop("Fuel raster is required.")
+    if (missing(fuel_model) || is.null(fuel_model) || fuel_model == "") stop("Fuel model is required.")
+    if (missing(input_folder) || is.null(input_folder) || input_folder == "") stop("Input folder is required.")
+    if (missing(out_folder) || is.null(out_folder)) stop("Output folder is required.")
+    
+    message("\n========================================\n====== SIMULATION STARTING =============\n========================================")
+    
     # -------------------------------------------------------------
     # 1. SETUP DIRECTORIES
     # -------------------------------------------------------------
     timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-    instance_dir <- file.path(out_folder, paste0("sim_", timestamp))
+    instance_dir <- file.path(out_folder, paste0("firesim_", timestamp))
     results_dir <- file.path(instance_dir, "results")
     
     if (!dry) dir.create(instance_dir, recursive = TRUE, showWarnings = FALSE)
@@ -127,7 +134,7 @@ run_cell2fire <- function(
     if (!is.null(firebreaks) && nzchar(firebreaks)) {
       fb_rast <- terra::rast(firebreaks)
       fb_cells <- terra::cells(fb_rast, 1)
-      if (!dry) utils::write.csv(data.frame(Cell = fb_cells), file.path(instance_dir, "firebreaks.csv"), row.names = FALSE)
+      if (!dry) utils::write.csv(data.frame(Cell = fb_cells), file.path(instance_dir, "firebreaks.csv"), quote=FALSE, row.names = FALSE)
     }
     
     # -------------------------------------------------------------
@@ -145,7 +152,7 @@ run_cell2fire <- function(
     } else { 
       wea_dir <- input_folder
       wea_out <- file.path(instance_dir, "Weathers")
-      if (!dry) dir.create(wea_out, showWarnings = FALSE)
+      if (!dry && !dir.exists(wea_out)) dir.create(wea_out, showWarnings = FALSE)
       
       wea_files <- list.files(wea_dir, pattern = "^Weather[0-9]*\\.csv$", full.names = TRUE)
       if (length(wea_files) > 0) {
@@ -162,7 +169,7 @@ run_cell2fire <- function(
     
     if (ignition_mode == "2. Single points on a Layer") {
       if (is.null(ignition_point) || !nzchar(ignition_point) || !file.exists(ignition_point)) { 
-        stop("No ignition points found!") 
+        stop("No ignition points found! Did you select a CSV uploaded with the instance or created from the interactive map  with ignition points?") 
       } else {
         fuel_rast <- terra::rast(fuel)
         ign_pt <- sf::st_read(ignition_point, quiet = TRUE)
@@ -171,7 +178,7 @@ run_cell2fire <- function(
           if (is.data.frame(ign_pt)) { 
             if (!dry) {
               message("Writing Ignition points!") 
-              utils::write.csv(ign_pt, file.path(instance_dir, "Ignitions.csv"), row.names = FALSE)
+              utils::write.csv(ign_pt, file.path(instance_dir, "Ignitions.csv"), quote=FALSE, row.names = FALSE)
             }
           } else { 
             stop("Cannot read Ignition points. Ensure a valid file/dataframe was provided.") 
@@ -179,8 +186,8 @@ run_cell2fire <- function(
         } else {
           if (!dry) {
             ign_pt <- sf::st_transform(ign_pt, terra::crs(fuel_rast)) 
-            cell_id <- terra::cellFromXY(fuel_rast, sf::st_coordinates(ign_pt)[1, 1:2]) 
-            writeLines(c("Year,Ncell", paste0("1,", cell_id)), file.path(instance_dir, "Ignitions.csv")) 
+            cell_id <- terra::cellFromXY(fuel_rast, sf::st_coordinates(ign_pt)[, 1:2]) 
+            writeLines(c("Year,Ncell", sprintf("%d,%d", 1:length(cell_id), cell_id)), file.path(instance_dir, "Ignitions.csv")) 
           }
         }
       }
@@ -209,6 +216,7 @@ run_cell2fire <- function(
     }
     
     if (crown) args[["--cros"]] <- ""
+    if (verbose) args[["--verbose"]] <- ""
     
     if (ignition_mode == "2. Single points on a Layer") {
       args[["--ignitions"]] <- ""
@@ -265,12 +273,28 @@ run_cell2fire <- function(
       stdout = "|",
       stderr = "|"
     ) 
-    return(sim_process)
+    return( list(
+      process = sim_process,
+      command = c2f_bin_path,
+      args = cli_args,
+      outputFolder = results_dir,
+      instanceFolder = instance_dir
+    )
+    )
     
   }, error = function(e) {  
-    browser()
-    stop(paste("Error preparing simulation:", e$message))
+    if (dry) {
+      message("Dry run complete. Returning arguments.")
+      return( paste("Error preparing simulation:", e$message))
+    } else { 
+      warning(paste("Error preparing simulation:", e$message))
+    }
   }, warning = function(e) {  
-    warning(paste("Warning preparing simulation:", e$message))
+    if (dry) {
+      message("Dry run complete. Returning arguments.")
+      return( paste("Warning preparing simulation:", e$message))
+    } else { 
+      warning(paste("Warning preparing simulation:", e$message))
+    }
   })
 }

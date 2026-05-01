@@ -70,24 +70,18 @@ proc <- function(dry = TRUE) {
         outputs = input$OUTPUTS,
         # c2f_bin_path = c2f_bin,
         template_dir = template_dir,
-        dry = dry
+        dry = dry,
+        verbose = FALSE #input$VERBOSE
       )  
  
     # 4. Handle Logging and UI Updates
     # If it's a dry run, run_cell2fire returns the command-line arguments.
     # We can print these to the log interface just like the original script.
-    if (dry) { 
-      # flush(logs$log_con)
-      # writeLines(c("INFO - this is the command line used...",
-      #              paste0("<br><div class=code-box><span class =copy-btn onclick =\"copyToClipboard('code1')\">Copy</span><div id=code1>", 
-      #                     basename(c2f_bin), " ", paste(sim_result, collapse = " "), "</div></div><br>")), 
-      #            con = logs$log_con)
-      # flush(logs$log_con)
+    if (dry) {  
       shinyjs::runjs(paste0("$('#code1').text('",
                  
                      paste(sim_result, collapse = " "),
-                     "')") )
-      # updateTabsetPanel(session, "tabs", selected = "processLogTab")
+                     "')") ) 
       return(NULL)
     } 
     # If not dry, run_cell2fire returns the processx object.
