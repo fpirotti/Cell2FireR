@@ -153,8 +153,10 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                                                  class="btn-sm", title="Remove file (cannot be undone)"),
                                                                     downloadButton("download_table_ignition", label = NULL, icon = icon("download"), class="btn-sm", 
                                                                                    title="Download table in CSV file format"),
-                                                                    actionButton("upload_table_ignition", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
-                                                                    div(style="display:none;", fileInput("upload_table_ignition_input", label = NULL, buttonLabel = NULL, width = 10,  accept = c(".csv", ".xlsx", ".xls")  ) )
+                                                                    # actionButton("upload_table_ignition", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
+                                                                    div(style="display:inline;", fileInput("upload_table_ignition_input", 
+                                                                                                           label = NULL, buttonLabel = icon("upload"), 
+                                                                                                           width = 20,  accept = c(".csv", ".xlsx", ".xls")  ) )
                                                                   ),
                                                                   div( style = "overflow-x: auto;",  DTOutput("ignitionInfo")  )
                                                                   # ,# collapsible=TRUE, collapsed = TRUE,
@@ -283,11 +285,11 @@ ui <-  shinydashboardPlus::dashboardPage(
         shiny::fluidRow(
           
           shiny::column(4,    div(
-            shiny::fileInput("zipfileload", label=NULL, buttonLabel =  icon("upload") ), 
+            shiny::fileInput("zipfileload_dataset", label=NULL, buttonLabel =  icon("upload") ), 
             title="add a zip file with all necessary files - please see <a href=https://github.com/fpirotti/Cell2FireR/blob/master/README.md target=_blank> 📖 documentation HERE</a> on how to prepare it"
           ) ), 
           shiny::column(3,   div(
-            shiny::actionButton("downloadfolder" ,   NULL,
+            shiny::downloadButton("downloadfolder_dataset" ,   NULL,
                                 icon = icon("download") ),  title="Download dataset") ),
           shiny::column(3, div(
             shiny::actionButton("deletefolder", NULL,

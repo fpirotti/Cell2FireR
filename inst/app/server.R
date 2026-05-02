@@ -794,7 +794,24 @@ and raster %s",
   })
 
   ## TABLE IGNITION and edits  ----
+  ## 
+  observeEvent(input$chooseIgnitionFile, {
+    req(input$chooseIgnitionFile)
+    df <-tryCatch({
+      read.csv(input$chooseIgnitionFile)
+      }, warning=function(e){
+        showNotification(e$message, type="warning", duration = 19)
+        NULL
+      }, error=function(e){
+        showNotification(e$message, type="error", duration = 19)
+        NULL
+      })
+    req(df)
+    ignitionPointsCoords(df)
+  })
+  
   output$ignitionInfo <- renderDT({
+    print(input$chooseIgnitionFile)
     # req(ignitionPointsCoords())
     ip <- ignitionPointsCoords()
     if(is.null(ip)){
@@ -843,6 +860,7 @@ and raster %s",
   
   save_table_ignition_final <- function(overwrite=F){
     df <- isolate(ignitionPointsCoords())
+    print(df)
     if(overwrite && isTruthy(input$chooseIgnitionFile)) {
       write.csv(df, input$chooseIgnitionFile, quote=FALSE, row.names = F)
     } else {
@@ -1082,24 +1100,26 @@ and raster %s",
       loadInstances()
  
   })
-  ## download dataset -----
-  observeEvent(input$downloadfolder, {
-    req(input$inputfolder)
-    fp <- file.path("data", input$inputfolder )
-    req(fp!="data")
-    zip(sprintf("%s.zip", fp), list.files(fp, full.names = T) )
-  })
+  ## download dataset ----- 
+  output$downloadfolder_dataset <- downloadHandler(
+    filename = function() { 
+      sprintf("%s.zip", basename(input$inputfolder))
+    },
+    content = function(file) { 
+      req(input$inputfolder)
+      zip(file, 
+          list.files(input$inputfolder, full.names = T) )
+    }
+  )
   
-
-  
-  ## upload dataset -----
-  observeEvent(input$zipfileload, {
-    req(input$zipfileload)
+   ## upload dataset -----
+  observeEvent(input$zipfileload_dataset, {
+    req(input$zipfileload_dataset)
    
    
-    path <- file.path("data", tools::file_path_sans_ext(input$zipfileload$name) )
+    path <- file.path("data", tools::file_path_sans_ext(input$zipfileload_dataset$name) )
     if(dir.exists(path)){
-      showNotification(paste("Directory ", input$zipfileload$name, " exists, please delete it first or change the name of the zip file!"),
+      showNotification(paste("Directory ", input$zipfileload_dataset$name, " exists, please delete it first or change the name of the zip file!"),
                        type = "error",duration = 15
       )
       return(NULL)

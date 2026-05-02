@@ -9,6 +9,7 @@
 #' @examples
 center <- function(r){
   e <- terra::ext(r)
+ 
   list(
     lng = (e$xmin + e$xmax) / 2,
     lat = (e$ymin + e$ymax) / 2
