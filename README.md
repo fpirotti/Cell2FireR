@@ -209,8 +209,9 @@ HERE](https://www.cirgeo.unipd.it/FIRE-RES/ITC34/ITC34.zip)
 ## Acknowledgements
 
 This work was supported by the [Wildfire CE project "Fighting wildfires
-better together across borders" Interreg Central
-Europe](https://www.interreg-central.eu/projects/wildfire-ce/).
+better together across borders" Interreg Central Europe](https://www.interreg-central.eu/projects/wildfire-ce/).
+
+
 [![](man/images/wildfireLogo.png)](https://www.interreg-central.eu/projects/wildfire-ce/)
 
 ==> Many parts were taken from the excellent development and implementation of the QGIS plugin from the

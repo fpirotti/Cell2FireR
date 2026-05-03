@@ -39,7 +39,10 @@ server <- function(input, output, session) {
   
   ## dummy start/stop process
   simProcess <- NULL
-  
+  # all_input_names <- unlist(lapply(PANELS, names), use.names = FALSE) 
+  # lapply(all_input_names, function(inp) {  
+  #   input[[inp]]
+  # })
   weatherFiles <- NULL
   rasters <- list()
   terra.rasters <- list()
@@ -56,18 +59,25 @@ server <- function(input, output, session) {
     invalidateLater(1000) 
 
     if (is.null(simProcess)) return()  
-
+  
     if(!file.exists(file.path(simProcess$outputFolder, "simLog.log"))){
-      cat( "  ============= COMMAND LINE ==============\n", paste(c(simProcess$command, simProcess$args), collapse=" ") , 
+      cat( "============= COMMAND LINE ==============\n", paste(c(simProcess$command, simProcess$args), collapse=" ") , 
            "\n=========================================\n\n", 
            file=file.path(simProcess$outputFolder, "simLog.log"), append = T)
     }
     # 1. Smarter safe read functions
     # These check if the connection is actually valid BEFORE reading
-    read_out_safe <- function(simProcess) {
-      if (simProcess$has_output_connection() && simProcess$is_incomplete_output()) {
-        res <- tryCatch(simProcess$read_output_lines(), error = function(e){
-          print(e)
+    read_out_safe <- function(proc) {
+      if (proc$has_output_connection() ) {
+        res <- tryCatch({ proc$read_output_lines(n = -1) }, 
+                        error = function(e){
+          print("read out safe")
+          print(e$message)
+          NULL
+        }, warning = function(e){
+          print("read out safe")
+          print(e$message)
+          NULL
         } )
         if (is.null(res)) return(character(0)) else return(res)
       }
@@ -81,30 +91,18 @@ server <- function(input, output, session) {
       }
       return(character(0))
     }
-    
-    # 2. Helper function to format the payload
-    build_payload <- function(out_lines, err_lines) {
-      payload <- list()
-      if (length(out_lines) > 0) {
-        payload$out <- lapply(out_lines, function(x) list(type = "out", text = x))
-      }
-      if (length(err_lines) > 0) {
-        payload$err <- lapply(err_lines, function(x) list(type = "err", text = x))
-      }
-      return(payload)
-    }
+
     
     # Read standard out and standard error safely
-    out <- read_out_safe(simProcess$process)
-    err <- read_err_safe(simProcess$process)
+    outl <- read_out_safe(simProcess$process)
+    errl <- read_err_safe(simProcess$process)
     
     # Send payload if there's anything to send
-    payload <- build_payload(out, err)
-    if (length(payload) > 0) {
-      cat( paste(out, collapse="\n") , "\n", file=file.path(simProcess$outputFolder, "simLog.log"), append = T)
-      cat( paste(err, collapse="\n") , "\n", file=file.path(simProcess$outputFolder, "simErr.log"), append = T)
-      session$sendCustomMessage("appendLog", payload)
-    }
+    payload <- list(out=outl, err=errl)
+    if (length(outl) > 0) cat( paste(outl, collapse="\n") , "\n", file=file.path(simProcess$outputFolder, "simLog.log"), append = T)
+    if (length(errl) > 0) cat( paste(errl, collapse="\n") , "\n", file=file.path(simProcess$outputFolder, "simErr.log"), append = T)
+    if (length(payload$err) > 0 || length(payload$out) > 0 ) session$sendCustomMessage("appendLog", payload)
+ 
     
     # ---- process finished? ----
     if (!simProcess$process$is_alive()) {
@@ -123,8 +121,8 @@ server <- function(input, output, session) {
         if (length(drain_out) == 0 && length(drain_err) == 0) {
           break
         }
-        
-        drain_payload <- build_payload(drain_out, drain_err)
+        print("ASDFASDFASFDDSAF")
+        drain_payload <- list(out=drain_out, err=drain_err)
         if (length(drain_payload) > 0) {
           session$sendCustomMessage("appendLog", drain_payload)
         }
@@ -132,8 +130,8 @@ server <- function(input, output, session) {
       
       # Send termination message
       session$sendCustomMessage("appendLog", list( 
-        "out" = list(list(type = "out", text = "--- process finished ---"))
-      ))
+        "out" =  " --- process finished ---")
+      )
       
       # Clean up state
       
@@ -354,7 +352,7 @@ Work in progress....",  input="textarea")
       rfiles<- rasterFiles()
       names(rfiles) <- basename(rfiles)
       for(wg in names(SIM_INPUTS)){
-        # print(toupper(wg))
+        if(tolower(wg)=="fuel_model") next
         shiny::updateSelectInput(inputId = toupper(wg),
                                         choices =  rfiles, selected=""  )
       }
@@ -465,7 +463,22 @@ and raster %s",
           shiny::updateSelectInput(inputId = "ELEVATION", 
                                           choices =  rfiles ,
                                           selected =  rasters[["ELEVATION"]]  )
-        }  else if(grepl("cbd|bulk", layerName, ignore.case = T) ){ 
+        }   else if(grepl("slope", layerName, ignore.case = T) ){ 
+          rasters[["SLOPE"]] <<- terra::sources(r2)[[1]]
+          shiny::updateSelectInput(inputId = "SLOPE", 
+                                   choices =  rfiles ,
+                                   selected =  rasters[["SLOPE"]]  )
+        }   else if(grepl("saz|azimuth", layerName, ignore.case = T) ){ 
+          rasters[["SAZ"]] <<- terra::sources(r2)[[1]]
+          shiny::updateSelectInput(inputId = "SAZ", 
+                                   choices =  rfiles ,
+                                   selected =  rasters[["SAZ"]]  )
+        }   else if(grepl("cur|curvature", layerName, ignore.case = T) ){ 
+          rasters[["CUR"]] <<- terra::sources(r2)[[1]]
+          shiny::updateSelectInput(inputId = "CUR", 
+                                   choices =  rfiles ,
+                                   selected =  rasters[["CUR"]]  )
+        }    else if(grepl("cbd|bulk", layerName, ignore.case = T) ){ 
           rasters[["CBD"]] <<- terra::sources(r2)[[1]]
           shiny::updateSelectInput(inputId = "CBD", 
                                           choices =  rfiles ,
@@ -475,12 +488,12 @@ and raster %s",
           shiny::updateSelectInput(inputId = "CBH", 
                                           choices =  rfiles ,
                                           selected =  rasters[["CBH"]]  )
-        }  else if(grepl("ccf|cover", layerName, ignore.case = T) ){ 
+        }  else if(grepl("ccf|cover|fcc", layerName, ignore.case = T) ){ 
           rasters[["CCF"]] <<- terra::sources(r2)[[1]]
           shiny::updateSelectInput(inputId = "CCF", 
                                           choices =  rfiles ,
                                           selected =  rasters[["CCF"]]   )
-        }  else if(grepl("ch|height", layerName, ignore.case = T) ){ 
+        }  else if(grepl("ch|height|hm", layerName, ignore.case = T) ){ 
           rasters[["CHM"]] <<- terra::sources(r2)[[1]]
           shiny::updateSelectInput(inputId = "CHM", 
                                           choices =  rfiles ,
@@ -577,7 +590,8 @@ and raster %s",
     
   })
   
-  # CROWN  ----
+# INPUT ARGS OBSERVE ------
+### CROWN  ----
   observeEvent(input$CROWN, {
     if(!input$CROWN){
       shinyjs::disable("CBH")
@@ -591,15 +605,51 @@ and raster %s",
       shinyjs::enable("CHM")
     }
   })
+  ### IGNITION_MODE   ----
+  observeEvent(input$IGNITION_MODE, {
+    md <- as.integer(substr(input$IGNITION_MODE, 1,1))
+    if(md==0){
+      shinyjs::disable("IGNITIONFILE")
+      shinyjs::disable("IGNIPOINT") 
+      shinyjs::disable("IGNIRADIUS") 
+    } 
+    else if (md==1){
+      shinyjs::enable("IGNITIONFILE") 
+      shinyjs::disable("IGNIPOINT") 
+      shinyjs::disable("IGNIRADIUS") 
+    } 
+    else if (md==2){ 
+      shinyjs::enable("IGNIRADIUS")
+      shinyjs::disable("IGNITIONFILE") 
+      shinyjs::enable("IGNIPOINT") 
+    } 
+  })  
   
-  
-  # change INSTANCE folder ----
+# SIMULATION INSTANCE  ------
+### change folder ----
   observeEvent(input$outputInstanceFolder, {
     req(input$outputInstanceFolder) 
-    runPostProcess(input$outputInstanceFolder)
-    
-    
+    processSimulationOutputFolder(input$outputInstanceFolder)
   })
+### del folder ----
+  observeEvent(input$deleteSimulationOutputInstance, {
+    req(input$deleteSimulationOutputInstance) 
+ 
+    if(nchar(input$outputInstanceFolder) > 5 && sum(lengths(gregexpr("/", input$outputInstanceFolder)))>2  ) {
+      shinyWidgets::ask_confirmation(inputId = "deleteSimulationOutputInstance_ok",html = T,
+                                     sprintf("Confirm you want to delete the selected 
+Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
+                                             basename(input$outputInstanceFolder)  )
+      )
+    }
+  })
+  
+  observeEvent(input$deleteSimulationOutputInstance_ok, {
+    req(input$deleteSimulationOutputInstance_ok) 
+    req(input$outputInstanceFolder) 
+    unlink(input$outputInstanceFolder,recursive = T)
+    loadInstancesSimulationOutputs()
+  }) 
   
   # change DATASET folder ----
   observeEvent(input$inputfolder, {
@@ -1205,11 +1255,10 @@ and raster %s",
                    updateActionButton(inputId = "runsim",label = paste("🔥 Run ", input$simulator)  )
                  
                    
-                    session$sendCustomMessage("appendLog", list( "out"=
-                                                                  list( list(type="out", text="--- process finished by user ---") ),
-                                                                "err"=
-                                                                  list( list(type="out", text="--- process finished by user ---") )
-                   ))
+                    session$sendCustomMessage("appendLog", 
+                                              list( "out"=  "--- process finished by user ---",
+                                                    "err"=  "--- process finished by user ---" )
+                                               )
                    
                    simProcess <<- NULL
                    showNotification(
@@ -1255,7 +1304,7 @@ and raster %s",
       })
   }, { 
      proc(TRUE)
-  })
+  }, ignoreInit = T)
   
 
   ## END SESSION ----

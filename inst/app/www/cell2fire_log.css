@@ -3,19 +3,56 @@
     font-size: larger;
     font-weight: bold;
     background: green; 
+    padding: 5px; 
+}
+.log-meta {
+      margin: 5px 25px;
+    padding: 1px 11px;
+    color: sandybrown;
+}
+.log-simulation-start { 
+    color: #4af626;                 /* Terminal Green */
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    padding: 10px 15px;
+    margin-top: 20px;
+    margin-bottom: 5px;
+    border-left: 5px solid #28a745; /* Thick green left border */
+    border-radius: 4px;
+    display: flex; 
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+}
+.log-simulation-results {  
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    padding: 10px 15px;
+    margin-top: 20px;
+    margin-bottom: 5px;
+    border-bottom: 2px solid #28a745; /* Thick green left border */
+    border-radius: 4px;
+    display: flex; 
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+}
+.run-id-content{ 
+    padding: 5px; 
 }
 .run-card{
     border: 1px solid grey;
-    margin: 15px;
+    margin: 5px;
     padding: 5px; 
 }
+
+ 
 #logSim {
   background-color: #1e1e1e;
   color: #d4d4d4;
   font-family: 'Fira Code', monospace;
-  padding: 20px;
+  padding: 5px;
   border-radius: 8px;
-  line-height: 1.5;
+  line-height: 1.5; 
+  overflow-y: auto; 
+  height: calc(100vh - 130px); 
+    
 }
 
 /* Section Headers (e.g., ------ Command line values ------) */
@@ -65,4 +102,43 @@
   color: #d7ba7d;
   font-style: italic;
   padding-left: 15px;
+}
+
+
+
+/* Add this to your tags$head(tags$style(...)) */
+.sim-popup-table {
+    border-collapse: collapse;
+    font-family: 'Segoe UI', Tahoma, Geneva, sans-serif;
+    font-size: 11px;
+    width: auto;
+}
+.helpTitle {
+  color:sandybrown;
+  cursor: pointer;
+}
+.sim-popup-header {
+    background-color: #b94a48;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sim-popup-label {
+    padding: 4px 8px 2px 0px;
+    font-weight: bold;
+    color: #555;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.sim-popup-value {
+    padding: 4px 0px 2px 8px;
+    text-align: right;
+    font-family: 'Courier New', Courier, monospace;
+    color: #000;
+    border-bottom: 1px solid #f0f0f0;
 }

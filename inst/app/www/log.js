@@ -40,11 +40,7 @@ function makeTooltips(size=13){
      $(this).attr('data-tippy-content', $(this).attr('title'));
      $(this).removeAttr('title');
    }); 
-   
-   
-  $('[data-value]').each(function() {
-     $(this).attr('data-tippy-content', $(this).attr('data-value'));
-   }); 
+    
         
   ttinstances = tippy('[data-tippy-content]', {
     theme: 'cool',
@@ -337,20 +333,27 @@ var updateControl = function() {
 };
 
 var runContainer = null;
-var stopSimlog = function(){
+ 
+var startSimlog = function(triggerTime){
   var $box = $('#logSim');
-  runContainer = $('<div class="run-card"/>');
-  $box.append(runContainer);
+  var runContainerCard = $('<div class="run-card"/>');
+  $box.append(runContainerCard);
   var timestamp = new Date().toLocaleTimeString();
-  runContainer.append($('<div class="run-id-header"/>').text("Run Triggered at " + timestamp));
-
-}
-var startSimlog = function(){
-  var $box = $('#logSim');
-  runContainer = $('<div class="run-card"/>');
-  $box.append(runContainer);
-  var timestamp = new Date().toLocaleTimeString();
-  runContainer.append($('<div class="run-id-header"/>').text("Run Triggered at " + timestamp));
+  
+  if(triggerTime) timestamp = triggerTime;
+  
+  var runContainerHeader = ($('<div class="run-id-header"/>').html("<strong> ▼ </strong>Run Triggered at " + timestamp));
+  runContainerCard.append(runContainerHeader)
+  var runContainerContent = $('<div class="run-id-content"/>') ;
+  runContainerCard.append(runContainerContent);
+  runContainerHeader.on('click', function() {
+      runContainerContent.toggle();
+      var text = runContainerContent.is(':visible') ? '▼' : '►';
+      $(this).find('strong').text(text);
+    });
+    
+    runContainer =runContainerContent;
+  
 }
 
 var assignTitles = function(){
@@ -368,14 +371,34 @@ Shiny.addCustomMessageHandler('appendLog', function(msg) {
   if ($box.length === 0) return;
   if ($boxErr.length === 0) return;
   if (msg === null) return;
-
+  var tifMetadataCounter=-1;
   if(msg.out &&   Array.isArray(msg.out)) msg.out.forEach(function(line) { 
-    var text = line.text.trim();
+    var text = line.trim();
     var $div = $('<div/>');
     // 1. Detect Section Headers: ------ Text ------
     if (text.startsWith('---')) {
         $div.addClass('log-section').text(text.replace(/-/g, ''));
+        tifMetadataCounter = -1; // Reset if we hit a new section
     } 
+    else if (/^Simulation \d+ Start:/.test(text) ) {
+        $div.addClass('log-simulation-start').text(text); 
+    }
+    else if (/^Simulation \d+ Results:/.test(text) ) {
+        $div.addClass('log-simulation-results').text(text); 
+    }
+    else if (text.endsWith('.tif')) {
+        $div.addClass('log-file').text(text);
+        tifMetadataCounter = 0; // Start the counter for the following lines
+    }
+    else if (tifMetadataCounter >= 0 && /^\d+$/.test(text)) {
+        const labels = ["Rows", "Columns", "Bands", "Data Type"];
+        let label = labels[tifMetadataCounter] || "Unknown";
+        
+        $div.addClass('log-meta').text(`${text} (${label})`);
+        
+        tifMetadataCounter++; 
+        if (tifMetadataCounter > 3) tifMetadataCounter = -1; // Stop after 4 lines
+    }
     // 2. Detect Warnings: No file found...
     else if (text.startsWith('No ') && text.includes('.tif')) {
         $div.addClass('log-warning').text('⚠ ' + text);

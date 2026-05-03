@@ -5,6 +5,9 @@
 #' @param input_folder Directory containing input files (like weathers).
 #' @param out_folder Base directory for outputs.
 #' @param elevation Path to elevation raster.
+#' @param slope Path to slope raster in degreees.
+#' @param saz Path to azimuth raster in degrees.
+#' @param cur Path to curvature raster.
 #' @param crown Logical; whether to use crown data.
 #' @param cbh Path to Crown Base Height raster.
 #' @param cbd Path to Crown Bulk Density raster.
@@ -36,7 +39,8 @@
 #' @field args Character vector. The CLI arguments used.
 #' @export
 run_cell2fire <- function(
-    fuel, fuel_model, input_folder, out_folder, elevation,
+    fuel, fuel_model, input_folder, out_folder, 
+    elevation = NULL, slope = NULL, saz=NULL, cur=NULL,
     crown = FALSE, cbh = NULL, cbd = NULL, ccf = NULL, hm = NULL,
     ignition_mode = "1. Probability map distributed random ignition",
     ignition_file = NULL, ignition_point = NULL, ignition_radius = NULL,
@@ -99,6 +103,9 @@ run_cell2fire <- function(
     # -------------------------------------------------------------
     copy_to_instance(fuel, "fuels")
     copy_to_instance(elevation, "elevation") 
+    copy_to_instance(slope, "slope") 
+    copy_to_instance(saz, "saz") 
+    copy_to_instance(cur, "cur") 
     
     if (crown) { 
       message("CROWN info available and used") 
@@ -260,7 +267,8 @@ run_cell2fire <- function(
     }
     
     if (dry) {
-      message("Dry run complete. Returning arguments.")
+      message("Dry run complete. Returning arguments..... " )
+      message(paste(c(basename(c2f_bin_path), cli_args), collapse = " ") )
       return(paste(c(basename(c2f_bin_path), cli_args), collapse = " "))
     }
     
@@ -284,14 +292,14 @@ run_cell2fire <- function(
     
   }, error = function(e) {  
     if (dry) {
-      message("Dry run complete. Returning arguments.")
+      message("ERR Dry run complete. Returning arguments.")
       return( paste("Error preparing simulation:", e$message))
     } else { 
       warning(paste("Error preparing simulation:", e$message))
     }
   }, warning = function(e) {  
     if (dry) {
-      message("Dry run complete. Returning arguments.")
+      message("WW Dry run complete. Returning arguments.")
       return( paste("Warning preparing simulation:", e$message))
     } else { 
       warning(paste("Warning preparing simulation:", e$message))

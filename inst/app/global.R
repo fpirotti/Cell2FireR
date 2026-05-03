@@ -1,6 +1,6 @@
 ## make sure leafem is version 0.2.5 or more!
 pkgs <- c("terra", "DT", "remotes", "sf", "httr", "shiny", "leaflet", "shinyjs", 
-          "processx", "dplyr",
+          "processx", "dplyr", "spatialEco",
           "tools", "shinydashboard", "shinyvalidate", "bcrypt", "xml2", "future",
           "promises", "stringr",  "leafem", "cli", "shinydashboardPlus",
           # "fresh",
@@ -296,6 +296,15 @@ isScottBurgan <- function(r){
     return(F)
   }
 }
+## ignition icon ----
+ignitionIcon <- leaflet::makeAwesomeIcon(
+  icon = "burst",
+  markerColor = "white",
+  iconColor = "red",
+  library  ="fa"
+  # squareMarker=TRUE,
+  # text="<span style='font-size:24px'>🔥</span>"
+)
 
 ## fire icon ----
 fireIcon <- leaflet::makeAwesomeIcon(

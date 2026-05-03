@@ -34,6 +34,7 @@ checkAPI <- function(url){
 
 
 parse_fire_log <- function(log_text) {
+  
   # 1. Read all lines into a character vector
   lines <- log_text
   
@@ -43,9 +44,9 @@ parse_fire_log <- function(log_text) {
   burnt_indices <- grep("^\\s+Burnt\\s+", lines)
   # 3. Extract just the numbers from those specific lines
   #    Using simple regex just to pull the digits
-  sim_ids      <- as.numeric(str_extract(lines[sim_indices], "\\d+"))
-  ign_cells    <- as.numeric(str_extract(lines[ign_indices], "\\d+"))
-  burnt_counts <- as.numeric(str_extract(lines[burnt_indices], "\\d+"))
+  sim_ids      <- as.numeric(str_extract(lines[sim_indices  ], "\\d+"))
+  ign_cells    <- as.numeric(str_extract(lines[ign_indices  ], "\\d+"))
+  burnt_counts <- as.numeric(str_extract(lines[burnt_indices ], "\\d+"))
   
   # 4. Bind them into a data frame
   data.frame(

@@ -9,7 +9,10 @@ run_cell2fire(
   fuel_model,
   input_folder,
   out_folder,
-  elevation,
+  elevation = NULL,
+  slope = NULL,
+  saz = NULL,
+  cur = NULL,
   crown = FALSE,
   cbh = NULL,
   cbd = NULL,
@@ -45,6 +48,12 @@ run_cell2fire(
 \item{out_folder}{Base directory for outputs.}
 
 \item{elevation}{Path to elevation raster.}
+
+\item{slope}{Path to slope raster in degreees.}
+
+\item{saz}{Path to azimuth raster in degrees.}
+
+\item{cur}{Path to curvature raster.}
 
 \item{crown}{Logical; whether to use crown data.}
 

@@ -20,28 +20,54 @@ plotPostProcess <- function(simulations){
     addMapPane(name = "ignition_points_pane", zIndex = 650) |>
     # clearGroup("Simulation Output") %>% # Optional: remove previous run's markers
     addCircleMarkers(group = "Simulation Ignition Points",
-      data = df_sf,
-      radius = 12,
-      options = pathOptions(pane = "ignition_points_pane"),
-      color = "#e74c3c", # Red for fire
-      # stroke = FALSE,
-      fillOpacity = 0.8,
+                     data = df_sf,
+      radius = 12,           # The clickable area
+      stroke = FALSE, 
+      fillOpacity = 0,       # Makes it invisible
+      options = pathOptions(pane = "ignition_points_pane"), 
       popup = ~paste0(
-        "<div style='font-family: sans-serif;'>",
-        "<b>Simulation:</b> ", simulation, "<br>",
-        "<b>Ignition Cell:</b> ", ignition_cell, "<br>",
-        "<b>Burnt Cells:</b> ", burnt_cells,
-        "</div>"
-      ) 
-      ) |>
+        "<table class='sim-popup-table'>",
+        "<thead>",
+        "<tr><th colspan='2' class='sim-popup-header'>Simulated Ignition n. ", simulation, "</th></tr>",
+        "</thead>",
+        "<tbody>", 
+        "<tr>",
+        "<td class='sim-popup-label'>Cell</td>",
+        "<td class='sim-popup-value'>", ignition_cell, "</td>",
+        "</tr>",
+        "<tr>",
+        "<td class='sim-popup-label'>Burnt cells</td>",
+        "<td class='sim-popup-value'>", burnt_cells, "</td>",
+        "</tr>",
+        "</tbody>",
+        "</table>"
+      )
+    ) |>
+   
+    addLabelOnlyMarkers(group = "Simulation Ignition Points",
+                        data = df_sf,
+      label = HTML('<i class="fa fa-burst" style="color:red; font-size:24px;"></i>'),
+      labelOptions = labelOptions(
+        noHide = TRUE, 
+        direction = 'center', 
+        textOnly = TRUE
+      )
+    )  |>
         leaflet::fitBounds( lng1 = bbox[["xmin"]], lat1 = bbox[["ymin"]],
                             lng2 = bbox[["xmax"]], lat2 = bbox[["ymax"]]
         )   
     
 }
 
-runPostProcess <- function(resDir){
- 
+processSimulationOutputFolder <- function(resDir){
+  formatted_time <- gsub(".*_(\\d{4})(\\d{2})(\\d{2})_(\\d{2})(\\d{2})(\\d{2})", 
+                         "\\1-\\2-\\3 \\4:\\5:\\6", 
+                         basename(resDir))
+  
+  print(formatted_time)
+  shinyjs::runjs("$('#logSim').empty('')")
+  shinyjs::runjs(paste0("startSimlog('",formatted_time,"');") )
+  ### load log ----
   fl <- list.files(resDir, pattern = "simLog.log", recursive = T, full.names = T)
  
   if(length(fl)!=1){
@@ -50,8 +76,16 @@ runPostProcess <- function(resDir){
     showNotification("Output simLog.log file not found!", type="warning", duration=19)
     return(NA)
   }
-  simout <- parse_fire_log(readLines(fl ) )
-  plotPostProcess(simout)
+  rfl <- readLines(fl ) 
+  session$sendCustomMessage("appendLog",  list(out=rfl))
+  tryCatch({
+    simout <-  parse_fire_log(rfl )
+    plotPostProcess(simout)
+  }, warning=function(e){
+    showNotification(e$message, type="warning", duration=20)
+  }, error=function(e){
+     showNotification(e$message, type="error", duration=20)
+  })
 }
 
 

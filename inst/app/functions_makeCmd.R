@@ -36,19 +36,51 @@ proc <- function(dry = TRUE) {
     # 2. Define Paths (Adapting from your original script's context)
     # Using the same logic you had to locate the binary and templates
     template_dir <- file.path(this.path::this.dir(), "templates")
- 
+  
     c2f_bin <-  Cell2FireR::c2f_bin_pathEnv()
+    
+    slope = input$SLOPE
+    saz = input$SAZ
+    cur = input$CUR
+    
+    terrain <- list(
+      slope = input$SLOPE,
+      saz = input$SAZ,
+      cur = input$CUR
+    )
     # browser()
-
+    if(isTruthy(input$ELEVATION)){
+      
+      elev <- rast(input$ELEVATION)
+      for(tt in names(terrain)){
+        if(!file.exists(terrain[[tt]])){
+        shiny::showNotification(ui =sprintf("%s raster NOT present, 
+but elevation raster is - I will create it for you...
+This is a one-time operation, please be patient.", tt), type = "warning")
+        if(tt=="slope") ttt <- terra::terrain(elev, v = "slope", unit = "degrees")
+        if(tt=="saz") ttt <- terra::terrain(elev, v = "aspect", unit = "degrees")
+        if(tt=="cur") ttt <- spatialEco::curvature(elev, type = "total")
+        
+        pout <- file.path(input$inputfolder,   sprintf("%s.tif", tt) )
+        writeRaster(ttt, pout )
+        assign(tt, pout)  
+       } 
+     }
+    } 
+     
       # 3. Call the Agnostic Function
       # We map the Shiny input$ variables directly to the function arguments
       if(!dry) runjs("startSimlog();")
+     
       sim_result <- run_cell2fire(
         fuel = input$FUEL,
         fuel_model = input$FUEL_MODEL,
         input_folder = input$inputfolder,
         out_folder = outfolder, # Assuming outfolder is still in the global/parent environment
         elevation = input$ELEVATION,
+        slope = slope,
+        saz = saz,
+        cur = cur,
         crown = isTruthy(input$CROWN) && input$CROWN == TRUE,
         cbh = input$CBH,
         cbd = input$CBD,
@@ -90,10 +122,10 @@ proc <- function(dry = TRUE) {
     simProcess <<- sim_result 
     
   }, error = function(e) {  
-    print(e$message)
+    message("error in dry run 1 ", e$message)
     shiny::showNotification(ui = paste("Error in preparing simulation:", e$message), type = "error")
   }, warning = function(e) { 
-    print(e$message) 
+    message("error in dry run 2 ", e$message)
     shiny::showNotification(ui = paste("Warning in preparing simulation:", e$message), type = "warning")
   })
 }

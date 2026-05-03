@@ -17,8 +17,15 @@ get_fuel_key <- function(fuel_string) {
     "2. Canada FBP" = "C",
     "3. Portugal" = "P"
   )
-  
+ 
   mapped_val <- unname(fuel_map[fuel_string])
+
+  if (is.null(mapped_val) || is.na(mapped_val)) {
+    mapped_val <- which(fuel_map==fuel_string)
+    if(length(mapped_val)==1)  mapped_val <- fuel_string
+    else mapped_val <- NULL
+  }
+  
   if (!is.null(mapped_val) && !is.na(mapped_val)) {
     return(mapped_val)
   }

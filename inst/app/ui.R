@@ -53,26 +53,27 @@ ui <-  shinydashboardPlus::dashboardPage(
 
                                                  shiny::selectInput(
                                                    "inputfolder",
-                                                   "Choose dataset",
+                                                   "DATASET",
                                                    choices = c("",  basename(
                                                      list.dirs("data", recursive = F)) )
                                                  ),
-                                                 
-                                                 div(title="Simulation outputs will create a folder which can be post-processed", 
+                                                  
                                                      shiny::selectInput(
                                                        "outputInstanceFolder",
-                                                       "Choose Output Instance",
-                                                       choices = c("")
-                                                     )
+                                                       HTML("Simulation Output Instance<sup class='helpTitle' title='Simulation outputs will create a folder with timestamp so that it 
+can be accessed anytime to check and download logs and outputs'>?</sup>"),
+                                                       choices = c("") 
                                                  ),
                                                  shinydashboard::sidebarMenu(id="tabs",             
                                                    shinydashboard::menuItem("Map", tabName = "dashboardMap", icon = icon("dashboard")),
                                                    
-                                                   div(style="display:none;", 
-                                                       shinydashboard::menuItem("Information", icon = icon("info"), tabName = "infoBox")
-                                                   ),
+                                                   # div(style="display:none;", 
+                                                   #     shinydashboard::menuItem("Information", icon = icon("info"), tabName = "infoBox")
+                                                   # ),
                                                    
-                                                   shinydashboard::menuItem("Process Log", icon = icon("gear"), tabName = "processLogTab"),
+                                                   shinydashboard::menuItem( HTML("SIMULATION LOG<sup class='helpTitle' title='Check parsed logs of the simulator'>?</sup>"), 
+                                                                            icon = icon("clipboard-list"), 
+                                                                            tabName = "processLogTab"),
                                                    # shinydashboard::menuItem("Inputs", icon = icon("table"),
                                                                             shinydashboard::menuItem("Input Args", icon = icon("sliders-h"), tabName = "inputInstancesInputArgs"),
                                                                            # shinydashboard::menuItem("Input Args2", icon = icon("sliders-h"), tabName = "inputInstancesInputArgs2"),
@@ -92,15 +93,10 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                  ),
                                                  
                                                  
-                                                 shiny::actionButton("runsim", "Run",    
-                                                                     title="From the  Fire2a research group at University of Chile, a big-scale, grid, forest fire simulator; parallel and fast (c++)  " ),
-                                                 
-
-                                                 
-                                                 
-                                                 shiny::actionButton("postsim", "PostProcessing",    
-                                                                     title="After simulation is finished, you can run a <b>postprocess</b> to extract information from results - requires an output instance" ),
-                                                 
+                                                 shiny::actionButton("runsim", "Run"   ), 
+                                                 # shiny::actionButton("postsim", "PostProcessing",    
+                                                 #                     title="After simulation is finished, you can run a <b>postprocess</b> to extract information from results - requires an output instance" ),
+                                                 # 
                                                  tags$div(
                                                    class = "sidebar-logo",
                                                    tags$img(src = "wildfireLogo.png", style = "width:100%; padding:10px;")
@@ -154,7 +150,7 @@ ui <-  shinydashboardPlus::dashboardPage(
                                                                     downloadButton("download_table_ignition", label = NULL, icon = icon("download"), class="btn-sm", 
                                                                                    title="Download table in CSV file format"),
                                                                     # actionButton("upload_table_ignition", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
-                                                                    div(style="display:inline;", fileInput("upload_table_ignition_input", 
+                                                                    div(style="margin-bottom: -40px; ", fileInput("upload_table_ignition_input", 
                                                                                                            label = NULL, buttonLabel = icon("upload"), 
                                                                                                            width = 20,  accept = c(".csv", ".xlsx", ".xls")  ) )
                                                                   ),
@@ -268,20 +264,9 @@ ui <-  shinydashboardPlus::dashboardPage(
     controlbarMenu(
       id = "controlbar_tabs",
       controlbarItem(
-        title = "Software",
-        icon = icon("desktop"),
-        shiny::selectInput(
-          "simulator",
-          "Fire Spread Simulator",
-          choices = c("Cell2Fire"="Cell2Fire", 
-                      "FlamMap"="FlamMap",
-                      "..."="others")
-        )
-      ),
-      controlbarItem(
-        title = "Dataset",
-        icon = icon("desktop"),
-        h4("Manage Dataset"),
+        title = NULL,
+        icon = tags$div(title="Manage Selected Dataset", icon("database")),
+        h6("Manage selected dataset"),
         shiny::fluidRow(
           
           shiny::column(4,    div(
@@ -295,7 +280,23 @@ ui <-  shinydashboardPlus::dashboardPage(
             shiny::actionButton("deletefolder", NULL,
                                 icon=icon("trash") ), title="Delete dataset") ) 
         )
-      )
+      ),
+      
+      controlbarItem(
+        title = NULL,
+        icon = tags$div(title="Simulation Output Instance", icon("square-poll-vertical")),
+        h6("Manage Selected Simulation Output Instance"),
+        div(
+          shiny::actionButton("deleteSimulationOutputInstance", "Delete Instance",
+                              icon=icon("trash") ), title="Delete Simulation Output"),
+        shiny::selectInput(
+          "simulator",
+          "Fire Spread Simulator",
+          choices = c("Cell2Fire"="Cell2Fire", 
+                      "FlamMap"="FlamMap",
+                      "..."="others")
+        )
+      ),
     )
   ),
   
