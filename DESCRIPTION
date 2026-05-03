@@ -1,9 +1,12 @@
 Package: Cell2FireR
-Title:  aA bridge between R and the Cell2Fire C++ executable. It automates several tedious steps and provides a web-app for user-friendly interaction and capacity building on fire spread simulations.
-Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Title:  A bridge between R and the Cell2Fire C++ executable. It automates several tedious steps and provides a web-app for user-friendly interaction and capacity building on fire spread simulations
+Version: 0.0.0.9500
+Authors@R:     person("Francesco", "Pirotti", , "francesco.pirotti@unipd.it", role = c("aut", "cre"))
+Description: a bridge between R and the Cell2Fire C++ executable. It automates several tedious steps:
+ **Workspace Management**: Creates timestamped instance and result directories for every run.
+ **Data Preparation**: Links or copies required landscape rasters (Fuel, Elevation, Slope, etc.) into a standardized format for the simulator.
+ **Auto-Conversion**: Detects if fuel rasters are not in the required 32/64-bit format and converts them to `INT4U` automatically.
+ **Spatial Alignment**: Automatically transforms ignition point coordinates to match the Coordinate Reference System (CRS) of the fuel raster.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
