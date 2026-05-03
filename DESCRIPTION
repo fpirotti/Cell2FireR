@@ -1,5 +1,5 @@
 Package: Cell2FireR
-Title: What the Package Does (One Line, Title Case)
+Title:  aA bridge between R and the Cell2Fire C++ executable. It automates several tedious steps and provides a web-app for user-friendly interaction and capacity building on fire spread simulations.
 Version: 0.0.0.9000
 Authors@R: 
     person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
