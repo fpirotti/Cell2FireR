@@ -53,7 +53,7 @@ ui <-  shinydashboardPlus::dashboardPage(
 
                                                  shiny::selectInput(
                                                    "inputfolder",
-                                                   "DATASET",
+                                                   HTML("DATASET<sup class='helpTitle' title='Choose dataset - you can upload your own ZIP file with rasters and weather files (click top right gear icon)'>?</sup>"),
                                                    choices = c("",  basename(
                                                      list.dirs("data", recursive = F)) )
                                                  ),
@@ -267,19 +267,20 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"),
         title = NULL,
         icon = tags$div(title="Manage Selected Dataset", icon("database")),
         h6("Manage selected dataset"),
-        shiny::fluidRow(
-          
-          shiny::column(4,    div(
-            shiny::fileInput("zipfileload_dataset", label=NULL, buttonLabel =  icon("upload") ), 
-            title="add a zip file with all necessary files - please see <a href=https://github.com/fpirotti/Cell2FireR/blob/master/README.md target=_blank> 📖 documentation HERE</a> on how to prepare it"
-          ) ), 
-          shiny::column(3,   div(
-            shiny::downloadButton("downloadfolder_dataset" ,   NULL,
-                                icon = icon("download") ),  title="Download dataset") ),
-          shiny::column(3, div(
-            shiny::actionButton("deletefolder", NULL,
-                                icon=icon("trash") ), title="Delete dataset") ) 
-        )
+ 
+            shiny::fileInput("zipfileload_dataset", 
+                             label=HTML("Upload Dataset<sup class='helpTitle' title='add a zip file with all necessary files - please see <a href=https://github.com/fpirotti/Cell2FireR/blob/master/README.md target=_blank> 📖 documentation HERE</a> on how to prepare it'>?</sup>"), 
+                             buttonLabel =  icon("upload"),accept = c(".zip") ), 
+            
+  
+            shiny::downloadButton("downloadfolder_dataset" ,  
+                                  label=HTML("Download<sup class='helpTitle' title='Downloads a ZIP file with dataset so you can run on your own cell2fire implementation.'>?</sup>"), 
+                                  
+                                icon = icon("download") ), 
+       
+            shiny::actionButton("deletefolder_dataset",  
+                                label=HTML("Delete<sup class='helpTitle' title='Delete active dataset'>?</sup>"), 
+                                icon=icon("trash") )  
       ),
       
       controlbarItem(

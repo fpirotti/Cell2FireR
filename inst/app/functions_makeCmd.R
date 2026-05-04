@@ -71,7 +71,7 @@ This is a one-time operation, please be patient.", tt), type = "warning")
       # 3. Call the Agnostic Function
       # We map the Shiny input$ variables directly to the function arguments
       if(!dry) runjs("startSimlog();")
-     
+      
       sim_result <- run_cell2fire(
         fuel = input$FUEL,
         fuel_model = input$FUEL_MODEL,
@@ -116,16 +116,17 @@ This is a one-time operation, please be patient.", tt), type = "warning")
                      "')") ) 
       return(NULL)
     } 
+      
     # If not dry, run_cell2fire returns the processx object.
     # We update the tab and assign it to the global environment so the rest of your app can track it.
     updateTabsetPanel(session, "tabs", selected = "processLogTab")
     simProcess <<- sim_result 
     
   }, error = function(e) {  
-    message("error in dry run 1 ", e$message)
+    message("error in proc run 1 ", e$message)
     shiny::showNotification(ui = paste("Error in preparing simulation:", e$message), type = "error")
   }, warning = function(e) { 
-    message("error in dry run 2 ", e$message)
+    message("warning in proc run 2 ", e$message)
     shiny::showNotification(ui = paste("Warning in preparing simulation:", e$message), type = "warning")
   })
 }

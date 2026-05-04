@@ -90,11 +90,6 @@ SIM_INPUTS <- list(
     units = "0-1", 
     description = tr("Ignition Probability"),
     title = tr("A raster representing the spatial likelihood of an ignition occurring. Used for distributed random ignition modes.")
-  ),
-  fmc = list(
-    units = "%", 
-    description = tr("Fuel Moisture Content"),
-    title = tr("Spatial distribution of moisture. Heavily dictates both ignition probability and the rate of spread.")
   ), 
   firebreaks = list(units = "0,1", description = "Firebreaks raster (1=firebreak)",
                     title = tr("Firebreaks raster (1=firebreak)")

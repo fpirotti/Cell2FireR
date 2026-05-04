@@ -83,13 +83,15 @@ run_cell2fire <- function(
         
         if (standard_name == "fuels") {
           tf <- terra::rast(filepath)
+          filepath.old <- filepath
           if (as.integer(substr(terra::datatype(tf), 4, 4)) < 4) { 
             # Note: add_suffix must be defined elsewhere in your package
             filepath <- paste0(tools::file_path_sans_ext(filepath), "_INT4U.", ext)
             if (!dry) {
               message("Fuel is not in 32 or 64 bits. Converting and copying. Please upload a dataset with fuel as 32 and 64 bits to avoid this warning.")
               if (!file.exists(filepath)) { 
-                terra::writeRaster(tf, filename = filepath, datatype = "INT4U")
+                terra::writeRaster(tf, filename = filepath, datatype = "INT4U", overwrite=T)
+                file.remove(filepath.old)                
               }
             } 
           } 

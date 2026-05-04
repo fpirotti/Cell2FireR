@@ -121,7 +121,6 @@ server <- function(input, output, session) {
         if (length(drain_out) == 0 && length(drain_err) == 0) {
           break
         }
-        print("ASDFASDFASFDDSAF")
         drain_payload <- list(out=drain_out, err=drain_err)
         if (length(drain_payload) > 0) {
           session$sendCustomMessage("appendLog", drain_payload)
@@ -373,18 +372,16 @@ Work in progress....",  input="textarea")
           if(!compareGeom(terra::rast(rasters[[1]]), r2, stopOnError = FALSE) ){
             showNotification(
               HTML(
-              sprintf("<b>Rasters NOT aligned!</b> Either CRS, 
-origin or resolution are 
-different between raster %s 
-and raster %s", 
-                    basename(sources(rasters[[1]])) , 
-                    basename(sources(r1))
+              sprintf("<b>Raster %s NOT aligned with raster stack %s!</b> Either CRS, 
+origin or resolution are different. It will be removed! Please reload dataset with clean set of aligned rasters.", 
+                    basename(rasters[[1]]) , 
+                    basename(sources(r2))
                       )
                    ),
               duration = 12,
               type = "error"
             )
-            break
+            next
           } 
         }
         
@@ -414,8 +411,6 @@ and raster %s",
             fuel = lut_fbp$fuel_type,
             color =   rgb(lut_fbp$r, lut_fbp$g, lut_fbp$b, maxColorValue = 255)
           )
-          
-          
           lut_generic <- lut_fbp
           if(isScottBurgan(r2)){ 
             levs <- data.frame(
@@ -1128,29 +1123,32 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
     )
   })
 
-
-  ## delete dataset -----
-  observeEvent(input$deletefolder, {
-    if(input$inputfolder==""){
+  
+# DATASET MANAGEMENT ------  
+  ### delete dataset -----
+  observeEvent(input$deletefolder_dataset, {
+ 
+    if(!isTruthy(input$inputfolder)){ 
       showNotification("Please select a dataset from the drop down menu",
-                       type="warning")
+                       type="warning", duration=20)
       return(NULL)
     } 
-        shinyWidgets::confirmSweetAlert(session=session,
-                                        "confirmDelete",
-                                        "Confirm",
-     paste("Confirm you want to delete dataset", input$inputfolder ))
+    print("asdgfasdf")
+    shinyWidgets::confirmSweetAlert(session=session,
+                                    inputId =  "confirmDelete_dataset",
+                                      title = "Confirm",
+                                    text =  paste("Confirm you want to delete dataset", input$inputfolder ))
   })
 
-  observeEvent(input$confirmDelete, {
-    print(input$inputfolder)
-      req(input$inputfolder)
-      showNotification("Removing folder " )
-      unlink( file.path("data", input$inputfolder) )
+  observeEvent(input$confirmDelete_dataset, { 
+ 
+      showNotification(paste("Removing folder ",   input$inputfolder), duration=10 )
+      if(nchar(input$inputfolder)>4)  unlink(   input$inputfolder, recursive = T  )
       loadInstances()
  
   })
-  ## download dataset ----- 
+  
+  ### download dataset ----- 
   output$downloadfolder_dataset <- downloadHandler(
     filename = function() { 
       sprintf("%s.zip", basename(input$inputfolder))
@@ -1161,8 +1159,8 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
           list.files(input$inputfolder, full.names = T) )
     }
   )
-  
-   ## upload dataset -----
+
+    ### upload dataset -----
   observeEvent(input$zipfileload_dataset, {
     req(input$zipfileload_dataset)
    
@@ -1174,26 +1172,64 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
       )
       return(NULL)
     }
-    fs <- file.size(input$zipfileload$datapath)
+    fs <- file.size(input$zipfileload_dataset$datapath)
     showNotification(
-      paste("Unzipping ", fs/1e6 ," MB in data folder to ", input$zipfileload$name)
+      paste("Unzipping ", ifelse(fs/1e6 > 1,  paste0(round(fs/1e6,1), " MB "),
+                                 paste0(round(fs/1e3,1), " kB")),"  in data folder to ",
+            input$zipfileload_dataset$name),duration = 10
       )
 
-    unzip(input$zipfileload$datapath, exdir=path )
+    unzip(input$zipfileload_dataset$datapath, exdir=path )
 
     showNotification(
-      paste("Finished unzipping  to ", input$zipfileload$name)
-    )
-    
+      paste("Finished unzipping  to ", input$zipfileload_dataset$name)
+    ) 
     if( length( list.files(path=path, pattern = "fuel.*\\.(asc|tif)$") )==0 ){
+      dd <- list.dirs(path=path, recursive = F) 
+      if( length( dd )==0 ){
+        showNotification(
+          "<b>No fuel raster found!</b> - make sure that   your zip does not have subfolders and  a TIF or ASC file with the word  fuel  e.g. myfuel.tif or fuelINT.asc is available in the instance.",
+          type = "error", duration = 20
+        )
+        
+        if(nchar(path)>4) unlink(path, recursive = TRUE) 
+      } else {
+        subdd <- list.files(path=dd, pattern = "fuel.*\\.(asc|tif)$")
+        if( length( subdd )==0 ){
+          showNotification(
+            "<b>No fuel rasters found!</b> - make sure that   your zip does not have subfolders and  a TIF or ASC file with the word  fuel  e.g. myfuel.tif or fuelINT.asc is available in the instance.",
+            type = "error", duration = 20
+          )
+          if(nchar(path)>4) unlink(path, recursive = TRUE) 
+        } else {
+          files_to_move <- list.files(path=dd, full.names = T)
+          dest_paths <- file.path(path, basename(files_to_move))
+          
+          # 4. Move the files
+          # file.rename returns TRUE if successful
+          success <- file.rename(from = files_to_move, to = dest_paths)
+          # Check results
+          if(all(success)) {
+            
+            showNotification(
+              "<b>Files in subfolder</b> copied to main folder successfully",
+              type = "success", duration = 20
+            )
+            
+            loadInstances()
+          } else {
+            
+            showNotification(
+              "<b>Some files could not be moved, please check your zip contents, no subfolders should be present",
+              type = "error", duration = 20
+            )
+            if(nchar(path)>4) unlink(path, recursive = TRUE) 
+          }
+          unlink(dd)
+        }
+      }
       # browser()
-      showNotification(
-        "<b>No fuel raster found!</b> - make sure that   your zip does not have subfolders and  a TIF or ASC file with the word  fuel  e.g. myfuel.tif or fuelINT.asc is available in the instance.",
-        type = "error", duration = 15
-      )
-      
-      if(nchar(path)>4) unlink(path, recursive = TRUE)
-      
+
     } else { 
       showNotification(
         paste("LOADING TO ", input$zipfileload$name)
