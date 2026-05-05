@@ -61,7 +61,7 @@ run_cell2fire <- function(
     if (missing(fuel_model) || is.null(fuel_model) || fuel_model == "") stop("Fuel model is required.")
     if (missing(input_folder) || is.null(input_folder) || input_folder == "") stop("Input folder is required.")
     if (missing(out_folder) || is.null(out_folder)) stop("Output folder is required.")
-    
+
     message("\n========================================\n====== SIMULATION STARTING =============\n========================================")
     
     # -------------------------------------------------------------
@@ -167,7 +167,7 @@ run_cell2fire <- function(
       if (length(wea_files) > 0) {
         if (!dry) file.copy(wea_files, wea_out)
       } else { 
-        stop("Multiple weathers requires a directory with Weather[0-9]*.csv files!") 
+        stop( errorCondition("Multiple weathers requires a directory with Weather[0-9]*.csv files!") )
       }
     }
     
@@ -276,6 +276,7 @@ run_cell2fire <- function(
     
     message(paste("Executing:", c2f_bin_path, paste(cli_args, collapse = " ")))
     
+    browser()
     # Start the process and return the object
     sim_process <- processx::process$new(
       c2f_bin_path,

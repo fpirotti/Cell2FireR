@@ -48,13 +48,29 @@ server <- function(input, output, session) {
   terra.rasters <- list()
   ignitionPointsCoords <- reactiveVal(NULL)
   
+  fire_raster <- reactiveVal(NULL) 
+  current_frame <- reactiveVal(1)
+  
   rasterFiles <- reactiveVal(NULL)
   csvFiles <- reactiveVal(NULL)
   weatherFiles <- reactiveVal(NULL)
   ignitionFiles <- reactiveVal(NULL)
   lut_generic <- lut_fbp
   
-  ## reactive Polling
+  
+  observeEvent(input$readGrids, {
+
+    fp <- file.path(input$outputInstanceFolder, "results",
+              "Grids", sprintf("Grids%d", input$readGrids) )
+    if(!dir.exists(fp)) {
+      showNotification(paste0(
+        "Directory <b>", sprintf("Grids%d", input$readGrids) , "</b> does not exist in results!"), 
+                       type="warning", duration=20)
+    } else {
+      readGrids(fp)
+    }
+  })
+  ## SIM OUTPUT Polling ----
   observe({
     invalidateLater(1000) 
 
@@ -71,12 +87,13 @@ server <- function(input, output, session) {
       if (proc$has_output_connection() ) {
         res <- tryCatch({ proc$read_output_lines(n = -1) }, 
                         error = function(e){
-          print("read out safe")
-          print(e$message)
+                          showNotification(paste0("Error in reading simulation output: ",
+                                                  e$message) )
           NULL
         }, warning = function(e){
           print("read out safe")
-          print(e$message)
+          showNotification(paste0("Warning in reading simulation output: ",
+                                  e$message) )
           NULL
         } )
         if (is.null(res)) return(character(0)) else return(res)
@@ -102,7 +119,13 @@ server <- function(input, output, session) {
     if (length(outl) > 0) cat( paste(outl, collapse="\n") , "\n", file=file.path(simProcess$outputFolder, "simLog.log"), append = T)
     if (length(errl) > 0) cat( paste(errl, collapse="\n") , "\n", file=file.path(simProcess$outputFolder, "simErr.log"), append = T)
     if (length(payload$err) > 0 || length(payload$out) > 0 ) session$sendCustomMessage("appendLog", payload)
- 
+    
+    realError <- which(grepl("^Error:", errl))
+    
+    if( length(realError)>0){
+      killSimProcess(T, errl[realError])  
+      return(invisible())
+    }
     
     # ---- process finished? ----
     if (!simProcess$process$is_alive()) {
@@ -183,7 +206,7 @@ server <- function(input, output, session) {
   })
   
  
-  showNotification<-function(..., type="message", duration=0){
+  showNotification<-function(..., type="message", duration=0, id=NULL){
     text <- paste(..., collapse = " ")
     if( !is.element(type, c("default", "message", "warning", "error")) ){
       typesh <- "default"
@@ -195,7 +218,7 @@ server <- function(input, output, session) {
       shiny::showNotification(
                      HTML(text),
                      duration = duration,
-                     type = typesh
+                     type = typesh,id = ifelse(is.null(id), "generic", id)
                       )
     }
      
@@ -554,7 +577,7 @@ origin or resolution are different. It will be removed! Please reload dataset wi
       
       addLayersControl(
         baseGroups = unlist(unname(base_layers)),
-        overlayGroups = c("Simulation Ignition Points", layerNames, names(fwi_layers)),
+        overlayGroups = c(sim_layers, layerNames, names(fwi_layers)),
         options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)
       )   |>
       # customizeLayersControl(
@@ -1277,7 +1300,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
     if(!is.null(simProcess)){ 
       shinyWidgets::ask_confirmation("confirmKillProc", 
         text="Process is running, do you want to stop it?", 
-        status = "warning")
+        status = "warning") 
     } else { 
       proc(F)  
       updateActionButton(inputId = "runsim",label = paste("<span class=spin>🔥</span> Running ", input$simulator)  )
@@ -1287,21 +1310,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
   observeEvent(input$confirmKillProc,
                {
                  if(input$confirmKillProc) {
-                   simProcess$process$kill()
-                   updateActionButton(inputId = "runsim",label = paste("🔥 Run ", input$simulator)  )
-                 
-                   
-                    session$sendCustomMessage("appendLog", 
-                                              list( "out"=  "--- process finished by user ---",
-                                                    "err"=  "--- process finished by user ---" )
-                                               )
-                   
-                   simProcess <<- NULL
-                   showNotification(
-                     "Simulation stopped!",
-                     type = "info",
-                     duration = 10
-                   )
+                      killSimProcess(T)
                  }
                })
   ## data folder observe -----
@@ -1343,6 +1352,58 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
   }, ignoreInit = T)
   
 
+  
+# FIRE SPREAD RASTER-----
+  autoInvalidate <- reactiveTimer(1000)
+  observe({
+    autoInvalidate() # Triggers every second
+    
+    r <- fire_raster()
+    
+    # If 'r' is NULL, this IF statement prevents the animation math from running
+    if (!is.null(r)) {
+      isolate({
+        new_frame <- current_frame() + 1
+        if (new_frame > nrow(r)) new_frame <- 1
+        current_frame(new_frame)
+      })
+    }
+  })
+  
+  observe({
+    print(isolate(current_frame()))
+    r <- fire_raster() 
+    req(r) 
+    
+    frame_idx <- current_frame() 
+    req(frame_idx <= nrow(r)) 
+    
+     
+    
+    # Filter the sf object to just this frame
+    active_poly <- r[frame_idx, ]
+    print(sf::st_area(r[frame_idx, ]))
+    leafletProxy("map") %>%
+      clearGroup(sim_layers[[1]]) %>%
+      addMapPane(name = "fire_spread_pane", zIndex = 649) |>
+      addPolygons(data = active_poly, fillColor = "red", 
+                  stroke = FALSE,opacity = 0.5,  
+                  options = pathOptions(pane = "fire_spread_pane"), 
+                  group = sim_layers[[1]])
+    
+    # leafletProxy("mymap") %>% 
+    #   clearGroup(sim_layers[[1]]) |>
+    #   
+    #   addMapPane(name = "fire_spread_pane", zIndex = 649) |>
+    #   addRasterImage(active_layer, 
+    #                  
+    #                  options = pathOptions(pane = "ignition_points_pane"), 
+    #                  colors = "red", 
+    #                  opacity = 0.8, 
+    #                  group = sim_layers[[1]],
+    #                  project = FALSE)
+  })
+  
   ## END SESSION ----
   # observe({
   onSessionEnded(function() {

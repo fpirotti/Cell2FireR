@@ -1,7 +1,8 @@
 ## make sure leafem is version 0.2.5 or more!
 pkgs <- c("terra", "DT", "remotes", "sf", "httr", "shiny", "leaflet", "shinyjs", 
           "processx", "dplyr", "spatialEco",
-          "tools", "shinydashboard", "shinyvalidate", "bcrypt", "xml2", "future",
+          "tools", "shinydashboard", "shinyvalidate", "bcrypt", 
+          "xml2", "future", "data.table",
           "promises", "stringr",  "leafem", "cli", "shinydashboardPlus",
           # "fresh",
           "htmlwidgets")
@@ -70,6 +71,8 @@ base_layers <- list(
   satellite= "BASE - Satellite"
 )
 
+sim_layers <- c("Simulated Fire Spread" ,
+                   "Simulation Ignition Points" )
 fwi_layers <- list(
   "EFFIS - Fire Weather Index" = "ecmwf.fwi",
   "EFFIS - Initial Spread Index" = "ecmwf.isi",

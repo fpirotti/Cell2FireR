@@ -1,5 +1,9 @@
 
-#' Title
+
+#' center
+#' @description
+#' Reads raster and get center of raster
+#' 
 #'
 #' @param r raster in terra format
 #'
@@ -49,9 +53,23 @@ parse_fire_log <- function(log_text) {
   burnt_counts <- as.numeric(str_extract(lines[burnt_indices ], "\\d+"))
   
   # 4. Bind them into a data frame
-  data.frame(
+  dd <- list(
     simulation = sim_ids,
     ignition_cell = ign_cells,
     burnt_cells = burnt_counts
   )
+  
+  if(length(unique(sapply(dd, length)))!=1 || length(dd$simulation)==0){
+    stop(errorCondition(
+      paste0(
+      "
+<br>Number of simulations: ", length(dd$simulation) ,". ",
+      "
+<br>Number of ignition cells: ", length(dd$ignition_cell), ". ", 
+      "
+<br>Number of burnt cells values: ", length(dd$burnt_cells), ". <br>"
+      ) ))
+  }
+  
+  as.data.frame(dd)
 }

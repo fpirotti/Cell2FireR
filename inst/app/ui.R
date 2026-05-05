@@ -1,7 +1,7 @@
 # ui.R
 ui <-  shinydashboardPlus::dashboardPage(
   options = list(sidebarExpandOnHover = TRUE),
-  header = shinydashboardPlus::dashboardHeader(title = HTML("<div title='Wildfire-Sim: Learning Wildfire Behaviour with Interaction with Spatial Data'>🔥 Wildfire-Sim🔥</div>"),
+  header = shinydashboardPlus::dashboardHeader(title = HTML("<div \title='Wildfire-Sim: Learning Wildfire Behaviour with Interaction with Spatial Data'>🔥 Wildfire-Sim🔥</div>"),
                                                leftUi = tagList( 
                                                    div(style="margin-bottom:-15px;", 
                                                        title="Do you want to keep seeing the help tooltips or not?",
