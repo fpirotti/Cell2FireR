@@ -12,6 +12,9 @@
     color: #333;
     
 }
+.ptr{
+  cursor: pointer;
+}
 .spin {
   animation: spin-animation 1s linear infinite;
   display: inline-block; 

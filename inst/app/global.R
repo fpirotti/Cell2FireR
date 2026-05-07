@@ -172,9 +172,15 @@ createLeaflet <- function(){
         format = "image/png",
         transparent = TRUE,
         opacity=0.6
-      ),
+      ), 
       attribution = "Copernicus Land Monitoring Service"
     ) |> hideGroup(clcLayerName) |>
+    addMapPane(name = "ignition_points_pane", zIndex = 660) |>
+    addMapPane(name = "fire_spread_pane", zIndex = 649) |>
+    addMapPane(name = "fire_ROS_pane", zIndex = 650) |>
+    addMapPane(name = "fire_SFL_pane", zIndex = 651) |>
+    addMapPane(name = "fire_SurfInt_pane", zIndex = 652) |>
+    addMapPane(name = "fire_Messages", zIndex = 655) |>
     setView(
       lng = default_center["lng"],
       lat = default_center["lat"],

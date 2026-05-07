@@ -16,7 +16,6 @@ plotPostProcess <- function(simulations){
   # Replace "fireMap" with the actual ID of your leafletOutput in the UI
   leafletProxy("map") |>
     clearGroup(sim_layers[[2]]) |>
-    addMapPane(name = "ignition_points_pane", zIndex = 650) |>
     # clearGroup("Simulation Output") %>% # Optional: remove previous run's markers
     addCircleMarkers(group = sim_layers[[2]],
                      data = df_sf,
@@ -30,10 +29,34 @@ plotPostProcess <- function(simulations){
         "<tr><th colspan='2' class='sim-popup-header'>Simulated Ignition n. ", simulation, "</th></tr>",
         "</thead>",
         "<tbody>", 
-        "<tr>",
-        "<td class='sim-popup-label'><span>DRAW Map</span></td>",
-        "<td class='sim-popup-value'><i onclick='Shiny.setInputValue(\"readGrids\", ", simulation, ",  {priority: \"event\"});' class='fas fa-file-export' role='presentation' aria-label='file-export icon'></i></td>",
-        "</tr>",
+        "<tr><td colspan='2'  >Fire Spread Grids
+         <span title='Play fire spread simulation output at time periods.' isplaying=false  
+         onclick=' 
+    var playing = $(this).attr(\"isplaying\") === \"true\";
+    if(playing) { 
+      $(this).html(\"▶️\").attr(\"isplaying\", \"false\"); 
+    } else { 
+      $(this).html(\"⏸️\").attr(\"isplaying\", \"true\"); 
+    }
+    Shiny.setInputValue(\"playGrids\", {simulationN:", simulation, ", force:true}
+    ' class='ptr'>▶️</span>|
+      <span id='simulationTableDateSpan", simulation, "'></span>
+        </td></tr>",
+        # --- NEW SLIDER ROW ---
+      "<tr><td colspan='2' style='padding: 5px 10px;'>",
+        "<input id='myGridSlider", simulation, "' type='range' min='1' max='1000' value='1' style='width:100%; cursor:pointer;' ",
+          "onchange='", 
+            "Shiny.setInputValue(\"playGrids\", {simulationN:", simulation, ", step: parseInt(this.value)}, {priority: \"event\"});",
+          "'>",
+        "<div style='font-size:10px; text-align:center;'>Step: <span id='val", simulation, "'>1</span></div>",
+      "</td></tr>",
+      # -----------------------
+        
+      "<tr><td colspan='2'  >Rate of Spread Grid - 
+         <span title='Add ROS grid to map' onclick='Shiny.setInputValue(\"addROStoMAP\", {simulationN:", simulation, ", force:true},  {priority: \"event\"});' class='ptr'>➡️</span>
+         <span title='Download ROS raster in TIFF format' onclick='Shiny.setInputValue(\"downloadROS\", {simulationN:", simulation, ", force:true},  {priority: \"event\"});' class='ptr'>⬇️️</span>|
+        <span id='simulationTableDateSpan", simulation, "'></span>
+        </td> ",
         "<tr>",
         "<td class='sim-popup-label'>Cell ID</td>",
         "<td class='sim-popup-value'>", ignition_cell, "</td>",
@@ -131,21 +154,25 @@ killSimProcess <- function(force=F, message=""){
 
 
 
-readGrids <- function(filepath){
+readGrids <- function(filepath, force=F ){
   
   if( dir.exists(filepath) ){
     filepathn <- list.files(filepath, pattern = "ForestGrid\\d+.csv$", full.names = T)
   } else {
     filepathn <- filepath
   }
+  timesSteps <- as.integer(gsub("[^0-9]", "", basename(filepathn)) ) +1
   if(!file.exists(filepathn[[1]])){
-    stop(errorCondition(paste0(
-      "File ", filepathn[[1]] , "does not exist ")
+    return((paste0(
+      "File ", filepathn[[1]] , "does not exist! ERROR ")
      )
     )
   } 
   
+
   output_tif <- dirname(filepathn[[1]])
+  simNumber <- as.numeric(gsub("[^0-9]", "", basename(output_tif) ) )
+  
   tifpath <- file.path(output_tif, 
             sprintf("%s.tif", 
                     basename(output_tif)   )  )
@@ -155,47 +182,56 @@ readGrids <- function(filepath){
   
 
   
-  if(file.exists( tifpath )  ) {
-    message("file exists")
+  if(!force && (file.exists( tifpath) &&  file.exists( vecpath) ) ) {
+  
     fire_stack <- rast(tifpath)
-    fire_vect <- sf::read_sf(vecpath)
-    # Put the raster into the reactive container
-    current_frame(1) # Reset frame
+    fire_vect <- sf::read_sf(vecpath)  
+    return( paste0("Grids ",basename(output_tif)," already processed!"))
+  } 
    
-    load(file=file.path(output_tif, "aStats.rda") ) 
-    # return(burnArea)
-  } else {
      
     ext <- terra::ext(terra.rasters[[1]])
+    res <- terra::res(terra.rasters[[1]])
     crs <- terra::crs(terra.rasters[[1]])
     burnArea <- rep(0, length(filepathn))
-    showNotification("Reading all output grids, might take a while", 
-                     type = "warning", duration = 20, id = "notification")
+   
+    vectsList <- list()
+    
     raster_list <- lapply(filepathn, function(file) {
       # fread is fast enough to handle the wide columns
       mat <- as.matrix(fread(file, header = FALSE, 
                              na.strings = "0",
                              colClasses = "integer"))
-      tt <- as.numeric(gsub("[^0-9]", "", basename(file))) + 1
+      tt <- as.integer(gsub("[^0-9]", "", basename(file))) + 1
    
-      burnArea[[tt]] <<- sum(!is.na(mat))
+      burnArea <- sum(!is.na(mat)) * mean(res)
       # Convert to raster
   
       # 3. Apply it to the raster
       r <- rast(mat, extent=ext, crs=crs  )
-   
+ 
+      p <-as.polygons(r, dissolve = TRUE)
+      
+      ff <- st_as_sf(p)
+      
+      ff <- ff[, attr(ff, "sf_column")] 
+      if (nrow(ff) == 0) {
+        # 1. Create an empty geometry column (sfc) and keep the original CRS
+        empty_geom <- st_sfc(st_polygon(), crs = st_crs(ff)) 
+        ff <- st_sf(geometry = empty_geom)
+      }
+      ff$iteration <- tt
+      ff$burntArea <- burnArea
+      vectsList[[as.character(tt)]] <<- ff
       return(r)
     })
     
   
-    removeNotification(id = "notification")
-    shinyWidgets::closeSweetAlert()
-    showNotification(paste0("Done reading ",  length(filepathn) , " GRIDS for simulation n.",
-                            as.numeric(gsub("[^0-9]", "", basename(output_tif) ))  ), 
-                     type = "warning", duration = 5)
-  
     # 4. Stack them into a single Multi-band SpatRaster
     fire_stack <- rast(raster_list)
+    
+    fire_vect <- do.call(rbind, vectsList)
+    
     names(fire_stack) <- tools::file_path_sans_ext(basename(filepathn))
   
     
@@ -222,42 +258,60 @@ readGrids <- function(filepath){
   <br>2023-07-07 16
   <br>2023-07-07") 
           )
+        
+        terra::time(fire_stack) <- 1:length(filepathn)
+        fire_vect$Date <- terra::time(fire_stack)
+        
+      } else {
+        td <-diff(clean_ts[1:2])
+        times <- c(clean_ts[[1]]-td, 
+                   clean_ts, 
+                   clean_ts[[length(clean_ts)]]+td  ) 
+ 
+        terra::time(fire_stack) <- times[timesSteps]
+        
+        fire_vect$Date <- terra::time(fire_stack)
       }
+ 
+    } else { 
       terra::time(fire_stack) <- 1:length(filepathn)
-    } else {
-      td <-diff(clean_ts[1:2])
-      terra::time(fire_stack) <- c(clean_ts[[1]]-td, 
-                                   clean_ts, 
-                                   clean_ts[[length(clean_ts)]]+td
-      )
+      fire_vect$Date <- terra::time(fire_stack)
     }
     
-    save(burnArea, file=file.path(output_tif, "aStats.rda") )
-    
-    writeRaster(fire_stack, tifpath, datatype="INT1U", 
-                overwrite = TRUE, gdal=c("COMPRESS=LZW"))
-  }
-  
-  if(!file.exists( vecpath )  ) {
-    vector_list <- sapply(fire_stack, function(firlayer){
-      p <-as.polygons(firlayer, dissolve = TRUE)
-      if (nrow(p) == 0) return(NULL) 
-      ff <- st_as_sf(p)
-      ff <- ff[, attr(ff, "sf_column")] 
-      ff$iteration <- names(firlayer) 
-      return(ff)
-    })
-    fire_vect <- do.call(rbind, Filter(Negate(is.null), vector_list))
+    fire_vect$simNumber <- simNumber
+    fire_vect$simInstance <- basename(input$outputInstanceFolder)
     
     sf::write_sf(fire_vect, vecpath, append = F)
-  }
-  fire_vect <- sf::read_sf(vecpath) |> sf::st_transform(4326)
+    writeRaster(fire_stack, tifpath, datatype="INT1U", 
+                overwrite = TRUE, gdal=c("COMPRESS=LZW"))
+ 
+   
+
   
-  if(!is.null(isolate(fire_raster()))) fire_raster(NULL)
-  else fire_raster( fire_vect) 
-  
-  return(burnArea)
+  return("Finished processing grids")
 }
+
+ 
+
+toggleROSfile <- function(simn){
+  req(input$outputInstanceFolder)
+ 
+ 
+    rpath <- file.path( file.path(input$outputInstanceFolder, 
+                                    "results", "RateOfSpread",
+                                    paste0("ROSFile", simn, ".tif") )  )
+    
+    if(!file.exists(rpath)){
+      showNotification(file.path("Could not read file ", basename(rpath)), 
+                       type = "info", duration = 20 )
+      
+      return(invisible())
+    }
+    ros <- terra::rast(rpath)
+    ros[ros==0] <- NA
+    ros
+ 
+} 
 
 checkIgnitionFile <- function(ignfile){
   ip <- read.csv(ignfile)

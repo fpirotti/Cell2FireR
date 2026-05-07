@@ -275,8 +275,7 @@ run_cell2fire <- function(
     }
     
     message(paste("Executing:", c2f_bin_path, paste(cli_args, collapse = " ")))
-    
-    browser()
+ 
     # Start the process and return the object
     sim_process <- processx::process$new(
       c2f_bin_path,
