@@ -44,23 +44,40 @@ parse_fire_log <- function(log_text) {
   
   # 2. Find the row indices (line numbers) for the data we want
   sim_indices   <- grep("Simulation \\d+ Start:", lines)
-  ign_indices   <- grep("ignition cell:", lines)
-  burnt_indices <- grep("^\\s+Burnt\\s+", lines)
-  # 3. Extract just the numbers from those specific lines
-  #    Using simple regex just to pull the digits
-  sim_ids      <- as.numeric(str_extract(lines[sim_indices  ], "\\d+"))
-  ign_cells    <- as.numeric(str_extract(lines[ign_indices  ], "\\d+"))
-  burnt_counts <- as.numeric(str_extract(lines[burnt_indices ], "\\d+"))
-  
+  ignitionsN <- as.integer(gsub("\\D+", "", lines[sim_indices]))
+  if(anyNA(ignitionsN)){
+    stop(errorCondition("We have NAs in simulation start ignition iterations!"))
+  }
+ 
+  ign_cells   <- trimws(gsub("ignition cell: ", "", lines[sim_indices+2]))
+ 
+  burnt_indices <- grep("^Simulation\\s+\\d+\\s+Results:", lines)
+  burnt_ignitionsN <- as.numeric(str_extract(lines[burnt_indices ], "\\d+"))
+ 
+  burnt_tables <- lapply(which(burnt_ignitionsN%in%ignitionsN), 
+                         function(x){  
+                           indices <- (burnt_indices[[x]]+3) : (burnt_indices[[x]]+7)
+                           data_lines <- lines[ indices ]
+                           data_lines <- gsub("^\t", "", data_lines)
+                           data_lines_csv <- gsub(" {2,}", ",", data_lines)
+                           df <- read.csv(text = data_lines_csv, header = FALSE)
+                           colnames(df) <- c("Cell Status", "Count", "Percent")
+                        
+                           kable(df, format = "html", table.attr = "class='table table-striped table-condensed table-sm'")
+                            
+                         })
+ 
+ 
+ print(burnt_tables)
   # 4. Bind them into a data frame
   dd <- list(
-    simulation = sim_ids,
-    ignition_cell = ign_cells,
-    burnt_cells = burnt_counts
+    simulation = as.integer(ignitionsN),
+    ignition_cell = as.integer(ign_cells),
+    burnt_cells = as.character(burnt_tables)
   )
   
   if(length(unique(sapply(dd, length)))!=1 || length(dd$simulation)==0){
-    stop(errorCondition(
+    showNotification(
       paste0(
       "
 <br>Number of simulations: ", length(dd$simulation) ,". ",
@@ -68,8 +85,8 @@ parse_fire_log <- function(log_text) {
 <br>Number of ignition cells: ", length(dd$ignition_cell), ". ", 
       "
 <br>Number of burnt cells values: ", length(dd$burnt_cells), ". <br>"
-      ) ))
+       ), type="warning", duration=19 )
   }
   
-  as.data.frame(dd)
+  dd
 }

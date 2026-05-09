@@ -5,8 +5,9 @@ plotPostProcess <- function(simulations){
   # 2. Extract X and Y coordinates using the cell IDs
   coords <- terra::xyFromCell(r, simulations$ignition_cell)
  
+  dd <- as.data.frame(simulations)
   # Bind the coordinates back to the data frame
-  df_coords <- cbind(simulations, coords)
+  df_coords <- cbind(dd, coords)
    
   df_sf <- st_as_sf(df_coords, coords = c("x", "y"), crs = terra::crs(r)) %>%
     st_transform(4326) # Leaflet strictly requires EPSG:4326 (Lat/Lon)
@@ -56,15 +57,8 @@ plotPostProcess <- function(simulations){
          <span title='Add ROS grid to map' onclick='Shiny.setInputValue(\"addROStoMAP\", {simulationN:", simulation, ", force:true},  {priority: \"event\"});' class='ptr'>➡️</span>
          <span title='Download ROS raster in TIFF format' onclick='Shiny.setInputValue(\"downloadROS\", {simulationN:", simulation, ", force:true},  {priority: \"event\"});' class='ptr'>⬇️️</span>|
         <span id='simulationTableDateSpan", simulation, "'></span>
-        </td> ",
-        "<tr>",
-        "<td class='sim-popup-label'>Cell ID</td>",
-        "<td class='sim-popup-value'>", ignition_cell, "</td>",
-        "</tr>",
-        "<tr>",
-        "<td class='sim-popup-label'>N of Burnt cells</td>",
-        "<td class='sim-popup-value'>", burnt_cells, "</td>",
-        "</tr>",
+        </td></tr> ",  
+      "<tr><td colspan='2'  > ", burnt_cells, "</td> </tr>", 
         "</tbody>",
         "</table>"
       )
@@ -91,6 +85,7 @@ processSimulationOutputFolder <- function(resDir){
                          basename(resDir))
   
   print(formatted_time)
+
   shinyjs::runjs("$('#logSim').empty('')")
   shinyjs::runjs(paste0("startSimlog('",formatted_time,"');") )
   ### load log ----
@@ -120,10 +115,10 @@ processSimulationOutputFolder <- function(resDir){
     tryCatch({
       plotPostProcess(simout)
     }, warning=function(e){
-      browser()
+ 
       showNotification(paste0("Warning in plotting fire log: ", e$message), type="warning", duration=20)
     }, error=function(e){
-      browser()
+ 
       showNotification(paste0("Error in plotting fire log: ", e$message), type="error", duration=20)
     })
   }  

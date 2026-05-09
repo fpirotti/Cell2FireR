@@ -42,7 +42,7 @@ run_cell2fire <- function(
     fuel, fuel_model, input_folder, out_folder, 
     elevation = NULL, slope = NULL, saz=NULL, cur=NULL,
     crown = FALSE, cbh = NULL, cbd = NULL, ccf = NULL, hm = NULL,
-    ignition_mode = "1. Probability map distributed random ignition",
+    ignition_mode = NULL,
     ignition_file = NULL, ignition_point = NULL, ignition_radius = NULL,
     firebreaks = NULL,
     weather_mode = "0. Single weather file", wea_file = NULL, weather_weights = NULL,
@@ -177,12 +177,13 @@ run_cell2fire <- function(
     message(paste0("IGNITION_MODE: ", ignition_mode))
     
     if (ignition_mode == "2. Single points on a Layer") {
+    
       if (is.null(ignition_point) || !nzchar(ignition_point) || !file.exists(ignition_point)) { 
-        stop("No ignition points found! Did you select a CSV uploaded with the instance or created from the interactive map  with ignition points?") 
+        stop(errorCondition("No FILE with Ignitions.csv found! Did you select a CSV uploaded with the instance or created from the interactive map  with ignition points?") )
       } else {
         fuel_rast <- terra::rast(fuel)
         ign_pt <- sf::st_read(ignition_point, quiet = TRUE)
-        
+        if(nrow(ign_pt)==0) stop(errorCondition("No ignition points found found in file Ignitions.csv! Did you select a CSV uploaded with the instance or created from the interactive map  with ignition points?"))
         if (is.na(sf::st_is_longlat(ign_pt))) { 
           if (is.data.frame(ign_pt)) { 
             if (!dry) {
@@ -244,6 +245,8 @@ run_cell2fire <- function(
     
     # Always grids!
     args[["--grids"]] <- ""
+    # if not set it will process only first line of ignitions in ignitions.csv!
+    args[["--sim-years"]] <- "999"
     
     # Directories
     args[["--input-instance-folder"]] <- instance_dir 

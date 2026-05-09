@@ -25,8 +25,8 @@ proc <- function(dry = TRUE) {
     )
   } else {
     showNotification(
-      text = c("
-========================================
+      text = paste("
+==========",    as.character(Sys.time())  ,"===============
 ===== DRY RUN OF SIMULATION STARTING === 
 ========================================")
     )
@@ -110,10 +110,14 @@ This is a one-time operation, please be patient.", tt), type = "warning")
     # If it's a dry run, run_cell2fire returns the command-line arguments.
     # We can print these to the log interface just like the original script.
     if (dry) {  
-      shinyjs::runjs(paste0("$('#code1').text('",
-                 
-                     paste(sim_result, collapse = " "),
+      shinyjs::runjs(paste0("$('#code1').text('", paste(sim_result, collapse = " "),
                      "')") ) 
+      showNotification(
+        text = c(paste(sim_result, collapse = "<BR>"), "<BR>
+========================================
+===== DRY RUN OF SIMULATION END  ======= 
+========================================<BR><BR>")
+      )
       return(NULL)
     } 
       
@@ -122,8 +126,7 @@ This is a one-time operation, please be patient.", tt), type = "warning")
     updateTabsetPanel(session, "tabs", selected = "processLogTab")
     simProcess <<- sim_result 
     
-  }, error = function(e) {  
-    message("error in proc run 1 ", e$message)
+  }, error = function(e) {   
     shiny::showNotification(ui = paste("Error in preparing simulation:", e$message), type = "error")
   }, warning = function(e) { 
     message("warning in proc run 2 ", e$message)

@@ -495,23 +495,33 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
             width = 12, div(class = "d-grid gap-2", downloadButton(
               "download.ros",
               HTML(
-                "ROS <sup class='helpTitle'
+                "ROS <span></span>  ▦ <sup class='helpTitle'
             title='Download Rate of Spread raster, one for each simulation'>?</sup>"
               ),
-              style = "width:100%; margin-bottom:10px;"
+              style = "font-size:small;  width:100%; margin-bottom:10px;"
             ))
           )),
           fluidRow(column(
             width = 12, div(class = "d-grid gap-4", downloadButton(
-              "download.grids",
+              "download.grids.tiff",
               HTML(
-                "GRID <sup class='helpTitle'
-            title='Download Grids with burnt area for each timestamp in the weather file and for each simulation.'>?</sup>"
+                "Burned Area <span></span> ▦ <sup class='helpTitle'
+            title='Download raster grids with burnt pixels for each timestamp in the weather file and for each simulation.'>?</sup>"
               ),
-              style = "width:100%; margin-bottom:10px;"
+              style = "font-size:small; width:100%; margin-bottom:10px;"
             ))
           )),
           
+          fluidRow(column(
+            width = 12, div(class = "d-grid gap-4", downloadButton(
+              "download.grids.gpkg",
+              HTML(
+                "Burned Area <span></span> ⭔ <sup class='helpTitle'
+            title='Download vector models in Geopackage format with with burnt areas for each timestamp in the weather file and for each simulation.'>?</sup>"
+              ),
+              style = "font-size:small; width:100%; margin-bottom:10px;"
+            ))
+          )),
           tags$hr(),
           
           fluidRow(column(

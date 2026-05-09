@@ -737,53 +737,136 @@ origin or resolution are different. It will be removed! Please reload dataset wi
                    
                      
                      for (fp in grids) {
-                       incProgress(1, detail = paste("Start processing grid ", basename(fp) ))
-                   
+                       iter <- as.integer( gsub("\\D+", "",
+                                    basename(fp) ) )
+                       if(is.na(iter)) next
+                       incProgress(1, detail = paste("Start processing grid n. ", iter ) )
+                    
                        ms <- readGrids(fp, force = input$processSimulationOutputInstance_force)
                        incProgress(1, detail = ms)
                        
                      }
-                   })
+         })
     }
     
-    
-    grids  <- list.files(
-      file.path(input$outputInstanceFolder, "results", "Grids"),
-      pattern = "Grids\\d+.tif$", full.names = T, recursive = T)
-    
-    gpkgs  <- list.files(
-      file.path(input$outputInstanceFolder, 
-                "results", "Grids"),
-      pattern = "Grids\\d+.gpkg$", full.names = T, recursive = T)
-    
-  
-    gpkgout <- file.path(input$outputInstanceFolder, 
-                        "results", "Grids", "geopackages")
-    
-    dir.create(gpkgout, showWarnings = F )
-    tifout <- file.path(input$outputInstanceFolder, 
-                         "results", "Grids", "geotiffs")
-    dir.create(tifout, showWarnings = F )
-    
-    tifcopysuccess <- file.copy(grids, file.path(tifout, basename(grids) ))
-    gpkgcopysuccess <- file.copy(gpkgs, file.path(gpkgout, basename(grids) ))
-    if(any(c(!tifcopysuccess, !gpkgcopysuccess)) ){
+    if(!input$processSimulationOutputInstance_force && 
+       file.exists(
+         file.path(input$outputInstanceFolder, "results", 
+                   paste0(
+                     basename(input$outputInstanceFolder),
+                     "_Grids_GeoTiffs.zip" 
+                    ) 
+                  )
+       ) && 
+       file.exists(
+         file.path(input$outputInstanceFolder, "results", 
+                   paste0(
+                     basename(input$outputInstanceFolder),
+                     "_Grids_Geopackages.zip" 
+                   ) 
+         )
+       )
+    ){ 
+      
+      sztif <- file.size(  file.path(input$outputInstanceFolder, "results", 
+                                  paste0(
+                                    basename(input$outputInstanceFolder),
+                                    "_Grids_GeoTiffs.zip" 
+                                  )  ) )
+      
+      szgpkg <- file.size(  file.path(input$outputInstanceFolder, "results", 
+                                  paste0(
+                                    basename(input$outputInstanceFolder),
+                                    "_Grids_Geopackages.zip" 
+                                  )  ) )
+      
       showNotification(
-        "Some files not copied" ,
+        "Files already processed, check the force flag to re-process" ,
         type = "warning",
-        duration = 10
+        duration = 19
       )
-    }
+      } else {
+        withProgress(message = 'Compressing GRIDS Raster...',
+                     min = 0,
+                     max = 4, {
+                       grids  <- list.files(
+                         file.path(input$outputInstanceFolder, "results", "Grids"),
+                         pattern = "Grids\\d+.tif$", full.names = T, recursive = T)
+                       
+                       gpkgs  <- list.files(
+                         file.path(input$outputInstanceFolder, 
+                                   "results", "Grids"),
+                         pattern = "Grids\\d+.gpkg$", full.names = T, recursive = T)
+                       
+                       
+                       gpkgout <- file.path(input$outputInstanceFolder, 
+                                            "results", "Grids", "geopackages")
+                       
+                       dir.create(gpkgout, showWarnings = F )
+                       tifout <- file.path(input$outputInstanceFolder, 
+                                           "results", "Grids", "geotiffs")
+                       dir.create(tifout, showWarnings = F )
+                       
+                       incProgress(1, detail = paste("Copying ", length(grids), " files" ))
+                       
+                       tifcopysuccess <- file.copy(grids, file.path(tifout, basename(grids) ))
+                       gpkgcopysuccess <- file.copy(gpkgs, file.path(gpkgout, basename(gpkgs) ))
+                       if(any(c(!tifcopysuccess, !gpkgcopysuccess)) ){
+                         showNotification(
+                           "Some files not copied" ,
+                           type = "warning",
+                           duration = 10
+                         )
+                       }
+                       
+                       
+                       incProgress(1, detail = paste("Zipping  ", length(grids), " GeoTiffs files" ))
+                       
+                       old_wd <- getwd()
+                       target_dir <- tifout
+                       setwd(target_dir)
+                       
+                       zip(zipfile =file.path("../../", 
+                                              paste0(
+                                                basename(input$outputInstanceFolder),
+                                                "_Grids_GeoTiffs.zip" 
+                                              ) ),
+                           list.files(getwd(), pattern = "\\.tif$") )
+                       
+                       sztif <- file.size(file.path("../../",
+                                                 paste0(
+                                                   basename(input$outputInstanceFolder),
+                                                   "_Grids_GeoTiffs.zip"
+                                                 )  ))
+                       
+                       setwd("../geopackages")
+                       
+                       
+                       incProgress(1, detail = paste("Zipping  ", length(grids), " Geopackages files" ))
+                       zip(file.path("../../", 
+                                     paste0(
+                                       basename(input$outputInstanceFolder),
+                                       "_Grids_Geopackages.zip"
+                                     )
+                       ),  list.files(getwd(), pattern = "\\.gpkg$") ) 
+                       
+                       szgpkg <- file.size(file.path("../../",
+                                                 paste0(
+                                                   basename(input$outputInstanceFolder),
+                                                   "_Grids_Geopackages.zip"
+                                                 )  ))
+                       
+                   
+                       
+                       setwd(old_wd)
+                       
+                     })
+      }
     
-    zip(file.path(
-      input$outputInstanceFolder,
-      "results",
-      paste0(
-        basename(input$outputInstanceFolder),
-        "_Grids.zip"
-      )
-    ),
-    c(tifout, gpkgout))
+    shinyjs::runjs(paste0("$('#download\\\\.grids\\\\.tiff span:first').html('(",
+                          round(sztif/1000000,2)," MB)&nbsp;');"))
+    shinyjs::runjs(paste0("$('#download\\\\.grids\\\\.gpkg span:first').html('(",
+                          round(szgpkg/1000000,2)," MB)&nbsp;');"))
     
     ### ROS ----
     rospath <- file.path(input$outputInstanceFolder, "results", "RateOfSpread")
@@ -795,59 +878,91 @@ origin or resolution are different. It will be removed! Please reload dataset wi
       )
       
     } else {
-      ext <- terra::ext(terra.rasters[[1]])
-      res <- terra::res(terra.rasters[[1]])
-      crs <- terra::crs(terra.rasters[[1]])
-      grids <- list.files(
-        rospath,
-        pattern = ".*\\.asc$",
-        full.names = T,
-        recursive = F
-      )
       
-      outtifs <- gsub("\\.asc$", "\\.tif", grids)
+      if(!input$processSimulationOutputInstance_force && 
+         file.exists(
+           file.path(input$outputInstanceFolder, "results", 
+                     paste0(
+                       basename(input$outputInstanceFolder),
+                       "_RateOfSpread.zip" 
+                     ) 
+           )
+         )
+      ) {
+        
+        invisible()
+        
+      } else {
+        withProgress(message = 'Processing ROS  Rasters...',
+                     min = 0,
+                     max = length(grids), {  
+                       
+                       ext <- terra::ext(terra.rasters[[1]])
+                       res <- terra::res(terra.rasters[[1]])
+                       crs <- terra::crs(terra.rasters[[1]])
+                       grids <- list.files(
+                         rospath,
+                         pattern = ".*\\.asc$",
+                         full.names = T,
+                         recursive = F
+                       )
+                       
+                       outtifs <- gsub("\\.asc$", "\\.tif", grids)  
+                       
+                       for (fp in grids) {
+                         message(basename(fp))
+                         incProgress(1, detail = paste("Processing ", basename(fp) ))
+                         
+                         r <- rast(fp)
+                         r[r == 0] <- NA
+                         terra::crs(r) <- crs
+                         
+                         writeRaster(
+                           r,
+                           paste0(tools::file_path_sans_ext(fp), ".tif"),
+                           overwrite = T,
+                           gdal = c("COMPRESS=DEFLATE")
+                         )
+                         
+                       }
+                     })
+        
+        
+        old_wd <- getwd()
+        target_dir <- dirname(outtifs)[[1]]
+        setwd(target_dir)
+        
+        zip(file.path("../",
+                      paste0(
+                        basename(input$outputInstanceFolder),
+                        "_RateOfSpread.zip"
+                      )
+        ), 
+        list.files(getwd(), pattern = "\\.tif$") )
+        setwd(old_wd)
+      }
+
+      sz <- file.size(file.path(input$outputInstanceFolder, "results", 
+                                paste0(
+                                  basename(input$outputInstanceFolder),
+                                  "_RateOfSpread.zip" 
+                                )  ) )
+      shinyjs::runjs(paste0("$('#download\\\\.ros span:first').html('(",
+                            round(sz/1000000,2)," MB)&nbsp;');"))
       
-      withProgress(message = 'Processing ROS  Rasters...',
-                   min = 0,
-                   max = length(grids), {
-                     # 1. Load the raster
-                       
-                       
-        for (fp in grids) {
-          message(basename(fp))
-          incProgress(1, detail = paste("Processing ", basename(fp) ))
-          
-          r <- rast(fp)
-          r[r == 0] <- NA
-          terra::crs(r) <- crs
-          
-          writeRaster(
-            r,
-            paste0(tools::file_path_sans_ext(fp), ".tif"),
-            overwrite = T,
-            gdal = c("COMPRESS=DEFLATE")
-          )
-          
-        }
-      })
-      zip(file.path(
-        input$outputInstanceFolder,
-        "results",
-        paste0(
-          basename(input$outputInstanceFolder),
-          "_RateOfSpread.zip"
-        )
-      ),
-      outtifs)
+
     }
+    
+
      
+    
   })
   
   
-  output$download.grids <- downloadHandler(
+  output$download.grids.gpkg <- downloadHandler(
     filename = function() {
       paste0(basename(input$outputInstanceFolder),
-             "_BurntAreaPerTimestamp.zip")
+             "_BurntAreaPerTimestampGpkg.zip")
     },
     content = function(file) {
       zip_path <-  file.path(
@@ -855,7 +970,7 @@ origin or resolution are different. It will be removed! Please reload dataset wi
         "results",
         paste0(
           basename(input$outputInstanceFolder),
-          "_Grids.zip"
+          "_Grids_Geopackages.zip"
         )
       )
       
@@ -869,6 +984,34 @@ origin or resolution are different. It will be removed! Please reload dataset wi
     },
     contentType = "application/zip"
   )
+  
+  
+  output$download.grids.tiff <- downloadHandler(
+    filename = function() {
+      paste0(basename(input$outputInstanceFolder),
+             "_BurntAreaPerTimestampTIFFs.zip")
+    },
+    content = function(file) {
+      zip_path <-  file.path(
+        input$outputInstanceFolder,
+        "results",
+        paste0(
+          basename(input$outputInstanceFolder),
+          "_Grids_GeoTiffs.zip"
+        )
+      )
+      
+      if (file.exists(zip_path)) {
+        file.copy(zip_path, file)
+      } else {
+        showNotification("BurntAreaPerTimestamp ZIP file not found!",
+                         type = "warning",
+                         duration = 10)
+      }
+    },
+    contentType = "application/zip"
+  )
+  
   
   output$download.ros <- downloadHandler(
     filename = function() {
@@ -1146,11 +1289,11 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
     ignitionPointsCoords(df)
   })
   
-  output$ignitionInfo <- renderDT({
-    print(input$chooseIgnitionFile)
+  output$ignitionInfo <- renderDT({ 
     # req(ignitionPointsCoords())
     ip <- ignitionPointsCoords()
-    if (is.null(ip)) {
+ 
+    if (is.null(ip) || nrow(ip)<1) {
       ip <- data.frame(X = numeric(),
                        Y = numeric(),
                        Tools = character())
