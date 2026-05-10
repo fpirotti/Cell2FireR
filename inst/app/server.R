@@ -430,24 +430,57 @@ Work in progress....",
                     detail = sprintf("Adding layer %s", layerName))
         
         r2 <- terra::rast(fi)
-        terra.rasters[[layerName]] <<- r2
+        if(terra::is.lonlat(r2)){
+          showNotification(HTML(
+            sprintf(
+              "Raster %s is in geographic coordinates (latitude and longitude). <br>
+This will not work with fire spread simulations - 
+I will force this to EPSG:3857 (PseudoMercator projection) and 
+<u>square pixel rounded to nearest meter</u>. 
+<b>Raster will be overwritten. </b>
+<br>If this is not what you want please remove the dataset and reload a projected dataset.
+",
+              basename(fi) 
+            )
+          ), duration = ifelse(length(rasters) > 0, 10, 20), type = "info")
+          
+          
+          
+           if(length(rasters) > 0){
+             rt <- terra::project(r2, terra::rast(rasters[[1]]))
+           } else {
+             r_3857 <- terra::project(r2, "epsg:3857")
+             exact_res <- mean(res(r_3857)) 
+             
+             ## 
+             rt <- project(r2, "EPSG:3857", res = round(exact_res), method = "near")
+             diff(res(rt))
+           }
+           terra::writeRaster(rt, filename = fi, overwrite=T)
+           r2 <- terra::rast(fi)
+        } 
+        
+        
+        
         ## check alignment between rasters -----
         if (length(rasters) > 0) {
           if (!compareGeom(terra::rast(rasters[[1]]), r2, stopOnError = FALSE)) {
             showNotification(HTML(
               sprintf(
                 "<b>Raster %s NOT aligned with raster stack %s!</b> Either CRS,
-origin or resolution are different. It will be removed! Please reload dataset with clean set of aligned rasters.",
+origin or resolution are different. The system will try to align the landscape stack. 
+Reload the dataset for better control.",
                 basename(rasters[[1]]) ,
                 basename(sources(r2))
               )
             ),
             duration = 12,
             type = "error")
-            next
+            
           }
         }
         
+        terra.rasters[[layerName]] <<- r2
         
         
         if (terra::crs(r2) == "") {

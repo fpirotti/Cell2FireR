@@ -18,7 +18,7 @@ run_cell2fire(
   cbd = NULL,
   ccf = NULL,
   hm = NULL,
-  ignition_mode = "1. Probability map distributed random ignition",
+  ignition_mode = NULL,
   ignition_file = NULL,
   ignition_point = NULL,
   ignition_radius = NULL,

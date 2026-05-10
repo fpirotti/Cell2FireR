@@ -53,7 +53,8 @@ proc <- function(dry = TRUE) {
       
       elev <- rast(input$ELEVATION)
       for(tt in names(terrain)){
-        if(!file.exists(terrain[[tt]])){
+        pout <- file.path(input$inputfolder,   sprintf("%s.tif", tt) )
+        if(!file.exists(terrain[[tt]]) && !file.exists(pout)){
         shiny::showNotification(ui =sprintf("%s raster NOT present, 
 but elevation raster is - I will create it for you...
 This is a one-time operation, please be patient.", tt), type = "warning")
@@ -61,7 +62,7 @@ This is a one-time operation, please be patient.", tt), type = "warning")
         if(tt=="saz") ttt <- terra::terrain(elev, v = "aspect", unit = "degrees")
         if(tt=="cur") ttt <- spatialEco::curvature(elev, type = "total")
         
-        pout <- file.path(input$inputfolder,   sprintf("%s.tif", tt) )
+        
         writeRaster(ttt, pout )
         assign(tt, pout)  
        } 

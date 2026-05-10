@@ -100,7 +100,7 @@ processSimulationOutputFolder <- function(resDir){
   
   rfl <- readLines(fl ) 
   session$sendCustomMessage("appendLog",  list(out=rfl))
-  
+ 
   simout <-  tryCatch({
    parse_fire_log(rfl )
   }, warning=function(e){
