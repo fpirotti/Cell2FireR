@@ -62,8 +62,7 @@ run_cell2fire <- function(
     if (missing(input_folder) || is.null(input_folder) || input_folder == "") stop("Input folder is required.")
     if (missing(out_folder) || is.null(out_folder)) stop("Output folder is required.")
 
-    message("\n========================================\n====== SIMULATION STARTING =============\n========================================")
-    
+  
     # -------------------------------------------------------------
     # 1. SETUP DIRECTORIES
     # -------------------------------------------------------------

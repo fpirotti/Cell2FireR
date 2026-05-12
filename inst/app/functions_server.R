@@ -1,5 +1,5 @@
 
-plotPostProcess <- function(simulations){
+plotPostProcess <- function(simulations, timestamps){
  
   r <-  currentRasterStack[[1]]
   # 2. Extract X and Y coordinates using the cell IDs
@@ -12,6 +12,10 @@ plotPostProcess <- function(simulations){
   df_sf <- st_as_sf(df_coords, coords = c("x", "y"), crs = terra::crs(r)) %>%
     st_transform(4326) # Leaflet strictly requires EPSG:4326 (Lat/Lon)
   bbox <- st_bbox(df_sf)
+
+  df_sf$start <- sapply(timestamps, function(x){ as.character(x[[1]])}) 
+  df_sf$end <- sapply(timestamps, function(x){ as.character(x[[length(x)]])}) 
+  df_sf$steps <- sapply(timestamps, function(x){ length(x)}) 
  
   # 4. Add to the existing Leaflet map
   # Replace "fireMap" with the actual ID of your leafletOutput in the UI
@@ -30,25 +34,29 @@ plotPostProcess <- function(simulations){
         "<tr><th colspan='2' class='sim-popup-header'>Simulated Ignition n. ", simulation, "</th></tr>",
         "</thead>",
         "<tbody>", 
-        "<tr><td colspan='2'  >Fire Spread Grids
-         <span title='Play fire spread simulation output at time periods.' isplaying=false  
-         onclick=' 
-    var playing = $(this).attr(\"isplaying\") === \"true\";
-    if(playing) { 
-      $(this).html(\"▶️\").attr(\"isplaying\", \"false\"); 
-    } else { 
-      $(this).html(\"⏸️\").attr(\"isplaying\", \"true\"); 
-    }
-    Shiny.setInputValue(\"playGrids\", {simulationN:", simulation, ", force:true}
-    ' class='ptr'>▶️</span>|
-      <span id='simulationTableDateSpan", simulation, "'></span>
+        "<tr><td>Date start: ", start,
+        "</td><td>",
+        "Date end: ",end,"</td></tr>",
+        "<tr><td colspan='2'  >
+        <span id='simulationTableDateSpan", simulation, "'></span>
         </td></tr>",
         # --- NEW SLIDER ROW ---
       "<tr><td colspan='2' style='padding: 5px 10px;'>",
-        "<input id='myGridSlider", simulation, "' type='range' min='1' max='1000' value='1' style='width:100%; cursor:pointer;' ",
+        "<input id='myGridSlider", simulation, "' type='range' 
+      min='1' max='",steps,"' value='1' style='width:100%; cursor:pointer;' ",
           "onchange='", 
             "Shiny.setInputValue(\"playGrids\", {simulationN:", simulation, ", step: parseInt(this.value)}, {priority: \"event\"});",
           "'>",
+      "<span style='cursor:pointer;font-size:16px;'
+      onclick='document.getElementById(\"myGridSlider", simulation, "\").stepDown(); 
+      document.getElementById(\"myGridSlider", simulation, "\").dispatchEvent(new Event(\"change\"));'>
+  ◁
+</span> 
+<span style='cursor:pointer;font-size:16px;margin-left:10px;'
+      onclick='document.getElementById(\"myGridSlider", simulation, "\").stepUp(); 
+      document.getElementById(\"myGridSlider", simulation, "\").dispatchEvent(new Event(\"change\"));'>
+  ▷
+</span>",
         "<div style='font-size:10px; text-align:center;'>Step: <span id='val", simulation, "'>1</span></div>",
       "</td></tr>",
       # -----------------------
@@ -113,7 +121,14 @@ processSimulationOutputFolder <- function(resDir){
    
   if(!is.null(simout)){
     tryCatch({
-      plotPostProcess(simout)
+      rdaa <- file.path(resDir, "results", "info.rda")
+      if(!file.exists(rdaa)){
+        timestamps <- NULL
+      } else { 
+        load(rdaa)
+        timestamps <- weatherTimestamps
+      }
+      plotPostProcess(simout, timestamps)
     }, warning=function(e){
  
       showNotification(paste0("Warning in plotting fire log: ", e$message), type="warning", duration=20)
@@ -164,8 +179,10 @@ readGrids <- function(filepath, force=F ){
     )
   } 
   
-
   output_tif <- dirname(filepathn[[1]])
+ 
+  rdapath <-  file.path(dirname(dirname(output_tif)), "info.rda")
+
   simNumber <- as.numeric(gsub("[^0-9]", "", basename(output_tif) ) )
   
   tifpath <- file.path(output_tif, 
@@ -181,6 +198,15 @@ readGrids <- function(filepath, force=F ){
   
     fire_stack <- rast(tifpath)
     fire_vect <- sf::read_sf(vecpath)  
+    
+    if(file.exists(rdapath)){
+      load(rdapath)
+      weatherTimestamps[[as.character(simNumber)]] <- terra::time(fire_stack)
+    } else {
+      weatherTimestamps <- list()
+      weatherTimestamps[[as.character(simNumber)]] <- terra::time(fire_stack)
+    }
+    save(weatherTimestamps,  file=rdapath)
     return( paste0("Grids ",basename(output_tif)," already processed!"))
   } 
    
@@ -215,7 +241,7 @@ readGrids <- function(filepath, force=F ){
         empty_geom <- st_sfc(st_polygon(), crs = st_crs(ff)) 
         ff <- st_sf(geometry = empty_geom)
       }
-      ff$iteration <- tt
+      ff$timeStep <- tt
       ff$burntArea <- burnArea
       vectsList[[as.character(tt)]] <<- ff
       return(r)
@@ -280,9 +306,15 @@ readGrids <- function(filepath, force=F ){
     writeRaster(fire_stack, tifpath, datatype="INT1U", 
                 overwrite = TRUE, gdal=c("COMPRESS=LZW"))
  
-   
+    if(file.exists(rdapath)){
+      load(rdapath)
+      weatherTimestamps[[as.character(simNumber)]] <- terra::time(fire_stack)
+    } else {
+      weatherTimestamps <- list()
+      weatherTimestamps[[as.character(simNumber)]] <- terra::time(fire_stack)
+    }
+    save(weatherTimestamps,  file=rdapath)
 
-  
   return("Finished processing grids")
 }
 

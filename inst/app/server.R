@@ -54,7 +54,7 @@ server <- function(input, output, session) {
   ignitionPointsCoords <- reactiveVal(NULL)
   
   simulation_output_grids <- reactiveVal(NULL)
-  current_frame <- reactiveVal(1)
+  current_frame <- reactiveVal(0)
   
   rasterFiles <- reactiveVal(NULL)
   csvFiles <- reactiveVal(NULL)
@@ -430,6 +430,7 @@ Work in progress....",
                     detail = sprintf("Adding layer %s", layerName))
         
         r2 <- terra::rast(fi)
+        
         if(terra::is.lonlat(r2)){
           showNotification(HTML(
             sprintf(
@@ -454,7 +455,7 @@ I will force this to EPSG:3857 (PseudoMercator projection) and
              
              ## 
              rt <- project(r2, "EPSG:3857", res = round(exact_res), method = "near")
-             diff(res(rt))
+          
            }
            terra::writeRaster(rt, filename = fi, overwrite=T)
            r2 <- terra::rast(fi)
@@ -467,16 +468,26 @@ I will force this to EPSG:3857 (PseudoMercator projection) and
           if (!compareGeom(terra::rast(rasters[[1]]), r2, stopOnError = FALSE)) {
             showNotification(HTML(
               sprintf(
-                "<b>Raster %s NOT aligned with raster stack %s!</b> Either CRS,
-origin or resolution are different. The system will try to align the landscape stack. 
-Reload the dataset for better control.",
-                basename(rasters[[1]]) ,
-                basename(sources(r2))
+                "Raster <b>%s</b> NOT aligned with raster stack <b>%s!</b>
+<br>%s <br>%s <br>%s <br>%s <br>
+Either CRS,
+origin or resolution are different. <br>
+The system will try to align the landscape stack. overwriting the misaligned raster. 
+<u>Reload the dataset for better control</u>.",
+                basename(sources(r2)),
+                basename(rasters[[1]]),
+                paste(res(r2), collapse = "x") , 
+                paste(res(terra::rast(rasters[[1]])), collapse = "x"),
+                paste(ext(r2) , collapse = "x"), 
+                paste(ext(terra::rast(rasters[[1]])), collapse = "x") 
               )
             ),
-            duration = 12,
-            type = "error")
+            duration = 20,
+            type = "warning")
             
+            rt <- terra::project(r2, terra::rast(rasters[[1]]))
+            terra::writeRaster(rt, filename = fi, overwrite=T)
+            r2 <- terra::rast(fi)
           }
         }
         
@@ -742,7 +753,11 @@ Reload the dataset for better control.",
     req(input$inputfolder)
     req(input$outputInstanceFolder)
     ### grids ----
-    gridpath <- file.path(input$outputInstanceFolder, "results", "Grids")
+    resultspath <- file.path(input$outputInstanceFolder,
+                             "results" )
+       gridpath <- file.path(resultspath, "Grids")
+       # rdapath <- file.path(resultspath, "weatherTimestamps.rda")
+    
     if (!dir.exists(gridpath)) {
       showNotification(
         "No Grid output found in this simulation instance, did you select the correct output arguments in the argument grid of the simulator?" ,
@@ -752,7 +767,7 @@ Reload the dataset for better control.",
       return(invisible())
     }
     
-    
+     
     grids <- list.dirs(gridpath, full.names = T, recursive = F)
     if (length(grids) == 0) {
       showNotification(
@@ -767,8 +782,7 @@ Reload the dataset for better control.",
                    min = 0,
                    max = length(grids)*2, {
                      # 1. Load the raster
-                   
-                     
+                  
                      for (fp in grids) {
                        iter <- as.integer( gsub("\\D+", "",
                                     basename(fp) ) )
@@ -842,8 +856,8 @@ Reload the dataset for better control.",
                        
                        incProgress(1, detail = paste("Copying ", length(grids), " files" ))
                        
-                       tifcopysuccess <- file.copy(grids, file.path(tifout, basename(grids) ))
-                       gpkgcopysuccess <- file.copy(gpkgs, file.path(gpkgout, basename(gpkgs) ))
+                       tifcopysuccess <- file.copy(grids, file.path(tifout, basename(grids) ), overwrite = T)
+                       gpkgcopysuccess <- file.copy(gpkgs, file.path(gpkgout, basename(gpkgs) ), overwrite = T)
                        if(any(c(!tifcopysuccess, !gpkgcopysuccess)) ){
                          showNotification(
                            "Some files not copied" ,
@@ -1685,7 +1699,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
     unzip(input$zipfileload_dataset$datapath, exdir = path)
     
     showNotification(paste("Finished unzipping  to ", input$zipfileload_dataset$name))
-    if (length(list.files(path = path, pattern = "fuel.*\\.(asc|tif)$")) ==
+    if (length(list.files(path = path, pattern = ".*fuel.*\\.(asc|tif)$", ignore.case = T)) ==
         0) {
       dd <- list.dirs(path = path, recursive = F)
       if (length(dd) == 0) {
@@ -1698,7 +1712,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
         if (nchar(path) > 4)
           unlink(path, recursive = TRUE)
       } else {
-        subdd <- list.files(path = dd, pattern = "fuel.*\\.(asc|tif)$")
+        subdd <- list.files(path = dd, pattern = "fuel.*\\.(asc|tif)$", ignore.case = T)
         if (length(subdd) == 0) {
           showNotification(
             "<b>No fuel rasters found!</b> - make sure that   your zip does not have subfolders and  a TIF or ASC file with the word  fuel  e.g. myfuel.tif or fuelINT.asc is available in the instance.",
@@ -1857,14 +1871,15 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
       )
     } else {
       
+      print("nonoo")
       req(input$outputInstanceFolder)
-      
-      if(!is.null(isolate(simulation_output_grids())) && !isTruthy(input$playGrids$step)) {
+      print("hhhhh")
+      currentVect <- isolate(simulation_output_grids())
+      if(!is.null(currentVect) && !isTruthy(input$playGrids$step)) {
         simulation_output_grids(NULL)
       }  else {
-        vecpath <- file.path( file.path(fp, 
-                                        paste0("Grids", input$playGrids$simulationN, ".gpkg"))
-        )
+        vecpath <-  file.path(fp, 
+                       paste0("Grids", input$playGrids$simulationN, ".gpkg") )  
         
         if(!file.exists(vecpath)){
           showNotification(file.path("Could not read file ", basename(vecpath)), 
@@ -1872,78 +1887,51 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
           return(invisible())
         }
         
-        fire_vect <- sf::read_sf(vecpath)
-        if(isTruthy(input$playGrids$step)) {
-          fm <- as.integer(ceiling(nrow(fire_vect)*input$playGrids$step/1000)) 
-          current_frame(fm) 
-          
-        }
-        else {
-          current_frame(1) 
-        }
-        simulation_output_grids( fire_vect |> sf::st_transform(4326)) 
         
+        fm <- as.integer(input$playGrids$step) 
+        print(fm)
+        if(is.null(currentVect) || 
+           attr(currentVect, "source_file") != basename(vecpath) ){
+          
+          fire_vect <- sf::read_sf(vecpath) 
+          attr(fire_vect, "source_file") <- basename(vecpath)
+          simulation_output_grids( fire_vect |> arrange(timeStep) |> sf::st_transform(4326)) 
+          current_frame(fm)  
+        } else {
+          fire_vect <- currentVect
+          shinyjs::runjs( sprintf("$('#simulationTableDateSpan%d').html('%s');", 
+                                  fire_vect[fm,]$simNumber ,
+                                  as.character(fire_vect[fm,]$Date) 
+          ) )
+          current_frame(fm) 
+        } 
+        
+        print(fire_vect[fm,])
       }
       
     }
-  })
-  autoInvalidate <- reactiveTimer(1000)
-  observe({
-    autoInvalidate() # Triggers every second
-    
-    r <- simulation_output_grids()
-    
-    # If 'r' is NULL, this IF statement prevents the animation math from running
-    if (!is.null(r) && !isTruthy(input$playGrids$step)) {
-      isolate({
-        new_frame <- current_frame() + 1
-        if (new_frame > nrow(r))
-          new_frame <- 1
-        current_frame(new_frame)
-      })
-    } 
-    
-    if (!is.null(r) && isTruthy(input$playGrids$step)) {
-      # isolate({
-        current_frame(input$playGrids$step)
-      # })
-    } 
-    
-    
-  })
+  }) 
   
-  observe({
-
+  observeEvent(current_frame(), {
+    
     r <- simulation_output_grids()
     req(r)
     
     frame_idx <- current_frame()
     req(frame_idx <= nrow(r))
     
-    message("Frame ", frame_idx)
     
     # Filter the sf object to just this frame
     active_poly <- r[frame_idx, ]
     
     leafletProxy("map") %>%
-      # clearGroup(sim_layers[[1]]) %>%
-      addPolygons(data = active_poly, fillColor = "red", 
-                  stroke = FALSE,opacity = 0.3,  
+      clearGroup(sim_layers[[1]]) %>%
+      addPolygons(data = active_poly, fillColor = "red",color = "red",
+                    opacity = 0.2,
+                  fillOpacity = 0.05,  weight = 2,stroke = TRUE,
                   options = pathOptions(pane = "fire_spread_pane"), 
                   group = sim_layers[[1]])
-    
-    shinyjs::runjs( paste0("$('#myGridSlider",active_poly$simNumber[[1]],"').val(",active_poly$simNumber[[1]],");" ) )
-    # leafletProxy("mymap") %>% 
-    #   clearGroup(sim_layers[[1]]) |>
-    #   
-    #   addMapPane(name = "fire_spread_pane", zIndex = 649) |>
-    #   addRasterImage(active_layer, 
-    #                  
-    #                  options = pathOptions(pane = "ignition_points_pane"), 
-    #                  colors = "red", 
-    #                  opacity = 0.8, 
-    #                  group = sim_layers[[1]],
-    #                  project = FALSE)
+     
   })
   
   ## END SESSION ----

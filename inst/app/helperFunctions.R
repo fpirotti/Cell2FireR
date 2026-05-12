@@ -67,8 +67,7 @@ parse_fire_log <- function(log_text) {
                             
                          })
  
- 
- print(burnt_tables)
+  
   # 4. Bind them into a data frame
   dd <- list(
     simulation = as.integer(ignitionsN),

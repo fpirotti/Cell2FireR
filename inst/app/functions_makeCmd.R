@@ -17,18 +17,12 @@ proc <- function(dry = TRUE) {
   req(input$FUEL, input$FUEL_MODEL, input$inputfolder)
   
   if (!dry) {
-    showNotification(
-      text = c("
-========================================
-====== SIMULATION STARTING =============
-========================================")
+    showNotification( 
+      text = paste("===== SIMULATION STARTING =====")
     )
   } else {
     showNotification(
-      text = paste("
-==========",    as.character(Sys.time())  ,"===============
-===== DRY RUN OF SIMULATION STARTING === 
-========================================")
+      text = paste("===== DRY RUN OF SIMULATION STARTING =====")
     )
   }
   
@@ -60,7 +54,7 @@ but elevation raster is - I will create it for you...
 This is a one-time operation, please be patient.", tt), type = "warning")
         if(tt=="slope") ttt <- terra::terrain(elev, v = "slope", unit = "degrees")
         if(tt=="saz") ttt <- terra::terrain(elev, v = "aspect", unit = "degrees")
-        if(tt=="cur") ttt <- spatialEco::curvature(elev, type = "total")
+        # if(tt=="cur") ttt <- spatialEco::curvature(elev, type = "total")
         
         
         writeRaster(ttt, pout )
@@ -113,11 +107,8 @@ This is a one-time operation, please be patient.", tt), type = "warning")
     if (dry) {  
       shinyjs::runjs(paste0("$('#code1').text('", paste(sim_result, collapse = " "),
                      "')") ) 
-      showNotification(
-        text = c(paste(sim_result, collapse = "<BR>"), "<BR>
-========================================
-===== DRY RUN OF SIMULATION END  ======= 
-========================================<BR><BR>")
+      showNotification( 
+        text = paste("===== DRY RUN OF SIMULATION ENDED =====")
       )
       return(NULL)
     } 
