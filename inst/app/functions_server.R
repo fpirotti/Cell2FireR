@@ -1,6 +1,7 @@
 
 plotPostProcess <- function(simulations, timestamps){
  
+  # browser()
   r <-  currentRasterStack[[1]]
   # 2. Extract X and Y coordinates using the cell IDs
   coords <- terra::xyFromCell(r, simulations$ignition_cell)
@@ -12,17 +13,25 @@ plotPostProcess <- function(simulations, timestamps){
   df_sf <- st_as_sf(df_coords, coords = c("x", "y"), crs = terra::crs(r)) %>%
     st_transform(4326) # Leaflet strictly requires EPSG:4326 (Lat/Lon)
   bbox <- st_bbox(df_sf)
-
-  df_sf$start <- sapply(timestamps, function(x){ as.character(x[[1]])}) 
-  df_sf$end <- sapply(timestamps, function(x){ as.character(x[[length(x)]])}) 
-  df_sf$steps <- sapply(timestamps, function(x){ length(x)}) 
  
-  # 4. Add to the existing Leaflet map
-  # Replace "fireMap" with the actual ID of your leafletOutput in the UI
+  if(!is.null(timestamps)){
+    df_sf$start <- sapply(timestamps, function(x){ as.character(x[[1]])}) 
+    df_sf$end <- sapply(timestamps, function(x){ as.character(x[[length(x)]])}) 
+    df_sf$steps <- sapply(timestamps, function(x){ length(x)}) 
+  } else {
+    df_sf$start <-1
+    df_sf$end <- nrow(df_sf)
+    df_sf$steps <- nrow(df_sf)
+    
+    showNotification("Please run postprocessing of this simulations - click
+<span onclick='Shiny.setInputValue(\"processSimulationOutputInstance\", {force:true},  {priority: \"event\"});' class='ptr' >HERE</span>",
+                      duration=20)
+  }
+ 
   leafletProxy("map") |>
-    clearGroup(sim_layers[[2]]) |>
+    clearGroup(sim_layers$IgnitionPoints) |>
     # clearGroup("Simulation Output") %>% # Optional: remove previous run's markers
-    addCircleMarkers(group = sim_layers[[2]],
+    addCircleMarkers(group = sim_layers$IgnitionPoints,
                      data = df_sf,
       radius = 12,           # The clickable area
       stroke = FALSE, 
@@ -34,11 +43,11 @@ plotPostProcess <- function(simulations, timestamps){
         "<tr><th colspan='2' class='sim-popup-header'>Simulated Ignition n. ", simulation, "</th></tr>",
         "</thead>",
         "<tbody>", 
-        "<tr><td>Date start: ", start,
+        "<tr><td>Start: ",  start,
         "</td><td>",
-        "Date end: ",end,"</td></tr>",
+        "End: ", end,"</td></tr>",
         "<tr><td colspan='2'  >
-        <span id='simulationTableDateSpan", simulation, "'></span>
+        Current timestamp: <span id='simulationTableDateSpan", simulation, "'></span>
         </td></tr>",
         # --- NEW SLIDER ROW ---
       "<tr><td colspan='2' style='padding: 5px 10px;'>",
@@ -47,12 +56,12 @@ plotPostProcess <- function(simulations, timestamps){
           "onchange='", 
             "Shiny.setInputValue(\"playGrids\", {simulationN:", simulation, ", step: parseInt(this.value)}, {priority: \"event\"});",
           "'>",
-      "<span style='cursor:pointer;font-size:16px;'
+      "<span style='cursor:pointer;font-size:14px;'
       onclick='document.getElementById(\"myGridSlider", simulation, "\").stepDown(); 
       document.getElementById(\"myGridSlider", simulation, "\").dispatchEvent(new Event(\"change\"));'>
   ◁
 </span> 
-<span style='cursor:pointer;font-size:16px;margin-left:10px;'
+<span style='cursor:pointer;font-size:14px;margin-left:10px;'
       onclick='document.getElementById(\"myGridSlider", simulation, "\").stepUp(); 
       document.getElementById(\"myGridSlider", simulation, "\").dispatchEvent(new Event(\"change\"));'>
   ▷
@@ -62,8 +71,8 @@ plotPostProcess <- function(simulations, timestamps){
       # -----------------------
         
       "<tr><td colspan='2'  >Rate of Spread Grid - 
-         <span title='Add ROS grid to map' onclick='Shiny.setInputValue(\"addROStoMAP\", {simulationN:", simulation, ", force:true},  {priority: \"event\"});' class='ptr'>➡️</span>
-         <span title='Download ROS raster in TIFF format' onclick='Shiny.setInputValue(\"downloadROS\", {simulationN:", simulation, ", force:true},  {priority: \"event\"});' class='ptr'>⬇️️</span>|
+         <input type=checkbox title='Add ROS grid to map' onchange='Shiny.setInputValue(\"addROStoMAP\", {simulationN:", simulation, ", force:true},  {priority: \"event\"});' class='ptr' />
+         <span title='Download Rate Of Spread raster in TIFF format' onclick='Shiny.setInputValue(\"downloadROS\", {simulationN:", simulation, ", force:true},  {priority: \"event\"});' class='ptr'>⬇️️</span>|
         <span id='simulationTableDateSpan", simulation, "'></span>
         </td></tr> ",  
       "<tr><td colspan='2'  > ", burnt_cells, "</td> </tr>", 
@@ -72,7 +81,7 @@ plotPostProcess <- function(simulations, timestamps){
       )
     ) |>
    
-    addLabelOnlyMarkers(group = "Simulation Ignition Points",
+    addLabelOnlyMarkers(group = sim_layers$IgnitionPoints,
                         data = df_sf,
       label = HTML('<i class="fa fa-burst" style="color:red; font-size:24px;"></i>'),
       labelOptions = labelOptions(
@@ -130,10 +139,8 @@ processSimulationOutputFolder <- function(resDir){
       }
       plotPostProcess(simout, timestamps)
     }, warning=function(e){
- 
       showNotification(paste0("Warning in plotting fire log: ", e$message), type="warning", duration=20)
     }, error=function(e){
- 
       showNotification(paste0("Error in plotting fire log: ", e$message), type="error", duration=20)
     })
   }  
@@ -152,7 +159,17 @@ killSimProcess <- function(force=F, message=""){
 --- process finished by user ---
 ") )
   )
-  if(nchar(dirname(simProcess$outputFolder)) > 13) unlink(dirname(simProcess$outputFolder), recursive = T)
+   
+  
+  if(nchar(dirname(simProcess$outputFolder)) > 13) {
+    showNotification(paste0(
+                      "Removing output  instance ", 
+                     dirname(simProcess$outputFolder) 
+                     ), type = "info", duration=10 )
+    unlink(dirname(simProcess$outputFolder), recursive = T)
+  }
+   
+  
   simProcess <<- NULL
   showNotification(
     paste("Simulation stopped!", message, collapse="<br>"),
@@ -269,7 +286,7 @@ readGrids <- function(filepath, force=F ){
       if(anyNA(clean_ts)) clean_ts <- as.POSIXct(raw_ts, format = "%Y%m%d%H")
       if(anyNA(clean_ts)) clean_ts <- as.POSIXct(raw_ts, format = "%Y%m%d")
       if(anyNA(clean_ts)) {
-        showNotification(paste0(
+        showNotification(
           "Sorry, we did find a column named '",
                          names(wf)[[datecol]] ,"' but we could not convert 
           its contents to a time stamp using our heuristics.
@@ -277,8 +294,7 @@ readGrids <- function(filepath, force=F ){
   <br>2023-07-07 16:00:00
   <br>2023-07-07 16:00
   <br>2023-07-07 16
-  <br>2023-07-07") 
-          )
+  <br>2023-07-07", type="info", duration=10   )
         
         terra::time(fire_stack) <- 1:length(filepathn)
         fire_vect$Date <- terra::time(fire_stack)

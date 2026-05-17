@@ -5,7 +5,8 @@ restore_inputs <- function() {
     
     # Skip NULLs
     if (is.null(value) || !is_all_caps(id)) next
-    
+     
+    if(anyNA(value)) return()
     # Handle by type (extend as needed)
     try({ 
        if (is.character(value) && length(value) == 1) {
@@ -15,6 +16,7 @@ restore_inputs <- function() {
         updateNumericInput(session, id, value = value)
         # message("Update updateNumericInput ", id)  
       } else if (is.logical(value) && length(value) == 1) {
+        
         updateCheckboxInput(session, id, value = value)
         # message("Update updateCheckboxInput ", id)   
       } else if (is.numeric(value) && length(value) == 2) {
@@ -22,6 +24,7 @@ restore_inputs <- function() {
         # message("Update updateSliderInput ", id)   
         
       } else if (is.character(value)) {
+    
         updateSelectInput(session, id, selected = value) 
         # message("Update char updateSelectInput ", id)   
       }

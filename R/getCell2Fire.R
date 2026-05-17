@@ -19,18 +19,23 @@ getCell2Fire <- function(
     
     # 1. Download the file
     # mode = "wb" is absolutely critical on Windows for binary/zip files
+    # url <- "https://github.com/fire2a/C2F-W/releases/download/v1.0.3/Cell2FireW_v1.0.3.zip"
+    
+    url <- "https://github.com/fpirotti/C2F-W/releases/download/wildfireSim/Cell2FireW_2093a03706d83c2c3d34a9b9387576a0ee4ef608.zip"
+ 
     if (!quiet) message("Downloading Cell2Fire binary (10.2 MB)...")
     utils::download.file(
-      "https://github.com/fire2a/C2F-W/releases/download/v1.0.3/Cell2FireW_v1.0.3.zip",
+      url,
       destfile = zip_path,
       mode = "wb", 
       quiet = quiet
     )
     
+ 
     # 2. Extract the file
     if (!quiet) message("Extracting binaries...")
     utils::unzip(zipfile = zip_path, exdir = extract_dir)
-    
+ 
     # 3. Define paths
     fp <- file.path(extract_dir, "C2F", "Cell2Fire")
     exe.linux <- file.path(fp, "Cell2Fire")

@@ -27,7 +27,8 @@
 #' @param fmc Numeric Fuel Moisture Content.
 #' @param ldfmcs Character string for scenario.
 #' @param outputs Character vector of output flags (e.g., c("grids", "stats")).
-#' @param c2f_bin_path Path to the Cell2Fire executable. Defaults to the user data path, but user can specify a different path.
+#' @param c2f_bin_path Path to the Cell2Fire executable. 
+#' Defaults to `Cell2FireR::c2f_bin_pathEnv()` but user can specify a different path.
 #' @param template_dir Path to the directory containing lookup tables and default weather.
 #' @param dry Logical; if TRUE, only prepares files and returns the command arguments.
 #' @param verbose Logical; if TRUE, provides many messages.
@@ -55,23 +56,34 @@ run_cell2fire <- function(
 ) {
   
 
-  tryCatch({
-    # Basic validation
-    if (missing(fuel) || is.null(fuel) || fuel == "") stop("Fuel raster is required.")
-    if (missing(fuel_model) || is.null(fuel_model) || fuel_model == "") stop("Fuel model is required.")
-    if (missing(input_folder) || is.null(input_folder) || input_folder == "") stop("Input folder is required.")
-    if (missing(out_folder) || is.null(out_folder)) stop("Output folder is required.")
-
   
+ 
+  tryCatch({
+    
+ 
+    # Basic validation
+    if (is.missing(fuel) || is.null(fuel) || fuel == "") stop("Fuel raster is required.")
+    if (is.missing(fuel_model, F) || is.null(fuel_model) || fuel_model == "") stop("Fuel model is required.")
+    if (is.missing(input_folder) || is.null(input_folder) || input_folder == "") stop("Input folder is required.")
+    if (is.missing(out_folder) || is.null(out_folder)) stop("Output folder is required.")
+    
+ 
+    input_folder <- normalizePath(input_folder)
+    out_folder <- normalizePath(out_folder)
     # -------------------------------------------------------------
     # 1. SETUP DIRECTORIES
     # -------------------------------------------------------------
     timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
     instance_dir <- file.path(out_folder, paste0("firesim_", timestamp))
     results_dir <- file.path(instance_dir, "results")
+ 
+    if (!dry) drcres1 <- dir.create(instance_dir, recursive = TRUE, showWarnings = TRUE)
+    if (!dry) drcres2 <- dir.create(results_dir, recursive = TRUE, showWarnings = TRUE)
     
-    if (!dry) dir.create(instance_dir, recursive = TRUE, showWarnings = FALSE)
-    if (!dry) dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
+    # actual_wd <- getwd()
+    # full_path <- normalizePath(instance_dir, mustWork = FALSE)
+    # exists_now <- dir.exists(instance_dir)
+    # files_in_parent <- list.files(dirname(instance_dir))
     
     # Helper to copy and rename files
     copy_to_instance <- function(filepath, standard_name) { 
@@ -95,9 +107,10 @@ run_cell2fire <- function(
             } 
           } 
         }
+        
         if (!dry) file.link(filepath, FP)  
       }
-      return(FP)
+      return(normalizePath(FP, mustWork = FALSE))
     } 
     # -------------------------------------------------------------
     # 2. COPY LANDSCAPE INPUTS
@@ -120,6 +133,7 @@ run_cell2fire <- function(
     
     # SIMULATOR LUT
     # Note: get_fuel_key must be defined in your package
+    # source("../../R/get_fuel_key.R")
     simulator <- get_fuel_key(fuel_model) 
     lookup_table <- switch(simulator,
                            "K" = "kitral_lookup_table.csv",
@@ -131,9 +145,14 @@ run_cell2fire <- function(
                              "spain_lookup_table.csv"
                            })
     
- 
-    if (!dry) file.copy(file.path(template_dir, lookup_table), file.path(instance_dir, lookup_table))
     
+    if (!dry) {
+      copy.success <- file.copy(file.path(template_dir, lookup_table), 
+                        file.path(instance_dir, lookup_table))
+      if(!copy.success){
+        stop(errorCondition(paste0("Could not copy template of ",lookup_table,"! ") ))
+      }
+    }
     if (ignition_mode == "1. Probability map distributed random ignition") {
       copy_to_instance(ignition_file, "probabilityMap")
     }
@@ -233,7 +252,8 @@ run_cell2fire <- function(
     }
     
     if (!is.null(firebreaks) && nzchar(firebreaks)) {
-      args[["--FirebreakCells"]] <- file.path(instance_dir, "firebreaks.csv")
+      args[["--FirebreakCells"]] <- normalizePath(
+        file.path(instance_dir, "firebreaks.csv"), mustWork = F)
     }
     
     if (!is.null(outputs)) {
@@ -248,8 +268,9 @@ run_cell2fire <- function(
     args[["--sim-years"]] <- "999"
     
     # Directories
-    args[["--input-instance-folder"]] <- instance_dir 
-    args[["--output-folder"]] <- results_dir 
+
+    args[["--input-instance-folder"]] <-  instance_dir 
+    args[["--output-folder"]] <-  results_dir 
     
     # Flatten list to a character vector for processx
     cli_args <- character()
@@ -265,18 +286,19 @@ run_cell2fire <- function(
     # 5. EXECUTE CELL2FIRE
     # -------------------------------------------------------------
 
-    
+ 
     if (!file.exists(c2f_bin_path)) {
       stop(paste("Cell2Fire executable not found at:", c2f_bin_path))
     }
     
     if (dry) {
       message("Dry run complete. Returning arguments..... " )
+       
       message(paste(c(basename(c2f_bin_path), cli_args), collapse = " ") )
-      return(paste(c(basename(c2f_bin_path), cli_args), collapse = " "))
+      return(paste(c(getwd(), " -- ", basename(c2f_bin_path), cli_args), collapse = " "))
     }
     
-    message(paste("Executing:", c2f_bin_path, paste(cli_args, collapse = " ")))
+    cat(paste("Executing:", c2f_bin_path, paste(cli_args, collapse = "\n")), file="mylog4.log")
  
     # Start the process and return the object
     sim_process <- processx::process$new(
@@ -285,6 +307,7 @@ run_cell2fire <- function(
       stdout = "|",
       stderr = "|"
     ) 
+     
     return( list(
       process = sim_process,
       command = c2f_bin_path,
@@ -294,12 +317,13 @@ run_cell2fire <- function(
     )
     )
     
-  }, error = function(e) {  
+  }, error = function(e) { 
+    
     if (dry) {
       message("ERR Dry run complete. Returning arguments.")
       return( paste("Error preparing simulation:", e$message))
     } else { 
-      warning(paste("Error preparing simulation:", e$message))
+      stop(errorCondition(paste("Error preparing simulation:", e$message)))
     }
   }, warning = function(e) {  
     if (dry) {

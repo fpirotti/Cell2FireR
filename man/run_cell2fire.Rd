@@ -93,7 +93,8 @@ run_cell2fire(
 
 \item{outputs}{Character vector of output flags (e.g., c("grids", "stats")).}
 
-\item{c2f_bin_path}{Path to the Cell2Fire executable. Defaults to the user data path, but user can specify a different path.}
+\item{c2f_bin_path}{Path to the Cell2Fire executable.
+Defaults to \code{Cell2FireR::c2f_bin_pathEnv()} but user can specify a different path.}
 
 \item{template_dir}{Path to the directory containing lookup tables and default weather.}
 

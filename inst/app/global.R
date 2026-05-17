@@ -71,8 +71,9 @@ base_layers <- list(
   satellite= "BASE - Satellite"
 )
 
-sim_layers <- c("Simulated Fire Spread" ,
-                   "Simulation Ignition Points" )
+sim_layers <- list( SimBurntArea = "Sim - Burnt Area" ,
+                IgnitionPoints = "Sim - Simulation Ignition Points", 
+                ROS="Sim - Rate of Spread (ROS)" )
 fwi_layers <- list(
   "EFFIS - Fire Weather Index" = "ecmwf.fwi",
   "EFFIS - Initial Spread Index" = "ecmwf.isi",

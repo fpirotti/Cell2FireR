@@ -98,7 +98,7 @@
 }
 
 /* Highlight specific alerts or missing files */
-.log-warning {
+.log-warning, log-warn {
   color: #d7ba7d;
   font-style: italic;
   padding-left: 15px;

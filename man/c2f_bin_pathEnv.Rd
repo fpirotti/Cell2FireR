@@ -2,10 +2,12 @@
 % Please edit documentation in R/zzz.R
 \name{c2f_bin_pathEnv}
 \alias{c2f_bin_pathEnv}
-\title{Get the Cell2Fire Binary Path}
+\title{Get the Cell2Fire Data Directory
+Get the Cell2Fire Binary Path}
 \usage{
 c2f_bin_pathEnv()
 }
 \description{
+Get the Cell2Fire Data Directory
 Get the Cell2Fire Binary Path
 }

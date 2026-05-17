@@ -2,7 +2,6 @@
 
 export(GenDataFile)
 export(c2f_bin_pathEnv)
-export(c2f_dir)
 export(detectCores)
 export(getCell2Fire)
 export(runWildfireApp)

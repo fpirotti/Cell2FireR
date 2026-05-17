@@ -397,17 +397,31 @@ PANELS[["WEATHER & CONFIG"]] <- list(
  from directory it will look into the directory of the selected dataset.",
       shiny::selectInput("WEATHER_MODE", "Source mode", choices = NAME$weather_modes) ),
 
-  WEAFILE=shiny::selectInput("WEAFILE", "Single weather file (.csv)", choices = get_existing_files("\\.csv$")),
+  WEAFILE=shiny::selectInput("WEAFILE", 
+                             HTML("Single weather file (.csv)<sup class='helpTitle' 
+                                  title='Choose the weather file, one simulation per row will be done'>?</sup>") , 
+                             choices = get_existing_files("\\.csv$")),
 
   # shiny::textInput("WEADIR", "Weather directory path", placeholder = "/path/to/weather/"),
 
-  FMC=shiny::numericInput("FMC", "Foliar Moisture Content [40-200]", value = 66, min = 40, max = 200),
+  FMC=shiny::numericInput("FMC", , 
+                          HTML("Foliar Moisture Content [40-200]<sup class='helpTitle' 
+                                  title='moisture percentage of the canopy foliage, which directly dictates how easily a crown fire will ignite and spread. Lower values (near 40%) represent highly flammable, dry needles that accelerate intense crown fires, while higher values (up to 200%) indicate lush, wet foliage that dampens or prevents canopy burning'>?</sup>"), 
+                          value = 66, min = 10, max = 200),
 
-  LDFMCS= shiny::sliderInput("LDFMCS", "Fuel Moisture Scenario [1-4]", min = 1, max = 4, value = 2),
+  LDFMCS= shiny::sliderInput("LDFMCS", , 
+                             HTML("Fuel Moisture Scenario [1-4]<sup class='helpTitle' 
+                                  title='pre-defined, standardized set of fuel moisture values (categorized from 1 to 4) to quickly simulate different levels of environmental drought and fire danger.
+<br><b>Scenario 1 (Extreme):</b> Represents critically dry conditions where both fine and heavy fuels ignite and spread fire effortlessly.
+<br><b>Scenario 4 (Low/Wet):</b> Represents damp conditions with high fuel moisture, drastically slowing down or entirely halting fire propagation.'>?</sup>"),
+                              min = 1, max = 4, value = 2),
  
   SIM_THREADS=shiny::numericInput("SIM_THREADS", sprintf("CPU Threads (%d available)", Cell2FireR::detectCores()), 
                       value = ceiling(Cell2FireR::detectCores()/4), min = 1, max=Cell2FireR::detectCores()),
-  RNG_SEED=shiny::numericInput("RNG_SEED", "Random Seed", value = runif(n=1, min=100, max=999))
+  RNG_SEED=shiny::numericInput("RNG_SEED", 
+                               HTML("Random Seed<sup class='helpTitle' 
+                                  title='Random number - used for replicability:  if you run a  simulation with a specific ignition point, it might calculate wind shifts, spot fires, and fuel burning using random numbers. If you run it a second time without fixing the seed, the fire will take a completely different path because the computer picked a new sequence of  random numbers.'>?</sup>") , step = 1, min = 1, max=999,
+                               value = trunc(runif(n=1, min=100, max=999)))
 
 )
 

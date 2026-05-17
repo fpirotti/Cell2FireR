@@ -1,6 +1,6 @@
 Package: Cell2FireR
 Title:  A bridge between R and the Cell2Fire C++ executable. It automates several tedious steps and provides a web-app for user-friendly interaction and capacity building on fire spread simulations
-Version: 0.0.0.9500
+Version: 0.0.0.9600
 Authors@R:     person("Francesco", "Pirotti", , "francesco.pirotti@unipd.it", role = c("aut", "cre"))
 Description: a bridge between R and the Cell2Fire C++ executable. It automates several tedious steps:
  **Workspace Management**: Creates timestamped instance and result directories for every run.

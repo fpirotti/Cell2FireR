@@ -29,6 +29,8 @@ proc <- function(dry = TRUE) {
   tryCatch({
     # 2. Define Paths (Adapting from your original script's context)
     # Using the same logic you had to locate the binary and templates
+    
+    cat("---rrr------", this.path::this.dir(), "\n", file="mylog3.log", append=T)
     template_dir <- file.path(this.path::this.dir(), "templates")
   
     c2f_bin <-  Cell2FireR::c2f_bin_pathEnv()
@@ -46,27 +48,39 @@ proc <- function(dry = TRUE) {
     if(isTruthy(input$ELEVATION)){
       
       elev <- rast(input$ELEVATION)
+      
+      withProgress(message = 'Creating terrain Rasters...',
+                   detail = "Slope...",
+                   min = 0,
+                   max = 4, {
+                     
       for(tt in names(terrain)){
         pout <- file.path(input$inputfolder,   sprintf("%s.tif", tt) )
         if(!file.exists(terrain[[tt]]) && !file.exists(pout)){
-        shiny::showNotification(ui =sprintf("%s raster NOT present, 
-but elevation raster is - I will create it for you...
-This is a one-time operation, please be patient.", tt), type = "warning")
+        
+        incProgress(1, sprintf("%s raster NOT present, 
+but elevation raster is - I will create it for you....", tt) )
+          
         if(tt=="slope") ttt <- terra::terrain(elev, v = "slope", unit = "degrees")
+         
+        
         if(tt=="saz") ttt <- terra::terrain(elev, v = "aspect", unit = "degrees")
-        # if(tt=="cur") ttt <- spatialEco::curvature(elev, type = "total")
-        
-        
+         
+        if(tt=="cur") ttt <- spatialEco::curvature(elev, type = "total")
+         
         writeRaster(ttt, pout )
         assign(tt, pout)  
-       } 
-     }
+         }
+       }
+     })
     } 
      
       # 3. Call the Agnostic Function
       # We map the Shiny input$ variables directly to the function arguments
       if(!dry) runjs("startSimlog();")
-      
+     
+        
+    
       sim_result <- run_cell2fire(
         fuel = input$FUEL,
         fuel_model = input$FUEL_MODEL,
@@ -113,15 +127,15 @@ This is a one-time operation, please be patient.", tt), type = "warning")
       return(NULL)
     } 
       
+      
     # If not dry, run_cell2fire returns the processx object.
     # We update the tab and assign it to the global environment so the rest of your app can track it.
     updateTabsetPanel(session, "tabs", selected = "processLogTab")
     simProcess <<- sim_result 
     
   }, error = function(e) {   
-    shiny::showNotification(ui = paste("Error in preparing simulation:", e$message), type = "error")
-  }, warning = function(e) { 
-    message("warning in proc run 2 ", e$message)
-    shiny::showNotification(ui = paste("Warning in preparing simulation:", e$message), type = "warning")
+    showNotification("Error in preparing simulation:", e$message, type = "error")
+  }, warning = function(e) {  
+    showNotification("Warning in preparing simulation:", e$message, type = "warning")
   })
 }

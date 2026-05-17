@@ -4,6 +4,7 @@ server <- function(input, output, session) {
   ## AUTH ------
   # source("functions_auth.R", local=T)
   ## LOAD STATE ------
+  # source("../../R/run_cell2fire.R")
   source("functions_state.R", local = T)
   source("functions_server.R", local = T)
   uniqueId <- paste0(format(Sys.time(), "%H%M%S"), substr(session$token, 1, 6))
@@ -251,15 +252,15 @@ server <- function(input, output, session) {
                                    html = T)
     }
     if (!is.null(logs$logfile)) {
-      writeLines(c(paste0(
-        format(Sys.time(), "[%Y-%m-%d %H:%M:%S] "),
-        toupper(type),
-        ";
-  ",
-        paste(text, collapse = " ")
-      ), "
-
-"), con = logs$log_con)
+      writeLines(paste0(
+        format(Sys.time(), "<b>[%Y-%m-%d %H:%M:%S] "),
+        ifelse(toupper(type)=="warning", 
+               paste(toupper(type), " ⚠ "),
+               toupper(type)
+               ), "</b>: ",
+        paste(text, 
+        collapse = " ") ), 
+        con = logs$log_con)
       flush(logs$log_con)
     }
     
@@ -679,18 +680,18 @@ The system will try to align the landscape stack. overwriting the misaligned ras
       
       addLayersControl(
         baseGroups = unlist(unname(base_layers)),
-        overlayGroups = c(sim_layers, layerNames, names(fwi_layers)),
+        overlayGroups = c(unname(unlist(sim_layers)), layerNames, names(fwi_layers)),
         options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)
       )   |>
-      # customizeLayersControl(
-      #   view_settings =view_settings ,
-      #   # home_btns = TRUE,
-      #   opacityControl = opacityControl,
-      #   includelegends = TRUE,
-      #   addCollapseButton = TRUE,
-      #   layersControlCSS = list("opacity" = 0.6),
-      #   increaseOpacityOnHover = TRUE
-      # ) |>
+      customizeLayersControl(
+        view_settings =view_settings ,
+        # home_btns = TRUE,
+        opacityControl = opacityControl,
+        includelegends = FALSE,
+        addCollapseButton = TRUE,
+        layersControlCSS = list("opacity" = 0.9),
+        increaseOpacityOnHover = FALSE
+      ) |>
       leaflet::fitBounds(
         lng1 =  xmin(r2),
         lat1 =  ymin(r2),
@@ -1637,6 +1638,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
       return(NULL)
     }
     print("asdgfasdf")
+    
     shinyWidgets::confirmSweetAlert(
       session = session,
       inputId =  "confirmDelete_dataset",
@@ -1646,6 +1648,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
   })
   
   observeEvent(input$confirmDelete_dataset, {
+    req(input$confirmDelete_dataset)
     showNotification(paste("Removing folder ", input$inputfolder), duration =
                        10)
     if (nchar(input$inputfolder) > 4)
@@ -1794,6 +1797,8 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
     if (!is.null(simProcess)) {
       shinyWidgets::ask_confirmation("confirmKillProc", text = "Process is running, do you want to stop it?", status = "warning")
     } else {
+      
+      cat("------------", this.path::this.dir(), " .... \n", file="mylog3.log", append=T)
       proc(F)
       updateActionButton(
         inputId = "runsim",
@@ -1850,7 +1855,68 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
   
   
   
-  # FIRE SPREAD RASTER-----
+  # ROS RASTER-----
+  observeEvent(input$addROStoMAP, {
+    fp <- file.path(
+      input$outputInstanceFolder,
+      "results",
+      "RateOfSpread",
+      sprintf("ROSFile%d.tif", input$addROStoMAP$simulationN)
+    )
+    if (!file.exists(fp)) {
+      showNotification(
+        paste0(
+          "ROS file <b>",
+          basename(fp) ,
+          "</b> does not exist in results! Did you post-process the simulation instance?
+  (tools in the second panel that apprears when you click the top right gear icon)"
+        ),
+        type = "warning",
+        duration = 20
+      )
+    } else {
+      r <-stars::read_stars( fp )
+      # if(!st_is_longlat(r)) {
+     r <- st_transform(r, 3857)
+     v <- spatSample(terra::rast(fp),
+                     size = 1e4,
+                     method = "regular",
+                     na.rm = TRUE)
+     
+     rrange <- quantile(v[, 1], probs = c(0.1, 0.9))
+     palette = viridisLite::turbo(20)
+     domain  = rrange
+     copts <- colorOptions(
+       palette = palette,
+       domain = unname(domain),
+       na.color = "#00000000"
+     )
+     
+      leaflet::leafletProxy("map") |>
+        # clearGroup(sim_layers$ROS)  |>
+        leafem::addGeoRaster(
+          r ,
+          opacity = 0.85,
+          group = sim_layers$ROS,
+          autozoom = TRUE,
+          colorOptions = copts,
+          options = leafletOptions(pane = "fire_ROS_pane"),
+          tileOptions = leaflet::tileOptions(zIndex = 999),
+          imagequeryOptions = leafem::imagequeryOptions(
+            digits = 0,
+            prefix =
+              "",
+            position =
+              "bottomright",
+            noData = "NA"
+          ) ,
+          layerId = gsub("[^[:alnum:]_-]", "", sim_layers$ROS)
+        )
+      
+    }
+  }) 
+  
+  # FIRE SPREAD VECTOR -----
   
   observeEvent(input$playGrids, {
     fp <- file.path(
@@ -1882,7 +1948,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
                        paste0("Grids", input$playGrids$simulationN, ".gpkg") )  
         
         if(!file.exists(vecpath)){
-          showNotification(file.path("Could not read file ", basename(vecpath)), 
+          showNotification(file.path("Could not read file ", basename(vecpath), "<br>Did you run post-processing? (tools in the second panel that appears when you click the top right gear icon)?"), 
                            type = "info", duration = 20 ) 
           return(invisible())
         }
