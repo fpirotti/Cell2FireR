@@ -63,7 +63,7 @@ run_cell2fire <- function(
  
     # Basic validation
     if (is.missing(fuel) || is.null(fuel) || fuel == "") stop("Fuel raster is required.")
-    if (is.missing(fuel_model, F) || is.null(fuel_model) || fuel_model == "") stop("Fuel model is required.")
+    if (is.missing(fuel_model,checkPath = F) || is.null(fuel_model) || fuel_model == "") stop("Fuel model is required.")
     if (is.missing(input_folder) || is.null(input_folder) || input_folder == "") stop("Input folder is required.")
     if (is.missing(out_folder) || is.null(out_folder)) stop("Output folder is required.")
     
@@ -109,6 +109,8 @@ run_cell2fire <- function(
         }
         
         if (!dry) file.link(filepath, FP)  
+      } else {
+        return(NULL)
       }
       return(normalizePath(FP, mustWork = FALSE))
     } 
@@ -141,7 +143,7 @@ run_cell2fire <- function(
                            "C" = "fbp_lookup_table.csv",
                            "P" = "portugal_lookup_table.csv",
                            {
-                             message(paste0("Simulation type not found for fuel model: ", fuel_model, ". Defaulting to Spain."))
+                             stop(paste0("Simulation type not found for fuel model: ", fuel_model, ". Defaulting to Spain."))
                              "spain_lookup_table.csv"
                            })
     
@@ -320,8 +322,9 @@ run_cell2fire <- function(
   }, error = function(e) { 
     
     if (dry) {
+    
       message("ERR Dry run complete. Returning arguments.")
-      return( paste("Error preparing simulation:", e$message))
+      stop(errorCondition("Error preparing simulation:", e$message))
     } else { 
       stop(errorCondition(paste("Error preparing simulation:", e$message)))
     }

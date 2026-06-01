@@ -128,4 +128,13 @@
   color: #444;
 }
  
-
+table.dataTable tbody tr.selected td,
+  table.dataTable tbody tr.selected th {
+    background-color: #FFF9C4 !important; /* Change to your preferred HEX code (e.g., Forest Green) */
+    color: #000000 !important;               /* Change text color of selected row */
+  }
+  
+  /* 2. Optional: Adjust hover color on selected rows so it doesn't revert to grey */
+  table.dataTable tbody tr.selected:hover td {
+    background-color: #FFF59D !important; /* Slightly darker shade on hover */
+  }

@@ -404,17 +404,18 @@ PANELS[["WEATHER & CONFIG"]] <- list(
 
   # shiny::textInput("WEADIR", "Weather directory path", placeholder = "/path/to/weather/"),
 
-  FMC=shiny::numericInput("FMC", , 
+  FMC=shiny::numericInput("FMC",  
                           HTML("Foliar Moisture Content [40-200]<sup class='helpTitle' 
                                   title='moisture percentage of the canopy foliage, which directly dictates how easily a crown fire will ignite and spread. Lower values (near 40%) represent highly flammable, dry needles that accelerate intense crown fires, while higher values (up to 200%) indicate lush, wet foliage that dampens or prevents canopy burning'>?</sup>"), 
                           value = 66, min = 10, max = 200),
 
-  LDFMCS= shiny::sliderInput("LDFMCS", , 
+  LDFMCS= shiny::sliderInput("LDFMCS",  
                              HTML("Fuel Moisture Scenario [1-4]<sup class='helpTitle' 
                                   title='pre-defined, standardized set of fuel moisture values (categorized from 1 to 4) to quickly simulate different levels of environmental drought and fire danger.
 <br><b>Scenario 1 (Extreme):</b> Represents critically dry conditions where both fine and heavy fuels ignite and spread fire effortlessly.
-<br><b>Scenario 4 (Low/Wet):</b> Represents damp conditions with high fuel moisture, drastically slowing down or entirely halting fire propagation.'>?</sup>"),
-                              min = 1, max = 4, value = 2),
+<br><b>Scenario 4 (Low/Wet):</b> Represents damp conditions with high fuel moisture, drastically slowing down or entirely halting fire propagation.
+<b>NB: Only 1 and 2 seem to work in Cell2Fire.</b>'>?</sup>"),
+                              min = 1, max = 4, value = 1, step = 1),
  
   SIM_THREADS=shiny::numericInput("SIM_THREADS", sprintf("CPU Threads (%d available)", Cell2FireR::detectCores()), 
                       value = ceiling(Cell2FireR::detectCores()/4), min = 1, max=Cell2FireR::detectCores()),

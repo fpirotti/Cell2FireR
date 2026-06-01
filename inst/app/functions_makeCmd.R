@@ -30,8 +30,8 @@ proc <- function(dry = TRUE) {
     # 2. Define Paths (Adapting from your original script's context)
     # Using the same logic you had to locate the binary and templates
     
-    cat("---rrr------", this.path::this.dir(), "\n", file="mylog3.log", append=T)
-    template_dir <- file.path(this.path::this.dir(), "templates")
+    cat("---rrr------", this.path::this.dir(n=1), "\n", file="mylog3.log", append=T)
+    template_dir <- file.path(this.path::this.dir(n = 1), "templates")
   
     c2f_bin <-  Cell2FireR::c2f_bin_pathEnv()
     
@@ -134,7 +134,7 @@ but elevation raster is - I will create it for you....", tt) )
     simProcess <<- sim_result 
     
   }, error = function(e) {   
-    showNotification("Error in preparing simulation:", e$message, type = "error")
+    killSimProcess(F, paste("Error in preparing simulation:", e$message))
   }, warning = function(e) {  
     showNotification("Warning in preparing simulation:", e$message, type = "warning")
   })

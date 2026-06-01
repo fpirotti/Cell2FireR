@@ -8,7 +8,30 @@ pkgs <- c("terra", "DT", "remotes", "sf", "httr", "shiny", "leaflet", "shinyjs",
           "htmlwidgets")
  
 api.openMeteo <- ""
- 
+scott_burgan_models <- c(
+  # Grass Models (GR1 - GR9)
+  101, 102, 103, 104, 105, 106, 107, 108, 109,
+  
+  # Grass-Shrub Models (GS1 - GS4)
+  121, 122, 123, 124,
+  
+  # Shrub Models (SH1 - SH9)
+  141, 142, 143, 144, 145, 146, 147, 148, 149,
+  
+  # Timber-Understory Models (TU1 - TU5)
+  161, 162, 163, 164, 165,
+  
+  # Timber Litter Models (TL1 - TL9)
+  181, 182, 183, 184, 185, 186, 187, 188, 189,
+  
+  # Slash-Blowdown Models (SB1 - SB4)
+  201, 202, 203, 204,
+  
+  # Non-Burnable Models (Urban, Ag, Water, Rock)
+  91, 92, 93, 98, 99
+)
+landscapeFlamMap <- c("ELEVATION", "SLOPE", "SAZ",
+                      "FUEL", "CCF","CHM","CBH","CBD")
 for (p in pkgs) {
   if (!requireNamespace(p, quietly = TRUE)) {
     warn("Package ", p, " not found... installing it.")
@@ -29,7 +52,7 @@ white_tile <- "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAw
 
 clcpluswms <- "https://image.discomap.eea.europa.eu/arcgis/services/CLC_plus/CLMS_CLCplus_RASTER_2021_010m_eu/ImageServer/WMSServer"
 # Example global data
-default_center <- c(lng = 11.96173904332453, lat = 45.342594242)
+default_center <- c(lng = 14, lat = 48)
 clcLayerName <- "BASE - Copernicus CLC+"
  
 
@@ -65,15 +88,16 @@ raster_info <- function(r) {
 
 ## FWI layers ------
 base_layers <- list(
+  light="BASE - Light",
   osm="BASE - OSM",
   blank="BASE - Blank",
-  light="BASE - Light",
   satellite= "BASE - Satellite"
 )
 
-sim_layers <- list( SimBurntArea = "Sim - Burnt Area" ,
-                IgnitionPoints = "Sim - Simulation Ignition Points", 
-                ROS="Sim - Rate of Spread (ROS)" )
+sim_layers <- list(IgnitionPointsMan="SIMULATION - Manual ignition points", 
+                IgnitionPointsSim = "SIMULATION - Simulated Ignition Points", 
+                SimBurntArea = "SIMULATION - Burnt Area" ,
+                ROS="SIMULATION - Rate of Spread (ROS)" )
 fwi_layers <- list(
   "EFFIS - Fire Weather Index" = "ecmwf.fwi",
   "EFFIS - Initial Spread Index" = "ecmwf.isi",
@@ -176,16 +200,17 @@ createLeaflet <- function(){
       ), 
       attribution = "Copernicus Land Monitoring Service"
     ) |> hideGroup(clcLayerName) |>
-    addMapPane(name = "ignition_points_pane", zIndex = 660) |>
-    addMapPane(name = "fire_spread_pane", zIndex = 649) |>
-    addMapPane(name = "fire_ROS_pane", zIndex = 650) |>
-    addMapPane(name = "fire_SFL_pane", zIndex = 651) |>
-    addMapPane(name = "fire_SurfInt_pane", zIndex = 652) |>
-    addMapPane(name = "fire_Messages", zIndex = 655) |>
+    addMapPane(name = "fuels_pane", zIndex = 590) |>
+    addMapPane(name = "ignition_points_pane", zIndex = 593) |>
+    addMapPane(name = "fire_spread_pane", zIndex = 599) |>
+    addMapPane(name = "fire_ROS_pane", zIndex = 590) |>
+    addMapPane(name = "fire_SFL_pane", zIndex = 591) |>
+    addMapPane(name = "fire_SurfInt_pane", zIndex = 592) |>
+    addMapPane(name = "fire_Messages", zIndex = 595) |>
     setView(
       lng = default_center["lng"],
       lat = default_center["lat"],
-      zoom = 16
+      zoom = 6
     ) |>
     leafem::garnishMap(leaflet::addScaleBar, leafem::addMouseCoordinates,
                        position = "bottomleft") |>
@@ -344,6 +369,8 @@ md_overwrite_ignition <- modalDialog(
     actionButton("overwrite_file_confirm_newFile", "Create a New file"),
     modalButton("Cancel")
   ),
-  
   easyClose = TRUE
 )
+
+options(shiny.error = rlang::entrace)
+options(shiny.fullstacktrace = TRUE)

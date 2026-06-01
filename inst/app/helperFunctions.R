@@ -67,7 +67,7 @@ parse_fire_log <- function(log_text) {
   <br>2023-07-07 16:00
   <br>2023-07-07 16
   <br>2023-07-07
-<br>We gave a generic 1 hour time lapse.") 
+<br>We gave a generic 1 hour time lapse."), duration=15 , id="datecolumnMixMatch"    
         )
         
         times <- 1:nrow(wf) 

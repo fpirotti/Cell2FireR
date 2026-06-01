@@ -242,7 +242,7 @@ server <- function(input, output, session) {
         HTML(text),
         duration = duration,
         type = typesh,
-        id = ifelse(is.null(id), "generic", id)
+        id = id
       )
     }
     
@@ -334,7 +334,7 @@ Work in progress....",
       df <-  read.csv(wf[[1]])
       weatherDataTable(df)
       names(wf) <- basename(wf)
-      shiny::updateSelectInput(inputId = "chooseWeatherFile", choices = wf)
+      shinyWidgets::updatePickerInput(inputId = "chooseWeatherFile", choices = wf)
       sel <- wf[[1]]
       if (isTruthy(input$WEAFILE))
         sel <- input$WEAFILE
@@ -513,8 +513,26 @@ The system will try to align the landscape stack. overwriting the misaligned ras
         ## LANDSCAPE FILES ------
         #### FUEL map ------
         if (grepl("forest|fuel", layerName, ignore.case = T)) {
+          tf <- r2
+         
+          filepath.old <- terra::sources(tf)[[1]]
+          if (as.integer(substr(terra::datatype(tf), 4, 4)) < 4 ||
+              grepl("FLT", terra::datatype(tf)) ) { 
+            # Note: add_suffix must be defined elsewhere in your package
+           
+ 
+              showNotification("Fuel is in " , terra::datatype(tf), " not in 32 or 64 bits integer! Converting and copying. Remember to upload  datasets with fuel tif as 32 and 64 bits integers to avoid this warning.",
+                               duration = 22, type="warning")
+            
+              filepath <- paste0(tools::file_path_sans_ext(filepath.old), "_INT4U.", tools::file_ext(filepath.old))
+            
+              terra::writeRaster(tf, filename = filepath, datatype = "INT4U", 
+                                   overwrite=T  )    
+              file.remove(filepath.old)
+              file.rename(filepath, filepath.old)
+             
+          }
           r2 <- terra::as.factor(r2)
-          
           levs <- data.frame(
             value = lut_fbp$grid_value,
             class = lut_fbp$descriptive_name,
@@ -623,8 +641,7 @@ The system will try to align the landscape stack. overwriting the misaligned ras
         } else {
           rasters[[layerName]] <<- terra::sources(r2)[[1]]
         }
-        
-        
+       
         opacityControl [[layerName]] <- list(
           min = 0,
           max = 1,
@@ -639,13 +656,11 @@ The system will try to align the landscape stack. overwriting the misaligned ras
         leaflet::leafletProxy("map") |>
           leafem::addGeoRaster(
             stars::st_as_stars(r2),
-            colorOptions = copts,
-            # pixelValuesToColorFn = pv2col,
-            opacity = 0.85,
+            colorOptions = copts, 
+            opacity = 0.65, 
             group = layerName,
             autozoom = F,
-            options = leafletOptions(pane = "markerPane"),
-            tileOptions = leaflet::tileOptions(zIndex = 999),
+            options = leafletOptions(pane = "fuels_pane"), 
             imagequeryOptions = leafem::imagequeryOptions(
               digits = 0,
               prefix =
@@ -655,12 +670,37 @@ The system will try to align the landscape stack. overwriting the misaligned ras
               noData = "NA"
             ),
             layerId = gsub(" ", "", layerName)
-          )
-        if (!grepl("forest|fuel", layerName, ignore.case = T)) {
-          leaflet::leafletProxy("map")   |> leaflet::hideGroup(layerName)
-        }
+          ) |>   leaflet::hideGroup(layerName)
+        # if (!grepl("forest|fuel", layerName, ignore.case = T)) {
+          # leaflet::leafletProxy("map")   |> leaflet::hideGroup(layerName)
+        # }
         
       }
+      
+      
+      if (length(rasters) < 8) {
+        # Keep button disabled and warn the user via notification
+        disable("download_landscape_flammap")
+        shinyjs::runjs(paste("$('#download_landscape_flammap').parent().attr('data-tippy-content', 'Warning: Found only ", length(rasters), " rasters. You need at least 8 to download.');"))
+        
+        
+      } else {
+        # Folder is valid, check if the correct elements are available
+        ls <- which( names(rasters) %in% 
+                       landscapeFlamMap )
+        if(length(ls)!= 8){
+          
+          showNotification(paste(setdiff(landscapeFlamMap, names(rasters)), 
+                                 collapse = " - "), " missing: landscape file cannot be created.",
+                           duration=22, type="warning" )
+          
+        } else {
+          enable("download_landscape_flammap")
+          shinyjs::runjs(paste("$('#download_landscape_flammap').parent().attr('data-tippy-content', null  );"))        
+        }
+ 
+      }
+      
     })
     
     currentRasterStack <<- tryCatch({
@@ -769,7 +809,9 @@ The system will try to align the landscape stack. overwriting the misaligned ras
     }
     
      
-    grids <- list.dirs(gridpath, full.names = T, recursive = F)
+    grids <- list.files(gridpath, pattern = "Grids\\d+", 
+                        include.dirs = TRUE, 
+                       full.names = T, recursive = F)
     if (length(grids) == 0) {
       showNotification(
         "No Grid files found in this simulation instance, there is a Grid folder but not grids inside" ,
@@ -837,6 +879,17 @@ The system will try to align the landscape stack. overwriting the misaligned ras
         withProgress(message = 'Compressing GRIDS Raster...',
                      min = 0,
                      max = 4, {
+                       
+                       gpkgout <- file.path(input$outputInstanceFolder, 
+                                            "results", "Grids", "geopackages")
+                       tifout <- file.path(input$outputInstanceFolder, 
+                                           "results", "Grids", "geotiffs")
+                       if(dir.exists(tifout) && nchar(tifout)>10){
+                         unlink(tifout, recursive = T, force = T)
+                       }
+                       if(dir.exists(gpkgout) && nchar(gpkgout)>10){
+                         unlink(gpkgout, recursive = T, force = T)
+                       }
                        grids  <- list.files(
                          file.path(input$outputInstanceFolder, "results", "Grids"),
                          pattern = "Grids\\d+.tif$", full.names = T, recursive = T)
@@ -847,16 +900,13 @@ The system will try to align the landscape stack. overwriting the misaligned ras
                          pattern = "Grids\\d+.gpkg$", full.names = T, recursive = T)
                        
                        
-                       gpkgout <- file.path(input$outputInstanceFolder, 
-                                            "results", "Grids", "geopackages")
-                       
+
                        dir.create(gpkgout, showWarnings = F )
-                       tifout <- file.path(input$outputInstanceFolder, 
-                                           "results", "Grids", "geotiffs")
+         
                        dir.create(tifout, showWarnings = F )
                        
                        incProgress(1, detail = paste("Copying ", length(grids), " files" ))
-                       
+                  
                        tifcopysuccess <- file.copy(grids, file.path(tifout, basename(grids) ), overwrite = T)
                        gpkgcopysuccess <- file.copy(gpkgs, file.path(gpkgout, basename(gpkgs) ), overwrite = T)
                        if(any(c(!tifcopysuccess, !gpkgcopysuccess)) ){
@@ -907,7 +957,12 @@ The system will try to align the landscape stack. overwriting the misaligned ras
                    
                        
                        setwd(old_wd)
-                       
+                       if(dir.exists(tifout) && nchar(tifout)>10){
+                         unlink(tifout, recursive = T, force = T)
+                       }
+                       if(dir.exists(gpkgout) && nchar(gpkgout)>10){
+                         unlink(gpkgout, recursive = T, force = T)
+                       }
                      })
       }
     
@@ -917,6 +972,7 @@ The system will try to align the landscape stack. overwriting the misaligned ras
                           round(szgpkg/1000000,2)," MB)&nbsp;');"))
     
     ### ROS ----
+ 
     rospath <- file.path(input$outputInstanceFolder, "results", "RateOfSpread")
     if (!dir.exists(rospath)) {
       showNotification(
@@ -1023,7 +1079,7 @@ The system will try to align the landscape stack. overwriting the misaligned ras
       )
       
       if (file.exists(zip_path)) {
-        file.copy(zip_path, file)
+        file.copy(zip_path, file, overwrite = T)
       } else {
         showNotification("BurntAreaPerTimestamp ZIP file not found!",
                          type = "warning",
@@ -1050,7 +1106,7 @@ The system will try to align the landscape stack. overwriting the misaligned ras
       )
       
       if (file.exists(zip_path)) {
-        file.copy(zip_path, file)
+        file.copy(zip_path, file, overwrite = T)
       } else {
         showNotification("BurntAreaPerTimestamp ZIP file not found!",
                          type = "warning",
@@ -1077,7 +1133,7 @@ The system will try to align the landscape stack. overwriting the misaligned ras
       ))
       
       if (file.exists(zip_path)) {
-        file.copy(zip_path, file)
+        file.copy(zip_path, file,  overwrite = T)
       } else {
         showNotification("RateOfSpread ZIP file not found!",
                          type = "warning",
@@ -1123,12 +1179,9 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
     
     showNotification(
       text = paste0(
-        "
-========================================
-====== DATASET:  ",
+        " DATASET:  ",
         basename(input$inputfolder) ,
-        "
-========================================"
+        "========================================"
       )
     )
     outfolder <<- file.path(input$inputfolder, "output")
@@ -1491,7 +1544,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
     req(ignitionPointsCoords())
     ip <- ignitionPointsCoords()
     ipt <- na.omit(ip)
-    leafletProxy("map") |> leaflet::clearMarkers()
+    leafletProxy("map") |> leaflet::clearGroup(sim_layers$IgnitionPointsMan)
     for (i in 1:nrow(ipt)) {
       # print(ipt[i,  ])
       leafletProxy("map") |>
@@ -1499,6 +1552,8 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
           as.numeric(ipt[i, 3]),
           as.numeric(ipt[i, 4]),
           icon =  fireIcon,
+          options = pathOptions(pane = "ignition_points_pane"), 
+          group = sim_layers$IgnitionPointsMan,
           popup = paste0(
             popup_text("Year:", ipt[i, 1]),
             "<br>",
@@ -1657,6 +1712,67 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
     
   })
   
+  ### download_landscape_flammap -----
+  output$download_landscape_flammap  <- downloadHandler(
+             filename = function() {
+               sprintf("LANDSCAPE_%s.zip", basename(input$inputfolder))
+             },
+             content = function(file) {
+               req(input$inputfolder)
+               ff <- list.files(input$inputfolder, full.names = T, pattern="\\.tif$")
+               validate(
+                 need(
+                   length(ff) >= 8, 
+                   paste0("Download aborted: Found only ", length(ff), " raster files. At least 8 are needed for parsing a landscape file.")
+                 )
+               )
+              
+               ls <- which( names(rasters) %in% 
+                              landscapeFlamMap )
+               if(length(ls)!= 8){
+                 
+                 showNotification(paste(setdiff(landscapeFlamMap, names(rasters)), 
+                                        collapse = " - "), " missing: landscape file cannot be created.",
+                                  duration=22, type="warning" )
+                 return()
+               }
+            
+               if(!file.exists(file.path(input$inputfolder, "output", "landscape.tif" ))){
+                 showNotification( "Creating and compressing stack of landscape file",
+                                   duration=10, id="flammap" )
+                 stack <- terra::rast( unlist(rasters[intersect(landscapeFlamMap, names(rasters))]) )
+                 names(stack)<-intersect(landscapeFlamMap, names(rasters))
+                 stack$CBD <- stack$CBD*100 
+                 stack$CHM <- stack$CHM*10 
+                 stack$CBH <- stack$CBH*10 
+                 stack$FUEL[ is.na(stack$FUEL)|stack$FUEL==0 ] <- 99
+                 uv <- unique(values(stack$FUEL))
+                 uvdiff <- setdiff(uv, scott_burgan_models)
+                 if(length(uv) > 40 ){
+                   showNotification( "Wrong classes found in FUEL model file: supposed to be 40 classes from Scott&Burgan, found",
+                                     length(uv), "classes. Uncompatible classes are: ",
+                                     paste(uvdiff, collapse=","),"Please check", duration=20, 
+                                     id="flammap", type="warning" )
+                   
+                 }
+                 showNotification( "Saving landscape file",
+                                   duration=10, id="flammap" )
+                 writeRaster(stack, datatype="INT4U",
+                             filename = 
+                               file.path(input$inputfolder, "output", "landscape.tif" )
+                 )
+                 
+                 showNotification( "Compressing stack of landscape file",
+                                   duration=10, id="flammap" )
+               } 
+               
+               zip(file, 
+                   file.path(input$inputfolder, "output", "landscape.tif" ),
+                   flags = "-r9Xj")
+             }
+           )
+           
+  
   ### download dataset -----
   output$downloadfolder_dataset <- downloadHandler(
     filename = function() {
@@ -1696,66 +1812,68 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
         "  in data folder to ",
         input$zipfileload_dataset$name
       ),
-      duration = 10
+      duration = 10, id = "unzip"
     )
     
     unzip(input$zipfileload_dataset$datapath, exdir = path)
     
-    showNotification(paste("Finished unzipping  to ", input$zipfileload_dataset$name))
-    if (length(list.files(path = path, pattern = ".*fuel.*\\.(asc|tif)$", ignore.case = T)) ==
-        0) {
+    showNotification(paste("Finished unzipping  to ", input$zipfileload_dataset$name), 
+                      duration = 10, id = "unzip")
+    if (length(list.files(path = path, pattern = ".*fuel.*\\.(asc|tif)$", ignore.case = T)) == 0) {
       dd <- list.dirs(path = path, recursive = F)
       if (length(dd) == 0) {
         showNotification(
           "<b>No fuel raster found!</b> - make sure that   your zip does not have subfolders and  a TIF or ASC file with the word  fuel  e.g. myfuel.tif or fuelINT.asc is available in the instance.",
+          type = "error",  duration = 20
+        )
+        
+        if (nchar(path) > 4)  unlink(path, recursive = TRUE)
+        return()
+      } 
+      
+      dd <- list.dirs(path = path, recursive = F)
+      subdd <- list.files(path = dd, pattern = "fuel.*\\.(asc|tif)$", ignore.case = T)
+      if (length(subdd) == 0) {
+        showNotification(
+          "<b>No fuel rasters found!</b> - make sure that   your zip does not have subfolders and  a TIF or ASC file with the word  fuel  e.g. myfuel.tif or fuelINT.asc is available in the instance.",
           type = "error",
           duration = 20
         )
+        if (nchar(path) > 4)  unlink(path, recursive = TRUE)
+        return()
+      }  
+    
+      files_to_move <- list.files(path = dd, full.names = T)
+      dest_paths <- file.path(path, basename(files_to_move))
+      
+      # 4. Move the files
+      # file.rename returns TRUE if successful
+      success <- file.rename(from = files_to_move, to = dest_paths)
+      # Check results
+      if (all(success)) {
+        showNotification(
+          "<b>Files in subfolder</b> copied to main folder successfully",
+          type = "success",
+          duration = 20
+        )
         
+        loadInstances()
+      } else {
+        showNotification(
+          "<b>Some files could not be moved, please check your zip contents, no subfolders should be present",
+          type = "error",
+          duration = 20
+        )
         if (nchar(path) > 4)
           unlink(path, recursive = TRUE)
-      } else {
-        subdd <- list.files(path = dd, pattern = "fuel.*\\.(asc|tif)$", ignore.case = T)
-        if (length(subdd) == 0) {
-          showNotification(
-            "<b>No fuel rasters found!</b> - make sure that   your zip does not have subfolders and  a TIF or ASC file with the word  fuel  e.g. myfuel.tif or fuelINT.asc is available in the instance.",
-            type = "error",
-            duration = 20
-          )
-          if (nchar(path) > 4)
-            unlink(path, recursive = TRUE)
-        } else {
-          files_to_move <- list.files(path = dd, full.names = T)
-          dest_paths <- file.path(path, basename(files_to_move))
-          
-          # 4. Move the files
-          # file.rename returns TRUE if successful
-          success <- file.rename(from = files_to_move, to = dest_paths)
-          # Check results
-          if (all(success)) {
-            showNotification(
-              "<b>Files in subfolder</b> copied to main folder successfully",
-              type = "success",
-              duration = 20
-            )
-            
-            loadInstances()
-          } else {
-            showNotification(
-              "<b>Some files could not be moved, please check your zip contents, no subfolders should be present",
-              type = "error",
-              duration = 20
-            )
-            if (nchar(path) > 4)
-              unlink(path, recursive = TRUE)
-          }
-          unlink(dd)
-        }
       }
+      unlink(dd)
+    
+ 
       # browser()
       
     } else {
-      showNotification(paste("LOADING TO ", input$zipfileload$name))
+      showNotification(paste("LOADING TO ", input$zipfileload$name), duration=10, id = "unzip")
       
       loadInstances()
     }
@@ -1798,7 +1916,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
       shinyWidgets::ask_confirmation("confirmKillProc", text = "Process is running, do you want to stop it?", status = "warning")
     } else {
       
-      cat("------------", this.path::this.dir(), " .... \n", file="mylog3.log", append=T)
+      cat("------------", this.path::this.dir(), " .... \n", file="mylog3.log")
       proc(F)
       updateActionButton(
         inputId = "runsim",
@@ -1956,11 +2074,12 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
         
         fm <- as.integer(input$playGrids$step) 
         print(fm)
+   
         if(is.null(currentVect) || 
-           attr(currentVect, "source_file") != basename(vecpath) ){
+           attr(currentVect, "source_file") != vecpath ){
           
           fire_vect <- sf::read_sf(vecpath) 
-          attr(fire_vect, "source_file") <- basename(vecpath)
+          attr(fire_vect, "source_file") <- vecpath
           simulation_output_grids( fire_vect |> arrange(timeStep) |> sf::st_transform(4326)) 
           current_frame(fm)  
         } else {
@@ -1991,12 +2110,12 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
     active_poly <- r[frame_idx, ]
     
     leafletProxy("map") %>%
-      clearGroup(sim_layers[[1]]) %>%
+      clearGroup(sim_layers$SimBurntArea) %>%
       addPolygons(data = active_poly, fillColor = "red",color = "red",
                     opacity = 0.2,
                   fillOpacity = 0.05,  weight = 2,stroke = TRUE,
                   options = pathOptions(pane = "fire_spread_pane"), 
-                  group = sim_layers[[1]])
+                  group = sim_layers$SimBurntArea)
      
   })
   

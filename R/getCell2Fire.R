@@ -21,7 +21,7 @@ getCell2Fire <- function(
     # mode = "wb" is absolutely critical on Windows for binary/zip files
     # url <- "https://github.com/fire2a/C2F-W/releases/download/v1.0.3/Cell2FireW_v1.0.3.zip"
     
-    url <- "https://github.com/fpirotti/C2F-W/releases/download/wildfireSim/Cell2FireW_2093a03706d83c2c3d34a9b9387576a0ee4ef608.zip"
+    url <- "https://github.com/fpirotti/C2F-W/releases/download/v1.0.3.1/binaries-WindowsLinux-x86_64.zip"
  
     if (!quiet) message("Downloading Cell2Fire binary (10.2 MB)...")
     utils::download.file(
@@ -37,10 +37,15 @@ getCell2Fire <- function(
     utils::unzip(zipfile = zip_path, exdir = extract_dir)
  
     # 3. Define paths
-    fp <- file.path(extract_dir, "C2F", "Cell2Fire")
-    exe.linux <- file.path(fp, "Cell2Fire")
-    exe.win <- file.path(fp, "Cell2Fire.exe")
+    lf.linux  <- list.files(extract_dir, pattern = "*\\.so$|^Cell2Fire$", all.files=T, recursive=T, full.names = TRUE)
+    fp.linux <- lf.linux[[ which(basename(lf.linux)=="Cell2Fire")]]
     
+    lf.win  <- list.files(extract_dir, pattern = "*\\.dll$|*\\.exe$", all.files=T, recursive=T, full.names = TRUE)
+    fp.win <- lf.win[[ which(basename(lf.win)=="Cell2Fire.exe")]]
+    
+    exe.linux <- normalizePath( fp.linux )
+    exe.win <- normalizePath( fp.win  )
+ 
     # Check for missing files
     if (!file.exists(exe.linux)) {
       warning("Linux compiled Cell2Fire does not exist in the downloaded archive.")
@@ -56,13 +61,13 @@ getCell2Fire <- function(
     
     # 4. Copy files to the persistent user directory
     # Linux/Mac files
-    Sys.chmod(list.files(fp, pattern = "*\\.so$|^Cell2Fire$", full.names = TRUE), mode = "0777", use_umask = TRUE)
-    Sys.chmod(list.files(fp, pattern = "*\\.dll$|*\\.exe$", full.names = TRUE), mode = "0777", use_umask = TRUE)
+    Sys.chmod(lf.linux, mode = "0777", use_umask = TRUE)
+    Sys.chmod(lf.win, mode = "0777", use_umask = TRUE)
     
-    file.copy(list.files(fp, pattern = "*\\.so$|^Cell2Fire$", full.names = TRUE),
+    file.copy(lf.linux,
               to = outdir, overwrite = TRUE)
     # Windows files
-    file.copy(list.files(fp, pattern = "*\\.dll$|*\\.exe$", full.names = TRUE),
+    file.copy(lf.win,
               to = outdir, overwrite = TRUE)
     
     TRUE

@@ -25,13 +25,13 @@ plotPostProcess <- function(simulations, timestamps){
     
     showNotification("Please run postprocessing of this simulations - click
 <span onclick='Shiny.setInputValue(\"processSimulationOutputInstance\", {force:true},  {priority: \"event\"});' class='ptr' >HERE</span>",
-                      duration=20)
+                      duration=20, id="postprocess")
   }
  
   leafletProxy("map") |>
-    clearGroup(sim_layers$IgnitionPoints) |>
+    clearGroup(sim_layers$IgnitionPointsSim) |>
     # clearGroup("Simulation Output") %>% # Optional: remove previous run's markers
-    addCircleMarkers(group = sim_layers$IgnitionPoints,
+    addCircleMarkers(group = sim_layers$IgnitionPointsSim,
                      data = df_sf,
       radius = 12,           # The clickable area
       stroke = FALSE, 
@@ -81,7 +81,7 @@ plotPostProcess <- function(simulations, timestamps){
       )
     ) |>
    
-    addLabelOnlyMarkers(group = sim_layers$IgnitionPoints,
+    addLabelOnlyMarkers(group = sim_layers$IgnitionPointsSim,
                         data = df_sf,
       label = HTML('<i class="fa fa-burst" style="color:red; font-size:24px;"></i>'),
       labelOptions = labelOptions(
@@ -149,12 +149,12 @@ processSimulationOutputFolder <- function(resDir){
 
 killSimProcess <- function(force=F, message=""){
   if(nchar(message)>0) message <- paste0("<br><b>", message, "</b>")
-  simProcess$process$kill()
+  if(exists("simProcess") && !is.null(simProcess)) simProcess$process$kill()
   updateActionButton(inputId = "runsim",label = paste("🔥 Run ", input$simulator)  )
   
   
   session$sendCustomMessage("appendLog", 
-                            list( "out"=  "--- process finished by user ---",
+                            list( "out"=  "--- process finished either by user or error ---",
                                   "err"=  paste(message, "
 --- process finished by user ---
 ") )
@@ -294,7 +294,7 @@ readGrids <- function(filepath, force=F ){
   <br>2023-07-07 16:00:00
   <br>2023-07-07 16:00
   <br>2023-07-07 16
-  <br>2023-07-07", type="info", duration=10   )
+  <br>2023-07-07", type="info", duration=10, id="datecolumnMixMatch"   )
         
         terra::time(fire_stack) <- 1:length(filepathn)
         fire_vect$Date <- terra::time(fire_stack)

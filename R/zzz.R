@@ -36,14 +36,14 @@ c2f_bin_pathEnv <- function() {
   } 
 
   ver <- verNow
-
-  tryCatch({
-    getCell2Fire(outdir) 
-    save(ver, file=verfile) 
-  }, warning=function(e){
-     message("Warning installing cell2fire: ", e$message)
-  }, error=function(e){
-     message("Error installing cell2fire: ", e$message)
-  })
+# 
+#   tryCatch({
+#     getCell2Fire(outdir)
+#     save(ver, file=verfile)
+#   }, warning=function(e){
+#      message("Warning installing cell2fire: ", e$message)
+#   }, error=function(e){
+#      message("Error installing cell2fire: ", e$message)
+#   })
 
 }

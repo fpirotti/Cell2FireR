@@ -281,64 +281,77 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
       ),
       shinydashboard::tabItem(
         tabName = "inputInstancesWeather",
-        shinydashboardPlus::box(
-          width = 12,
-          title = tags$div(
+        # h3("Weather CSV File"),
+         shinydashboardPlus::box(
+         width = 12,
+         title="Weather CSV File",
+         tags$div(
             style = "display:flex; align-items:center; gap:6px;",
-            span("Weather CSV File"),
+            
             div(
               title = "Select a weather file",
               style = "margin-bottom:-15px",
-              selectInput(
+              shinyWidgets::pickerInput(
                 "chooseWeatherFile",
                 label =  NULL,
-                width = "200px",
+                # width = "200px",
                 choices = c()
               )
+            ),HTML(
+              "<sup class='helpTitle'
+            title='Select a weather file (or upload one if not present) - check format at <a href=https://github.com/fire2a/C2F-W/blob/main/data/ScottAndBurgan/Zona_60-tif/Weather.csv target=_blank>Link here</a>'>?</sup>"
             ),
-            actionButton(
-              "save_table_weather",
-              label = NULL,
-              icon = icon("save"),
-              class = "btn-sm",
-              title = "Save changes to be used in the Cell2Fire process (only valid for this session)"
-            ),
+            # actionButton(
+            #   "save_table_weather",
+            #   label = NULL,
+            #   icon = icon("save"),
+            #   class = "btn-sm",
+            #   title = "Save changes to be used in the Cell2Fire process (only valid for this session)"
+            # ),
             downloadButton(
-              "download_table_weather",
-              label = NULL,
+              "download_table_weather", 
+              label =  HTML(
+                "<sup class='helpTitle'
+            title='Download table'>?</sup>"
+              ),
               icon = icon("download"),
               class = "btn-sm",
               title = "Download table in CSV file format"
             ),
             # actionButton("upload_table_weather", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
-            div(
-              title = "Click here to get values at center of map using  <b>open-meteo</b> API and EFFIS Web Services (NB this is experimental and not to be used for production environments or decision making!). <br><a href='https://forest-fire.emergency.copernicus.eu/' target=_blank>👉 Learn more about EFFIS, the European Forest Fire Information System from Copernicus</a><br><a href=https://open-meteo.com/ target=_blank>👉 Learn more about meteo data and fire behaviour</a>",
+            div( 
               onclick = "getFromOpenMeteo(); queryWMS(); ",
               actionButton(
                 "create_table_weather",
-                label = NULL,
+                label =  HTML(
+                  "<sup class='helpTitle'
+            title='Click here to get values at center of map using  <b>open-meteo</b> API and EFFIS Web Services (NB this is experimental and not to be used for production environments or decision making!). <br><a href=https://forest-fire.emergency.copernicus.eu/ target=_blank>👉 Learn more about EFFIS, the European Forest Fire Information System from Copernicus</a><br><a href=https://open-meteo.com/ target=_blank>👉 Learn more about meteo data and fire behaviour</a>'>?</sup>"
+                ),
                 icon = icon("cloud"),
                 class = "btn-sm"
               )
             ),
-            div(
-              title = "Upload your table(make sure it is in the same format as the required input format for Cell2Fire)",
-              # style="display:none;",
+            div( 
+              style="margin-bottom:-35px;",
               fileInput(
                 "upload_table_weather_input",
-                label = NULL,
-                buttonLabel = icon("upload"),
-                width = 50,
+                label =  NULL,
+                buttonLabel = HTML(
+                  paste(icon("upload"), "<sup class='helpTitle'
+            title='Upload your table(make sure it is in the same format as the required input format for Cell2Fire)'>?</sup>")
+                  
+                ),
+                width = 10,
                 accept = c(".csv", ".xlsx", ".xls")
               )
             )
           ),
-          status = "primary",
-          solidHeader = TRUE,
-          collapsible = TRUE,
-          headerBorder = TRUE,
-          enable_sidebar = FALSE,
-          div(style = "overflow-x: auto;", id =
+          # status = "primary",
+          # solidHeader = TRUE,
+          # collapsible = TRUE,
+          # headerBorder = TRUE,
+          # enable_sidebar = FALSE,
+          div(style = "overflow-x: auto; margin-top:10px;", id =
                 "weatherTableOutputDIV", DTOutput("weather.table"))
         )
       ),
@@ -368,7 +381,7 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
               label = NULL,
               icon = icon("upload"),
               class = "btn-sm",
-              title = "Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"
+              title = "Upload your table (make sure it is in the same format as the required input format for Cell2Fire)"
             ),
             div(
               style = "display:none;",
@@ -431,7 +444,72 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
           accept = c(".zip")
         ),
         
-        
+        div( 
+          disabled( shiny::downloadButton(
+            "download_landscape_flammap" ,
+            label =tagList(
+              tags$img(
+                src = "flammap.png", 
+                # height = "20px", 
+                style = "vertical-align: middle; margin-right: 5px;"
+              ) 
+            ), 
+            style = "width:70%; margin-bottom:10px;" 
+          ) ),
+          HTML(
+          "<sup class='helpTitle' title='<table style=\"width:100%; border-collapse: collapse; font-family: sans-serif; margin: 20px 0;\">",
+          "<thead>",
+          "<tr style=\"background-color: #2c3e50; color: white; text-align: left;\">
+              <th style=\"padding: 4px; border: 1px solid #dddddd;\">GeoTIFF Band</th>
+              <th style=\"padding: 4px; border: 1px solid #dddddd;\">Data </th>
+              <th style=\"padding: 4px; border: 1px solid #dddddd;\">Units</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr style=\"background-color: #f8f9fa;\">
+              <td style=\"padding: 4px; border: 1px solid #dddddd; font-weight: bold;\">Band 1</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Elevation</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Meters</td>
+              </tr>
+              <tr>
+              <td style=\"padding: 4px; border: 1px solid #dddddd; font-weight: bold;\">Band 2</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Slope</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Degrees</td>
+              </tr>
+              <tr style=\"background-color: #f8f9fa;\">
+              <td style=\"padding: 4px; border: 1px solid #dddddd; font-weight: bold;\">Band 3</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Aspect</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Degrees</td>
+              </tr>
+              <tr>
+              <td style=\"padding: 4px; border: 1px solid #dddddd; font-weight: bold;\">Band 4</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Fire Behavior Fuel Model</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Class (40 FBFM / 13 Anderson)</td>
+              </tr>
+              <tr style=\"background-color: #f8f9fa;\">
+              <td style=\"padding: 4px; border: 1px solid #dddddd; font-weight: bold;\">Band 5</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Canopy Cover</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Percent (%)</td>
+              </tr>
+              <tr>
+              <td style=\"padding: 4px; border: 1px solid #dddddd; font-weight: bold;\">Band 6</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Canopy (Stand) Height</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Meters</td>
+              </tr>
+              <tr style=\"background-color: #f8f9fa;\">
+              <td style=\"padding: 4px; border: 1px solid #dddddd; font-weight: bold;\">Band 7</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Canopy Base Height (CBH)</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Meters</td> 
+              </tr>
+              <tr>
+              <td style=\"padding: 4px; border: 1px solid #dddddd; font-weight: bold;\">Band 8</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">Canopy Bulk Density (CBD)</td>
+              <td style=\"padding: 4px; border: 1px solid #dddddd;\">kg/m&sup3;</td>
+              </tr>
+              </tbody>
+              </table>'>?</sup>")
+          ),
+
         shiny::downloadButton(
           "downloadfolder_dataset" ,
           label = HTML(
@@ -537,24 +615,26 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
               width = "100%",
               class = "btn-danger"
             )
-          )),
-          
-          tags$hr(),
-          
-          fluidRow(column(
-            width = 12,
-            
-            selectInput(
-              "simulator",
-              "Fire Spread Simulator",
-              choices = c(
-                "Cell2Fire" = "Cell2Fire",
-                "FlamMap" = "FlamMap",
-                "..." = "others"
-              ),
-              width = "100%"
-            )
           ))
+          # ,
+          
+          # tags$hr(),
+          # 
+          # fluidRow(column(
+          #   width = 12,
+          #   
+          #   selectInput(
+          #     "simulator",
+          #     "Fire Spread Simulator",
+          #     choices = c(
+          #       "Cell2Fire" = "Cell2Fire",
+          #       "FlamMap" = "FlamMap",
+          #       "..." = "others"
+          #     ),
+          #     width = "100%"
+          #   )
+          # )
+          # )
         )
       ),
     )

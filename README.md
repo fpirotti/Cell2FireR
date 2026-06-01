@@ -56,9 +56,23 @@ The `run_cell2fire` function acts as a bridge between R and the Cell2Fire C++ ex
 | :--- | :--- |
 | `fuel` | **Required**. Path to the fuel model raster. |
 | `fuel_model` | **Required**. String specifying the model logic. It can be provide either by  string or single character according to the lookup table below. "0. Scott & Burgan" = "S", "1. Kitral" = "K", "2. Canada FBP" = "C", "3. Portugal" = "P" also an heuristic check for key words is done to look for the fuel model to use. |
-| `input_folder` | Directory containing rasters in asc or tif format with fuel, topography and canopy metrics, and weather and ignition files in csv format. |
 | `out_folder` | Base directory where simulation instances will be stored. |
+| `input_folder` | Directory containing rasters in asc or tif format with the following possible rasters |
 
+
+If the 'fuels' raster file is in `tif` format, then it assumes all other rasters are also in that format.  Otherwise, it assumes `ascii` format.
+ 
+ - elevation: terrain elevation [m]
+ - saz: slope azimuth
+ - slope: terrain slope
+ - cur: curing level
+ - cbd: canopy bulk density [kg/m3]
+ - cbh: canopy base height [m]
+ - ccf: canopy cover fraction
+ - probabilityMap: ignition probability map [%]
+ - fmc: foliage moisture content
+ - hm: tree height [m]  
+ 
 ### Landscape & Topography
 * `elevation`, `slope`, `saz` (Azimuth), `cur` (Curvature): Paths to topographic rasters.
 * `firebreaks`: Path to a raster defined where fire cannot spread.
