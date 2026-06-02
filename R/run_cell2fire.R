@@ -294,10 +294,8 @@ run_cell2fire <- function(
     }
     
     if (dry) {
-      message("Dry run complete. Returning arguments..... " )
-       
-      message(paste(c(basename(c2f_bin_path), cli_args), collapse = " ") )
-      return(paste(c(getwd(), " -- ", basename(c2f_bin_path), cli_args), collapse = " "))
+      message("Dry run complete. Returning arguments..... " ) 
+      return(paste(c(basename(c2f_bin_path), cli_args), collapse = " "))
     }
     
     cat(paste("Executing:", c2f_bin_path, paste(cli_args, collapse = "\n")), file="mylog4.log")
@@ -321,8 +319,7 @@ run_cell2fire <- function(
     
   }, error = function(e) { 
     
-    if (dry) {
-    
+    if (dry) { 
       message("ERR Dry run complete. Returning arguments.")
       stop(errorCondition("Error preparing simulation:", e$message))
     } else { 

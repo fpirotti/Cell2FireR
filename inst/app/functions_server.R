@@ -188,6 +188,8 @@ readGrids <- function(filepath, force=F ){
   } else {
     filepathn <- filepath
   }
+  filepathn <- str_sort(filepathn, numeric = TRUE)
+
   timesSteps <- as.integer(gsub("[^0-9]", "", basename(filepathn)) ) +1
   if(!file.exists(filepathn[[1]])){
     return((paste0(
@@ -218,12 +220,12 @@ readGrids <- function(filepath, force=F ){
     
     if(file.exists(rdapath)){
       load(rdapath)
-      weatherTimestamps[[as.character(simNumber)]] <- terra::time(fire_stack)
+      # weatherTimestamps[[as.character(simNumber)]] <- terra::time(fire_stack)
     } else {
       weatherTimestamps <- list()
       weatherTimestamps[[as.character(simNumber)]] <- terra::time(fire_stack)
+      save(weatherTimestamps,  file=rdapath)
     }
-    save(weatherTimestamps,  file=rdapath)
     return( paste0("Grids ",basename(output_tif)," already processed!"))
   } 
    
@@ -234,7 +236,7 @@ readGrids <- function(filepath, force=F ){
     burnArea <- rep(0, length(filepathn))
    
     vectsList <- list()
-    
+    showNotification("Starting conversion to vector areas...", duration = 10)
     raster_list <- lapply(filepathn, function(file) {
       # fread is fast enough to handle the wide columns
       mat <- as.matrix(fread(file, header = FALSE, 
@@ -247,7 +249,15 @@ readGrids <- function(filepath, force=F ){
   
       # 3. Apply it to the raster
       r <- rast(mat, extent=ext, crs=crs  )
- 
+      # 1. Convert your terra SpatRaster to a stars object
+      # r_stars <- stars::st_as_stars(r) 
+      # # 2. Convert to polygons using 8-connectivity (diagonal connections allowed)
+      # ff <- st_as_sf(r_stars, as_points = FALSE, merge = TRUE, connect8 = T)
+      # plot(ff)
+      # browser()
+      # 3. If you need it back as a terra SpatVector:
+      # p_smooth_terra <- vect(p_smooth)
+      
       p <-as.polygons(r, dissolve = TRUE)
       
       ff <- st_as_sf(p)
@@ -271,50 +281,10 @@ readGrids <- function(filepath, force=F ){
     fire_vect <- do.call(rbind, vectsList)
     
     names(fire_stack) <- tools::file_path_sans_ext(basename(filepathn))
+    times <- getDateTimeFromCSV(file.path(input$outputInstanceFolder, "Weather.csv"))
   
-    
-    wf <- read.csv(
-      file.path(input$outputInstanceFolder, "Weather.csv")
-      )
-    datecol <- grep("date", names(wf))
-    
-    if(length(datecol)==1){
-      
-      raw_ts <- gsub("[^0-9]", "", wf[,datecol])  
-      clean_ts <- as.POSIXct(raw_ts, format = "%Y%m%d%H%M%S")
-      if(anyNA(clean_ts)) clean_ts <- as.POSIXct(raw_ts, format = "%Y%m%d%H%M")
-      if(anyNA(clean_ts)) clean_ts <- as.POSIXct(raw_ts, format = "%Y%m%d%H")
-      if(anyNA(clean_ts)) clean_ts <- as.POSIXct(raw_ts, format = "%Y%m%d")
-      if(anyNA(clean_ts)) {
-        showNotification(
-          "Sorry, we did find a column named '",
-                         names(wf)[[datecol]] ,"' but we could not convert 
-          its contents to a time stamp using our heuristics.
-  <br> The following timestamps formats are recognized:
-  <br>2023-07-07 16:00:00
-  <br>2023-07-07 16:00
-  <br>2023-07-07 16
-  <br>2023-07-07", type="info", duration=10, id="datecolumnMixMatch"   )
-        
-        terra::time(fire_stack) <- 1:length(filepathn)
-        fire_vect$Date <- terra::time(fire_stack)
-        
-      } else {
-        td <-diff(clean_ts[1:2])
-        times <- c(clean_ts[[1]]-td, 
-                   clean_ts, 
-                   clean_ts[[length(clean_ts)]]+td  ) 
- 
-        terra::time(fire_stack) <- times[timesSteps]
-        
-        fire_vect$Date <- terra::time(fire_stack)
-      }
- 
-    } else { 
-      terra::time(fire_stack) <- 1:length(filepathn)
-      fire_vect$Date <- terra::time(fire_stack)
-    }
-    
+    terra::time(fire_stack) <- times[timesSteps] 
+    fire_vect$Date <- terra::time(fire_stack) 
     fire_vect$simNumber <- simNumber
     fire_vect$simInstance <- basename(input$outputInstanceFolder)
     
@@ -392,4 +362,71 @@ checkIgnitionFile <- function(ignfile){
     )
   } 
   return(TRUE)
+}
+
+
+
+
+
+parse_fire_log <- function(log_text) {
+  
+  # 1. Read all lines into a character vector
+  lines <- log_text
+  
+  # 2. Find the row indices (line numbers) for the data we want
+  sim_indices   <- grep("Simulation \\d+ Start:", lines)
+  weatherFiles <-  trimws(sub(".*weather file:\\s*", "", lines[sim_indices+1]))
+  ignitionsN <- as.integer(gsub("\\D+", "", lines[sim_indices]))
+  
+  Map(getDateTimeFromCSV, weatherFiles)
+  
+  if(anyNA(ignitionsN)){
+    stop(errorCondition("We have NAs in simulation start ignition iterations!"))
+  }
+  
+  ign_cells   <- trimws(gsub("ignition cell: ", "", lines[sim_indices+2]))
+  
+  burnt_indices <- grep("^Simulation\\s+\\d+\\s+Results:", lines)
+  burnt_ignitionsN <- as.numeric(str_extract(lines[burnt_indices ], "\\d+"))
+  burnt_indicesClean <- burnt_indices[which(!duplicated(burnt_ignitionsN))]
+  burnt_ignitionsNClean <- burnt_ignitionsN[which(!duplicated(burnt_ignitionsN))]
+  
+  burnt_tables <- Map(function(x){  
+    x <- which(burnt_ignitionsNClean==x)
+    indices <- (burnt_indicesClean[[x]]+3) : (burnt_indices[[x]]+7)
+    data_lines <- lines[ indices ]
+    data_lines <- gsub("^\t", "", data_lines)
+    data_lines_csv <- gsub(" {2,}", ",", data_lines)
+    df <- read.csv(text = data_lines_csv, header = FALSE)
+    colnames(df) <- c("Cell Status", "Count", "Percent")
+    
+    kable(df, format = "html", table.attr = "class='table table-striped table-condensed table-sm'")
+    
+  },
+  ignitionsN 
+  )
+  # df <- data.frame(simulation = sim_indices,
+  #                  ignitionsN = ignitionsN,
+  #                  ign_cells=ign_cells)
+  # 4. Bind them into a data frame
+  
+  dd <- list(
+    simulation = as.integer(ignitionsN),
+    ignition_cell = as.integer(ign_cells),
+    burnt_cells = as.character(burnt_tables)
+  )
+  
+  if(length(unique(sapply(dd, length)))!=1 || length(dd$simulation)==0){
+    showNotification(
+      paste0(
+        "
+<br>Number of simulations: ", length(dd$simulation) ,". ",
+        "
+<br>Number of ignition cells: ", length(dd$ignition_cell), ". ", 
+        "
+<br>Number of burnt cells values: ", length(dd$burnt_cells), ". <br>"
+      ), type="warning", duration=19 )
+  }
+  
+  dd
 }

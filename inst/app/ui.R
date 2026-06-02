@@ -131,7 +131,7 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
     ),
     
     
-    shiny::actionButton("runsim", "Run"),
+    shiny::actionButton("runsim", "🔥 Run"),
     # shiny::actionButton("postsim", "PostProcessing",
     #                     title="After simulation is finished, you can run a <b>postprocess</b> to extract information from results - requires an output instance" ),
     #
@@ -284,12 +284,10 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
         # h3("Weather CSV File"),
          shinydashboardPlus::box(
          width = 12,
-         title="Weather CSV File",
          tags$div(
             style = "display:flex; align-items:center; gap:6px;",
             
             div(
-              title = "Select a weather file",
               style = "margin-bottom:-15px",
               shinyWidgets::pickerInput(
                 "chooseWeatherFile",
@@ -301,35 +299,38 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
               "<sup class='helpTitle'
             title='Select a weather file (or upload one if not present) - check format at <a href=https://github.com/fire2a/C2F-W/blob/main/data/ScottAndBurgan/Zona_60-tif/Weather.csv target=_blank>Link here</a>'>?</sup>"
             ),
-            # actionButton(
-            #   "save_table_weather",
-            #   label = NULL,
-            #   icon = icon("save"),
-            #   class = "btn-sm",
-            #   title = "Save changes to be used in the Cell2Fire process (only valid for this session)"
-            # ),
+            
+            actionButton(
+              "delete_table_weather",
+              HTML(
+                "<sup class='helpTitle'
+            title='Delete this table!'>?</sup>"
+              ),
+              icon = icon("trash"),
+              # width = "100%",
+              class = "btn-danger"
+            ),
+            
             downloadButton(
               "download_table_weather", 
               label =  HTML(
                 "<sup class='helpTitle'
-            title='Download table'>?</sup>"
+            title='Download table in CSV format so you can modify and reload'>?</sup>"
               ),
               icon = icon("download"),
-              class = "btn-sm",
-              title = "Download table in CSV file format"
+              class = "btn-sm"
             ),
             # actionButton("upload_table_weather", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
-            div( 
-              onclick = "getFromOpenMeteo(); queryWMS(); ",
+    
+            
               actionButton(
                 "create_table_weather",
                 label =  HTML(
                   "<sup class='helpTitle'
-            title='Click here to get values at center of map using  <b>open-meteo</b> API and EFFIS Web Services (NB this is experimental and not to be used for production environments or decision making!). <br><a href=https://forest-fire.emergency.copernicus.eu/ target=_blank>👉 Learn more about EFFIS, the European Forest Fire Information System from Copernicus</a><br><a href=https://open-meteo.com/ target=_blank>👉 Learn more about meteo data and fire behaviour</a>'>?</sup>"
+            title='Click here to get values at center of map using  <b>open-meteo API and EFFIS Web Services</b> (NB this is experimental and not to be used for production environments or decision making!). The time steps are daily and  in GMT and at at hourly steps so make sure you remove lines that do not cover your desired fire time span.<br><a href=https://forest-fire.emergency.copernicus.eu/ target=_blank>👉 Learn more about EFFIS, the European Forest Fire Information System from Copernicus</a><br><a href=https://open-meteo.com/ target=_blank>👉 Learn more about meteo data and fire behaviour</a>'>?</sup>"
                 ),
                 icon = icon("cloud"),
-                class = "btn-sm"
-              )
+                class = "btn-sm" 
             ),
             div( 
               style="margin-bottom:-35px;",

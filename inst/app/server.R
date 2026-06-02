@@ -330,6 +330,7 @@ Work in progress....",
   ## WEATHER FILES OBSERVE -----
   observeEvent(weatherFiles(), {
     wf <- weatherFiles()
+ 
     if (length(wf) != 0) {
       df <-  read.csv(wf[[1]])
       weatherDataTable(df)
@@ -1276,14 +1277,30 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
   })
   
   # EFFIS AND open meteo for weather file ----
+  # 
+  #   onclick = 
+  
+  observeEvent( input$create_table_weather, {
+    dt <- isolate(weatherDataTable())
+    req(dt)
+    timeseries <- getDateTimeFromCSV(dt)
+    shinyjs::runjs(sprintf("getFromOpenMeteo(null, null, false, start_date='%s', end_date='%s'); queryWMS(null, null, false, start_date='%s');", 
+                           as.character(as.Date(min(timeseries))),
+                           as.character(as.Date(max(timeseries))),
+                           as.character(as.Date(min(timeseries)))
+                           )
+                   );
+ 
+    #"getFromOpenMeteo(); queryWMS(); ",
+  })
   observeEvent(list(input$openmeteoInput, input$WMSQueryReturned), {
+    
     if (!(
       shiny::isTruthy(input$openmeteoInput) ||
       shiny::isTruthy(input$WMSQueryReturned)
     )) {
       return(invisible(NULL))
-    }
-    
+    } 
     df <- isolate(weatherDataTable())
     dfl <- isolate(as.list(df[1, ]))
     
@@ -1294,22 +1311,61 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
         showNotification(msg, type = "error")
         return(invisible(NULL))
       }
-      outp <- "OM"
-      dflt <-   list(
-        Instance = "SB",
-        datetime = gsub("T", " ", input$openmeteoInput$current$time),
-        TMP = input$openmeteoInput$current$temperature_2m,
-        WS = input$openmeteoInput$current$wind_speed_10m,
-        WD = input$openmeteoInput$current$wind_direction_10m,
-        RH = input$openmeteoInput$current$relative_humidity_2m,
-        FireScenario = "open meteo + EFFIS"
-      )
+      
+      # 1. Determine if the API payload is Historical (hourly arrays) or Current (single values)
+      if (!is.null(input$openmeteoInput$hourly)) {
+        
+        # --- HISTORICAL / ARCHIVE TRACK ---
+        # Open-Meteo hourly timestamps look like "2026-06-01T00:00". 
+        # We convert the entire vector to data.frame/list friendly format.
+        formatted_datetimes <- gsub("T", " ", input$openmeteoInput$hourly$time)
+        
+        dflt <- list(
+          Instance     = rep("SB", length(formatted_datetimes)),
+          datetime     = formatted_datetimes,
+          TMP          = unlist(input$openmeteoInput$hourly$temperature_2m),
+          WS           = unlist(input$openmeteoInput$hourly$wind_speed_10m),
+          WD           = unlist(input$openmeteoInput$hourly$wind_direction_10m),
+          RH           = unlist(input$openmeteoInput$hourly$relative_humidity_2m),
+          FireScenario = rep("open meteo historical + EFFIS", length(formatted_datetimes))
+        )
+        
+        outp <- "OM_Historical"
+        
+      } else {
+        
+        # --- CURRENT FORECAST TRACK ---
+        # Standard single-value parsing fallback for live data
+        dflt <- list(
+          Instance     = "SB",
+          datetime     = gsub("T", " ", input$openmeteoInput$current$time),
+          TMP          = input$openmeteoInput$current$temperature_2m,
+          WS           = input$openmeteoInput$current$wind_speed_10m,
+          WD           = input$openmeteoInput$current$wind_direction_10m,
+          RH           = input$openmeteoInput$current$relative_humidity_2m,
+          FireScenario = "open meteo current + EFFIS"
+        )
+        
+        outp <- "OM_Current"
+      }
+      
+      # outp <- "OM"
+      # dflt <-   list(
+      #   Instance = "SB",
+      #   datetime = gsub("T", " ", input$openmeteoInput$current$time),
+      #   TMP = input$openmeteoInput$current$temperature_2m,
+      #   WS = input$openmeteoInput$current$wind_speed_10m,
+      #   WD = input$openmeteoInput$current$wind_direction_10m,
+      #   RH = input$openmeteoInput$current$relative_humidity_2m,
+      #   FireScenario = "open meteo + EFFIS"
+      # )
       
       dfl[na.omit(names(dflt))] <- dflt[na.omit(names(dflt))]
     }
     
     if (shiny::isTruthy(input$WMSQueryReturned)) {
       outp <- "EFFIS"
+ 
       doc <- xml2::read_html(input$WMSQueryReturned$datast)
       rows <- xml2::xml_find_all(doc, ".//tr")
       kv_list <- lapply(rows, function(row) {
@@ -1329,9 +1385,10 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
       names(dflt) <- inside_text
       dfl[na.omit(names(dflt))] <- dflt[na.omit(names(dflt))]
     }
-    
-    weatherDataTable(as.data.frame(dfl))
-  })
+    print(outp)
+ 
+    weatherDataTable(as.data.frame(dfl, stringsAsFactors = FALSE))
+  }, ignoreInit = T)
   
   ## TABLE WEATHER table -----
   output$weather.table <- renderDT({
@@ -1367,6 +1424,46 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
       selected = input$chooseWeatherFile
     )
   })
+  
+  observeEvent(input$delete_table_weather, {
+    req(input$chooseWeatherFile)
+    shinyWidgets::ask_confirmation(
+      inputId = "delete_table_weather_confirm",
+      html = T,
+      sprintf(
+        "Confirm you want to delete the selected weather table: <br><u><b>%s</b></u>",
+        basename(input$chooseWeatherFile)
+      )
+    )
+
+  })
+  
+  observeEvent(input$delete_table_weather_confirm, {
+    req(input$chooseWeatherFile)
+    if (input$delete_table_weather_confirm) {
+      if (length(isolate(weatherFiles())) > 1) {
+        file.remove(input$chooseWeatherFile) 
+        weatherFiles(
+          list.files(
+            path = input$inputfolder,
+            pattern = ".*weather.*\\.(csv)$",
+            full.names = TRUE,
+            ignore.case = TRUE
+          )
+        )
+      } else {
+        showNotification(
+          paste0("Cannot remove the last weather file, is is used as a template - just modify it or upload a new one."),
+          type = "warning",
+          duration = 20
+        )
+      }  
+    }
+  })
+  
+  
+  
+  
   ## TABLE FBP table ----
   output$FBP.table <- renderDT({
     req(lut_fbp_local())
@@ -1468,7 +1565,6 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
     
   }
   
-  
   observeEvent(input$delete_table_ignition, {
     req(input$chooseIgnitionFile)
     shinyWidgets::ask_confirmation(
@@ -1478,15 +1574,22 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
         "Confirm you want to delete the selected ignition table: <br><u><b>%s</b></u>",
         basename(input$chooseIgnitionFile)
       )
-    )
-    
+    ) 
   })
-  
+    
   observeEvent(input$delete_table_ignition_confirm, {
     req(input$chooseIgnitionFile)
     if (input$delete_table_ignition_confirm) {
       if (length(isolate(ignitionFiles())) > 1) {
         file.remove(input$chooseIgnitionFile)
+        ignitionFiles(
+          list.files(
+            path = input$inputfolder,
+            pattern = ".*ignition.*\\.(csv)$",
+            full.names = TRUE,
+            ignore.case = TRUE
+          )
+        )
       } else {
         showNotification(
           paste0("Cannot remove the last ignition file - just modify it  "),
@@ -1494,17 +1597,6 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
           duration = 10
         )
       }
-      
-      ignitionFiles(
-        list.files(
-          path = input$inputfolder,
-          pattern = ".*ignition.*\\.(csv)$",
-          full.names = TRUE,
-          ignore.case = TRUE
-        )
-      )
-      
-      
     }
   })
   
@@ -1967,8 +2059,11 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
     lapply(all_input_names, function(inp) {
       input[[inp]]
     })
+    input$tabs
   }, {
-    proc(TRUE)
+ 
+   req(input$tabs == "inputInstancesInputArgs") 
+      proc(TRUE) 
   }, ignoreInit = T)
   
   

@@ -90,26 +90,68 @@ function dateFromToday(back=0){
   return(dateStr);
 }
 
+var formatOpenMeteoDate = function(d) {
+  if (!d) return null;
+  
+  var dateObj = new Date(d);
+  if (isNaN(dateObj.getTime())) return null;
+  
+  // Use UTC methods to completely bypass local timezone adjustments
+  var year  = dateObj.getUTCFullYear();
+  var month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+  var day   = String(dateObj.getUTCDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+};
 
-
-var getFromOpenMeteo = function(lat=null, lon=null,   pop=false){
+var getFromOpenMeteo = function(lat=null, lon=null,   pop=false, start_date=null, end_date=null ){
   
       if(lat===null){
       var center = mymap.getCenter();
       lat =center.lat;
       lon =center.lng;
-    } 
+    }
+ 
+  var url ="";
+  if(start_date==null || end_date==null) {
+    url = "https://api.open-meteo.com/v1/forecast?latitude="+ lat+"&longitude="+lon+"&current=";
+  } else {
+    var formattedStart = formatOpenMeteoDate(start_date);
+    var formattedEnd = formatOpenMeteoDate(end_date);
+    if (!formattedStart || !formattedEnd) {
+      alert(
+        "⚠️ Error Formatting Dates!\n\n" +
+        "One or both of the provided dates could not be converted to YYYY-MM-DD.\n" +
+        "• Provided Start: '" + start_date + "' (Parsed: " + formattedStart + ")\n" +
+        "• Provided End:   '" + end_date + "' (Parsed: " + formattedEnd + ")\n\n" +
+        "Please check your inputs."
+      );
+      return; // Stop execution immediately and return nothing
+    }
+    url = "https://archive-api.open-meteo.com/v1/archive?latitude="+ lat+"&longitude="+lon+"&hourly&start_date="+formattedStart+"&end_date="+formattedEnd+"&hourly="
+  }
+  //?latitude=52.52&longitude=13.41&start_date=2026-04-24&end_date=2026-04-25&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m"
   $.ajax({
-    url: "https://api.open-meteo.com/v1/forecast?latitude="+ lat+"&longitude="+lon+"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms",
+    url: url+"temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m",
     dataType: "json",
           timeout: 3000,  
     success: function(data) {
        Shiny.setInputValue('openmeteoInput', data, {priority: 'event'}); 
-      var speed = Math.round(parseFloat(data.current.wind_speed_10m));
-      var dir = data.current.wind_direction_10m;
-      $('#speed').val(speed).trigger('input');  
-      $('#wdir').text(dir).trigger('change');  
-      $('#wtmp').text(data.current.temperature_2m + "°C").trigger('change'); 
+       if (data && data.current) {
+        
+        // 2. Parse wind speed safely (fallback to 0 if missing)
+        var rawSpeed = data.current.wind_speed_10m;
+        var speed = (rawSpeed !== undefined && rawSpeed !== null) ? Math.round(parseFloat(rawSpeed)) : 0;
+        
+        // 3. Extract wind direction and temperature (fallback to defaults if missing)
+        var dir = (data.current.wind_direction_10m !== undefined) ? data.current.wind_direction_10m : 0;
+        var tmp = (data.current.temperature_2m !== undefined) ? data.current.temperature_2m : "--";
+      
+        // 4. Update your HTML form values and trigger reactive events cleanly
+        $('#speed').val(speed).trigger('input');  
+        $('#wdir').val(dir).trigger('change'); // Note: .val() is usually preferred over .text() for form elements
+        $('#wtmp').text(tmp + "°C").trigger('change');  
+      } 
     },
     error: function(jqXHR, textStatus, errorThrown) {
       console.error("API call failed:", textStatus, errorThrown); 
@@ -123,13 +165,29 @@ var getFromOpenMeteo = function(lat=null, lon=null,   pop=false){
 
 }
 
-var   queryWMS = function(lat=null, lon=null,   pop=false)  {
+var   queryWMS = function(lat=null, lon=null,   pop=false, start_date=null )  {
     if(lat===null){
       var center = mymap.getCenter();
       lat =center.lat;
       lon =center.lng;
     }
-    const time = dateFromToday(0); 
+    
+    var time = dateFromToday(0); 
+    if(start_date!=null ) {
+ 
+      var formattedStart = formatOpenMeteoDate(start_date); 
+      if (!formattedStart) {
+        alert(
+          "⚠️ Error Formatting Dates!\n\n" +
+          "One or both of the provided dates could not be converted to YYYY-MM-DD.\n" +
+          "• Provided Date: '" + start_date + "' (Parsed: " + formattedStart + ")\n" + 
+          "Please check your inputs."
+        );
+        return; // Stop execution immediately and return nothing
+      }
+      time = formattedStart;
+    }
+  
     const buffer = 0.00001;
     var latlng = L.latLng(lat, lon);
       const bbox = [
@@ -170,7 +228,25 @@ var   queryWMS = function(lat=null, lon=null,   pop=false)  {
             } else {
               Shiny.setInputValue('WMSQueryReturned', {coords:[lon, lat], datast:data}, {priority: 'event'});
             }
+        },
+    error: function (textStatus, errorThrown) {
+        console.error("WMS EFFIS request failed:", textStatus, errorThrown);
+        
+        // Construct a fallback payload explaining the failure
+        var fallbackData = {
+            coords: [lon, lat],
+            datast: null, // Signals to your R code that the data fetching failed
+            error: true,
+            status: textStatus
+        };
+
+        // Notify the exact same Shiny inputs so your R observers always execute
+        if (pop) {
+            Shiny.setInputValue('WMSQueryReturnedPop', fallbackData, { priority: 'event' });
+        } else {
+            Shiny.setInputValue('WMSQueryReturned', fallbackData, { priority: 'event' });
         }
+    }
     });
 }
 
