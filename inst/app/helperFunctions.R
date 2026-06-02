@@ -47,10 +47,12 @@ getDateTimeFromCSV<-function(x){
       times <- 1:(nrow(wf)+2)
       
     } else {
-      td <-diff(clean_ts[1:2])
-      times <- c(clean_ts[[1]]-td, 
+      if(hour(clean_ts[[1]])==0){
+        clean_ts <- clean_ts+3600*12
+      }
+      times <- c(clean_ts[[1]]-3600, 
                  clean_ts, 
-                 clean_ts[[length(clean_ts)]]+td  ) 
+                 clean_ts[[length(clean_ts)]]+3600  ) 
       
     }
     

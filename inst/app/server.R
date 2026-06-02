@@ -1284,6 +1284,11 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
     dt <- isolate(weatherDataTable())
     req(dt)
     timeseries <- getDateTimeFromCSV(dt)
+    if(!inherits(timeseries, "POSIXct")){
+      showNotification("Cannot read value ", timeseries[[1]] , " as Date Time! Please check the format of your timeseries column which should be named 'date' or 'datetime'. ",
+                       duration=15, type="warning")
+      return()
+    }
     shinyjs::runjs(sprintf("getFromOpenMeteo(null, null, false, start_date='%s', end_date='%s'); queryWMS(null, null, false, start_date='%s');", 
                            as.character(as.Date(min(timeseries))),
                            as.character(as.Date(max(timeseries))),
