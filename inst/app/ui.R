@@ -191,38 +191,44 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
               span("Ignition File"),
               actionButton(
                 "delete_table_ignition_row",
-                label = NULL,
+                HTML(
+                  "<sup class='helpTitle'
+            title='Delete selected rows'>?</sup>"
+                ),
                 icon = icon("cancel"),
-                class =
-                  "btn-sm",
-                title = "Delete Row"
+                class = "btn-sm" 
               ),
               span("|", style =
                      "color:black;"),
-              div(
-                title = "Select an ignition file to modify - this layer can be used as <u>ignitions points</u> input argument. To add rows, use the button <span>🔥 </span> in the map, coordinates will be converted to Ncell values.",
+              div( 
                 style = "margin-bottom:-15px",
                 shinyWidgets::pickerInput(
                   "chooseIgnitionFile",
-                  NULL,
+                  HTML(
+                    "<sup class='helpTitle'
+            title='Select an ignition file to modify - this layer can be used as <u>ignitions points</u> input argument. To add rows, use the button <span>🔥 </span> in the map, coordinates will be converted to Ncell values.'>?</sup>"
+                  ),
                   width = "100px",
                   choices = c()
                 )
               ),
               actionButton(
-                "save_table_ignition",
-                label = NULL,
+                "save_table_ignition", 
+                HTML(
+                  "<sup class='helpTitle'
+            title='Save this table!'>?</sup>"
+                ),
                 icon = icon("save"),
-                class = "btn-sm",
-                title = "Save changes to be used in the Cell2Fire process (only valid for this session)"
+                class = "btn-sm" 
               ),
               actionButton(
                 "delete_table_ignition",
-                label = NULL,
+                HTML(
+                  "<sup class='helpTitle'
+            title='Delete this table!'>?</sup>"
+                ),
                 icon = icon("trash"),
-                class =
-                  "btn-sm",
-                title = "Remove file (cannot be undone)"
+                class = "btn-sm" 
               ),
               downloadButton(
                 "download_table_ignition",
@@ -301,10 +307,19 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
             ),
             
             actionButton(
+              "save_table_weather",
+              HTML(
+                "<sup class='helpTitle'
+            title='Save weather  table!'>?</sup>"
+              ),
+              icon = icon("save"),
+              class = "btn-sm" 
+            ),
+            actionButton(
               "delete_table_weather",
               HTML(
                 "<sup class='helpTitle'
-            title='Delete this table!'>?</sup>"
+            title='Delete weather table!'>?</sup>"
               ),
               icon = icon("trash"),
               # width = "100%",
@@ -353,7 +368,7 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
           # headerBorder = TRUE,
           # enable_sidebar = FALSE,
           div(style = "overflow-x: auto; margin-top:10px;", id =
-                "weatherTableOutputDIV", DTOutput("weather.table"))
+                "weatherTableOutputDIV", DTOutput("weatherTable"))
         )
       ),
       shinydashboard::tabItem(

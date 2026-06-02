@@ -359,10 +359,22 @@ uiInputsArgs <- lapply(names(PANELS), function(op){
                           PANELS[[op]] )
 })
 
- 
+
+md_overwrite_ignition_weather <- modalDialog(
+  title = "Overwrite",size = "s",
+  "Confirm you want to overwrite the selected weather file?",
+  
+  footer = tagList(
+    actionButton("overwrite_file_confirm_weather_yes", "Yes"),
+    actionButton("overwrite_file_confirm_weather_newFile", "Create a New file"),
+    modalButton("Cancel")
+  ),
+  easyClose = TRUE
+)
+
 md_overwrite_ignition <- modalDialog(
   title = "Overwrite",size = "s",
-  "Confirm you want to overwrite the selected file?",
+  "Confirm you want to overwrite the selected ignition file?",
   
   footer = tagList(
     actionButton("overwrite_file_confirm_yes", "Yes"),

@@ -1391,7 +1391,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
   }, ignoreInit = T)
   
   ## TABLE WEATHER table -----
-  output$weather.table <- renderDT({
+  output$weatherTable <- renderDT({
     dt <- weatherDataTable()
     datatable(dt,
               editable = TRUE,
@@ -1414,6 +1414,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
                 c('DC', 'FWI', 'DMC', 'ISI', 'BUI', 'FFMC')
               ), digits = 2)
   })
+  
   observeEvent(input$chooseWeatherFile, {
     req(input$chooseWeatherFile)
     df <- read.csv(input$chooseWeatherFile)
@@ -1443,14 +1444,23 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
     if (input$delete_table_weather_confirm) {
       if (length(isolate(weatherFiles())) > 1) {
         file.remove(input$chooseWeatherFile) 
-        weatherFiles(
-          list.files(
+
+        lf <-   list.files(
             path = input$inputfolder,
             pattern = ".*weather.*\\.(csv)$",
             full.names = TRUE,
             ignore.case = TRUE
           )
+        
+        weatherDataTable(NULL)
+        
+        updateSelectInput(
+          inputId = "WEAFILE",
+          choices = lf,
+          selected = ""
         )
+        weatherFiles( lf )
+        
       } else {
         showNotification(
           paste0("Cannot remove the last weather file, is is used as a template - just modify it or upload a new one."),
@@ -1462,8 +1472,72 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
   })
   
   
+  observeEvent(input$delete_table_weather_row, {
+    df <- isolate(weatherDataTable())
+    df <- df[-1 * input$weatherTable_rows_selected, ]
+    weatherDataTable(df)
+  })
   
   
+  observeEvent(input$weatherTable_cell_edit, {
+    print(input$weatherTable_cell_edit)
+    info <- input$weatherTable_cell_edit
+    df <- isolate(weatherDataTable())
+    df[info$row, info$col] <- info$value
+    weatherDataTable(df)
+  })
+  
+  observeEvent(input$save_table_weather, {
+    if (!isTruthy(input$chooseWeatherFile)) {
+      save_table_weather_final(F)
+    } else {
+      showModal(md_overwrite_ignition_weather) 
+    }
+  })
+ 
+  
+  observeEvent(input$overwrite_file_confirm_weather_yes, {
+    req(input$chooseWeatherFile)
+    save_table_weather_final(T)
+    removeModal()
+  })
+  
+  observeEvent(input$overwrite_file_confirm_weather_newFile, {
+    save_table_weather_final(F)
+    removeModal()
+  })
+  
+  save_table_weather_final <- function(overwrite = F) {
+    df <- isolate(weatherDataTable())  
+    if (overwrite && isTruthy(input$chooseWeatherFile)) {
+      write.csv(df,
+                input$chooseWeatherFile,
+                quote = FALSE,
+                row.names = F)
+    } else {
+      write.csv(
+        df,
+        file.path(
+          input$inputfolder,
+          sprintf(
+            "Weather_%s.csv",
+            format(Sys.time(), "%Y-%m-%d_%H-%M-%S")
+          )
+        ),
+        quote = FALSE,
+        row.names = F
+      )
+      weatherFiles(
+        list.files(
+          path = input$inputfolder,
+          pattern = ".*Weather.*\\.(csv)$",
+          full.names = TRUE,
+          ignore.case = TRUE
+        )
+      )
+    }
+    
+  }
   ## TABLE FBP table ----
   output$FBP.table <- renderDT({
     req(lut_fbp_local())
@@ -1534,7 +1608,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
   
   save_table_ignition_final <- function(overwrite = F) {
     df <- isolate(ignitionPointsCoords())
-    print(df)
+ 
     if (overwrite && isTruthy(input$chooseIgnitionFile)) {
       write.csv(df,
                 input$chooseIgnitionFile,
@@ -1624,10 +1698,9 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
   
   observeEvent(input$save_table_ignition, {
     if (!isTruthy(input$chooseIgnitionFile)) {
-      save_table_ignition_final(F)
+      save_table_weather_final(F)
     } else {
-      showModal(md_overwrite_ignition)
-      
+      showModal(md_overwrite_ignition) 
     }
   })
   
