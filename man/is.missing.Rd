@@ -2,7 +2,7 @@
 % Please edit documentation in R/is.missing.R
 \name{is.missing}
 \alias{is.missing}
-\title{Title}
+\title{is.missing}
 \usage{
 is.missing(x, checkPath = T)
 }
@@ -15,5 +15,5 @@ is.missing(x, checkPath = T)
 TRUE or FALSE
 }
 \description{
-Title
+Checks for validity of variable and path
 }

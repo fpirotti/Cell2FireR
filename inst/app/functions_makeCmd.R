@@ -125,8 +125,7 @@ but elevation raster is - I will create it for you....", tt) )
         text = paste("===== DRY RUN OF SIMULATION ENDED =====")
       )
       return(NULL)
-    } 
-      
+    }  
       
     # If not dry, run_cell2fire returns the processx object.
     # We update the tab and assign it to the global environment so the rest of your app can track it.
@@ -134,6 +133,7 @@ but elevation raster is - I will create it for you....", tt) )
     simProcess <<- sim_result 
     
   }, error = function(e) {   
+    browser()
     killSimProcess(F, paste("Error in preparing simulation:", e$message))
   }, warning = function(e) {  
     showNotification("Warning in preparing simulation:", e$message, type = "warning")

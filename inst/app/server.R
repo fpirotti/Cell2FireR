@@ -377,6 +377,44 @@ Work in progress....",
     
   }, ignoreInit = T)
   
+  
+  output$download_table_ignition_shapefile <- downloadHandler(
+    filename = function() { 
+      req(input$chooseIgnitionFile)
+      gsub("\\.csv$", ".zip", basename(input$chooseIgnitionFile))
+    },
+    content = function(file) {
+      # Write the dataset to the `file` that will be downloaded
+    
+        df <- read.csv(input$chooseIgnitionFile) 
+        shp_files <- file.path(dirname(file), "Ignitions.shp")
+ 
+        write_sf(sf::st_as_sf(df, coords=c("X","Y"), crs="epsg:4326"), shp_files) 
+        wd <- getwd()
+        setwd(dirname(file))
+        zip::zip(zipfile = file, 
+            files = list.files(path = dirname(file),
+                               pattern =  "Ignitions" 
+                              )
+            )
+        setwd(wd)
+    }
+  )
+  
+  output$download_table_weather_flammap <- downloadHandler(
+    filename = function() {
+      # Use the selected dataset as the suggested file name
+      paste0(gsub(".csv$", ".wxs", basename(input$chooseWeatherFile)))
+    },
+    content = function(file) {
+      # Write the dataset to the `file` that will be downloaded
+      export_weather_to_wxs(
+        read.csv(input$chooseWeatherFile),
+        file
+      )
+    }
+  )
+  
   output$download_table_weather <- downloadHandler(
     filename = function() {
       # Use the selected dataset as the suggested file name
@@ -682,6 +720,7 @@ The system will try to align the landscape stack. overwriting the misaligned ras
       if (length(rasters) < 8) {
         # Keep button disabled and warn the user via notification
         disable("download_landscape_flammap")
+        enable("download_landscape_flammap")
         shinyjs::runjs(paste("$('#download_landscape_flammap').parent().attr('data-tippy-content', 'Warning: Found only ", length(rasters), " rasters. You need at least 8 to download.');"))
         
         
@@ -697,6 +736,7 @@ The system will try to align the landscape stack. overwriting the misaligned ras
           
         } else {
           enable("download_landscape_flammap")
+          enable("download_landscape_forefire")
           shinyjs::runjs(paste("$('#download_landscape_flammap').parent().attr('data-tippy-content', null  );"))        
         }
  
@@ -1175,6 +1215,13 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
   
   # change DATASET folder ----
   observeEvent(input$inputfolder, {
+    
+    if (is.null(input$inputfolder) || input$inputfolder == "") {
+      shinyjs::disable("download_table_ignition_shapefile")
+    } else {
+      shinyjs::enable("download_table_ignition_shapefile")
+    }
+    
     req(input$inputfolder)
     
     
@@ -1551,7 +1598,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
   
   ## TABLE IGNITION and edits  ----
   ##
-  observeEvent(input$chooseIgnitionFile, {
+  observeEvent(input$chooseIgnitionFile, { 
     req(input$chooseIgnitionFile)
     df <- tryCatch({
       read.csv(input$chooseIgnitionFile)
@@ -1885,7 +1932,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
   ### download_landscape_flammap -----
   output$download_landscape_flammap  <- downloadHandler(
              filename = function() {
-               sprintf("LANDSCAPE_%s.zip", basename(input$inputfolder))
+               sprintf("LANDSCAPE_FARSITE_%s.zip", basename(input$inputfolder))
              },
              content = function(file) {
                req(input$inputfolder)
@@ -1931,17 +1978,72 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
                              filename = 
                                file.path(input$inputfolder, "output", "landscape.tif" )
                  )
-                 
-                 showNotification( "Compressing stack of landscape file",
-                                   duration=10, id="flammap" )
+                  
                } 
                
+               showNotification( "Compressing stack of landscape file",
+                                 duration=10, id="flammap" )
                zip(file, 
                    file.path(input$inputfolder, "output", "landscape.tif" ),
                    flags = "-r9Xj")
              }
            )
            
+  
+  ### download_landscape ForeFire -----
+  output$download_landscape_forefire  <- downloadHandler(
+    filename = function() {
+      sprintf("LANDSCAPE_FOREFIRE_%s.zip", basename(input$inputfolder))
+    },
+    content = function(file) {
+      req(input$inputfolder)
+      ff <- list.files(input$inputfolder, full.names = T, pattern="\\.tif$")
+      validate(
+        need(
+          length(ff) >= 8, 
+          paste0("Download aborted: Found only ", length(ff), " raster files. At least 8 are needed for parsing a landscape file.")
+        )
+      )
+      
+      ls <- which( names(rasters) %in% 
+                     landscapeForeFire )
+ 
+      if(length(ls) < 2){
+        showNotification( "At least FUEL and ELEVATION rasters must be present, seems they are not.",
+                          duration=10, id="flammap" )
+        return(invisible())
+      } 
+      
+      if(!file.exists(file.path(input$inputfolder, "output", "landscapeForeFire.tif" ))){
+        showNotification( "Creating and compressing stack of landscape file",
+                          duration=10, id="flammap" )
+        stack <- terra::rast( unlist(rasters[c("FUEL","ELEVATION")]) )
+        names(stack)<- c("fuel","elevation") 
+        uv <- unique(values(stack$FUEL))
+        uvdiff <- setdiff(uv, scott_burgan_models)
+        if(length(uv) > 40 ){
+          showNotification( "Wrong classes found in FUEL model file: supposed to be 40 classes from Scott&Burgan, found",
+                            length(uv), "classes. Uncompatible classes are: ",
+                            paste(uvdiff, collapse=","),"Please check", duration=20, 
+                            id="flammap", type="warning" )
+          
+        }
+        showNotification( "Saving landscape file",
+                          duration=10, id="flammap" )
+        writeRaster(stack, datatype="INT4U",
+                    filename = 
+                      file.path(input$inputfolder, "output", "landscapeForeFire.nc" )
+        )
+        
+      } 
+      
+      showNotification( "Compressing stack of landscape file",
+                        duration=10, id="flammap" )
+      zip(file, 
+          file.path(input$inputfolder, "output", "landscapeForeFire.nc" ),
+          flags = "-r9Xj")
+    }
+  )
   
   ### download dataset -----
   output$downloadfolder_dataset <- downloadHandler(

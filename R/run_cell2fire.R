@@ -174,10 +174,10 @@ run_cell2fire <- function(
     if (weather_mode == "0. Single weather file") { 
       if (is.null(wea_file) || !nzchar(wea_file) || !file.exists(wea_file)) {
         message("No Weather file found or selected. Using a generic weather file (20 degrees Celsius, 20 km/h wind, south -> north).")
-        if (!dry) file.copy(file.path(template_dir, "Weather.csv"), file.path(instance_dir, "Weather.csv"))
-      } else { 
-        if (!dry) file.copy(wea_file, file.path(instance_dir, "Weather.csv"))
-      }
+        wea_file <- file.path(template_dir, "Weather.csv")
+      }  
+      write.csv(parse_weather_for_cell2fire(wea_file, simulator), file.path(instance_dir, "Weather.csv"),
+                row.names = F, quote = FALSE) 
     } else { 
       wea_dir <- input_folder
       wea_out <- file.path(instance_dir, "Weathers")

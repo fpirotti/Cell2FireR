@@ -32,6 +32,7 @@ scott_burgan_models <- c(
 )
 landscapeFlamMap <- c("ELEVATION", "SLOPE", "SAZ",
                       "FUEL", "CCF","CHM","CBH","CBD")
+landscapeForeFire <- c("FUEL", "ELEVATION")
 for (p in pkgs) {
   if (!requireNamespace(p, quietly = TRUE)) {
     warn("Package ", p, " not found... installing it.")

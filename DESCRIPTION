@@ -1,7 +1,7 @@
 Package: Cell2FireR
-Title:  A bridge between R and the Cell2Fire C++ executable. It automates several tedious steps and provides a web-app for user-friendly interaction and capacity building on fire spread simulations
+Title: A bridge between R and the Cell2Fire C++ executable. It automates several tedious steps and provides a web-app for user-friendly interaction and capacity building on fire spread simulations
 Version: 0.0.0.9810
-Authors@R:     person("Francesco", "Pirotti", , "francesco.pirotti@unipd.it", role = c("aut", "cre"))
+Authors@R: person("Francesco", "Pirotti", , "francesco.pirotti@unipd.it", role = c("aut", "cre"))
 Description: a bridge between R and the Cell2Fire C++ executable. It automates several tedious steps:
  **Workspace Management**: Creates timestamped instance and result directories for every run.
  **Data Preparation**: Links or copies required landscape rasters (Fuel, Elevation, Slope, etc.) into a standardized format for the simulator.
@@ -11,9 +11,11 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-Imports:  
-    processx, 
-    sf, 
+Imports: 
+    dplyr,
+    lubridate,
+    processx,
+    sf,
     terra,
     utils
 Suggests:

@@ -124,14 +124,28 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
           # Add your icon
           tags$span("Ignitions Table") # Add your text
         )
-      ),
+      )#,
       # shinydashboard::menuItem("LUT FUEL Model", icon = icon("fire"), tabName = "inputInstancesLUT")
       # ),
-      shinydashboard::menuItem("Outputs", icon = icon("table"), tabName = "outputInstances")
+     # shinydashboard::menuItem("Outputs", icon = icon("table"), tabName = "outputInstances")
     ),
     
     
     shiny::actionButton("runsim", "🔥 Run"),
+      selectInput(
+        "simulator",
+        HTML(
+          "Fire Spread Model<sup class='helpTitle'
+            title='Select an one model, remember the fuel model raster chosen should 
+be compatible with the model used!'>?</sup>"
+        ),
+        choices = c(
+          "Cell2FireS" = "Cell2Fire S&B",
+          "Cell2FireK" = "Cell2Fire Kitral",
+          "Cell2FireB" = "Cell2Fire FBP" 
+        ),
+        width = "100%"
+      ),
     # shiny::actionButton("postsim", "PostProcessing",
     #                     title="After simulation is finished, you can run a <b>postprocess</b> to extract information from results - requires an output instance" ),
     #
@@ -238,6 +252,26 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
                 title =
                   "Download table in CSV file format"
               ),
+              
+              downloadButton(
+                "download_table_ignition",
+                HTML(
+                  "CSV<sup class='helpTitle'
+            title='Download table in CSV file format'>?</sup>"
+                ),
+                icon = icon("download"),
+                class = "btn-sm" 
+              ),
+              
+              downloadButton(
+                "download_table_ignition_shapefile",
+                HTML(
+                  "SHP<sup class='helpTitle'
+            title='Download table in ESRI Shapefile file format to use for FLAMMAP/FARSITE'>?</sup>"
+                ),
+                icon = icon("download"),
+                class = "btn-sm" 
+              ),
               # actionButton("upload_table_ignition", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
               div(
                 style = "margin-bottom: -40px; ",
@@ -335,6 +369,24 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
               icon = icon("download"),
               class = "btn-sm"
             ),
+            
+            downloadButton(
+              "download_table_weather_flammap", 
+              label =  tagList(
+                tags$img(
+                  src = "flammap.png", 
+                  # height = "20px", 
+                  style = "vertical-align: middle; margin-right: 2px;"
+                ),
+                HTML(
+                  "<sup class='helpTitle'
+            title='Download table formatted for FLAMMAP/FARSITE software'>?</sup>"
+                )
+              ),
+              icon = icon("download"),
+              class = "btn-sm"
+            ),
+            
             # actionButton("upload_table_weather", label = NULL, icon = icon("upload"), class="btn-sm", title="Upload your table(make sure it is in the same format as the required input format for Cell2Fire)"),
     
             
@@ -473,7 +525,9 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
             style = "width:70%; margin-bottom:10px;" 
           ) ),
           HTML(
-          "<sup class='helpTitle' title='<table style=\"width:100%; border-collapse: collapse; font-family: sans-serif; margin: 20px 0;\">",
+          "<sup class='helpTitle' title='
+      Prepares and downloads a single mult-band 16 bit GeoTIFF ready to be used
+as landscape file in FlamMap software.<hr><table style=\"width:100%; border-collapse: collapse; font-family: sans-serif; margin: 20px 0;\">",
           "<thead>",
           "<tr style=\"background-color: #2c3e50; color: white; text-align: left;\">
               <th style=\"padding: 4px; border: 1px solid #dddddd;\">GeoTIFF Band</th>
@@ -525,7 +579,24 @@ can be accessed anytime to check and download logs and outputs'>?</sup>"
               </tbody>
               </table>'>?</sup>")
           ),
-
+        
+        div( 
+          disabled( shiny::downloadButton(
+            "download_landscape_forefire" ,
+            label =tagList(
+              tags$img(
+                src = "forefire.png", 
+                # height = "20px", 
+                style = "vertical-align: middle; margin-right: 5px;"
+              ), "ForeFire" 
+            ), 
+            style = " margin-bottom:10px;" 
+          ) ),
+          HTML(
+            "<sup class='helpTitle' title='
+      Prepares and downloads a NetCDF format ready to be used
+as landscape file in <a href=https://forefire.readthedocs.io/en/latest/user_guide/landscape_file.html  target=_blank>ForeFire</a> software.'>?</sup>")
+        ),
         shiny::downloadButton(
           "downloadfolder_dataset" ,
           label = HTML(
