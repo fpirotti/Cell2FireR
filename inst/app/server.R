@@ -332,7 +332,7 @@ Work in progress....",
     wf <- weatherFiles()
  
     if (length(wf) != 0) {
-      df <-  read.csv(wf[[1]])
+      df <-  na.omit(read.csv(wf[[1]]))
       weatherDataTable(df)
       names(wf) <- basename(wf)
       shinyWidgets::updatePickerInput(inputId = "chooseWeatherFile", choices = wf)
@@ -1601,7 +1601,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
   observeEvent(input$chooseIgnitionFile, { 
     req(input$chooseIgnitionFile)
     df <- tryCatch({
-      read.csv(input$chooseIgnitionFile)
+      na.omit(read.csv(input$chooseIgnitionFile))
     }, warning = function(e) {
       showNotification(e$message, type = "warning", duration = 19)
       NULL
@@ -2018,19 +2018,11 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
         showNotification( "Creating and compressing stack of landscape file",
                           duration=10, id="flammap" )
         stack <- terra::rast( unlist(rasters[c("FUEL","ELEVATION")]) )
-        names(stack)<- c("fuel","elevation") 
-        uv <- unique(values(stack$FUEL))
-        uvdiff <- setdiff(uv, scott_burgan_models)
-        if(length(uv) > 40 ){
-          showNotification( "Wrong classes found in FUEL model file: supposed to be 40 classes from Scott&Burgan, found",
-                            length(uv), "classes. Uncompatible classes are: ",
-                            paste(uvdiff, collapse=","),"Please check", duration=20, 
-                            id="flammap", type="warning" )
-          
-        }
-        showNotification( "Saving landscape file",
+        names(stack)<- c("fuel","elevation")   
+ 
+        showNotification( "Saving landscape file for ForeFire in NetCDF",
                           duration=10, id="flammap" )
-        writeRaster(stack, datatype="INT4U",
+        writeRaster(stack, 
                     filename = 
                       file.path(input$inputfolder, "output", "landscapeForeFire.nc" )
         )

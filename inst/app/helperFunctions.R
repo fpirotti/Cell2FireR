@@ -95,6 +95,7 @@ getDateTimeFromCSV<-function(x){
     x <- read.csv(x ) 
   }
  
+  x <- na.omit(x)
   header <- names(x) 
  
   datecol <- grep("date", header, ignore.case = TRUE) # Case-insensitive match
@@ -122,11 +123,11 @@ getDateTimeFromCSV<-function(x){
       if (anyNA(clean_ts)) clean_ts <- lubridate::mdy_hm(wf_col, quiet = TRUE)
       if (anyNA(clean_ts)) clean_ts <- lubridate::mdy(wf_col, quiet = TRUE)
     }
-     
+      
     if(anyNA(clean_ts)) {
       showNotification(paste0(
         "Sorry, we did find a column named '",
-        names(wf)[[datecol]] ,"' BUT we could not convert 
+        header[[datecol]] ,"' BUT we could not convert 
           its contents to a time stamp using various heuristics.
   <br> The following timestamp format is advised and recognized:
   <br>2023-07-07 16:00:00

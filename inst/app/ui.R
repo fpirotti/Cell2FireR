@@ -253,15 +253,15 @@ be compatible with the model used!'>?</sup>"
                   "Download table in CSV file format"
               ),
               
-              downloadButton(
-                "download_table_ignition",
-                HTML(
-                  "CSV<sup class='helpTitle'
-            title='Download table in CSV file format'>?</sup>"
-                ),
-                icon = icon("download"),
-                class = "btn-sm" 
-              ),
+            #   downloadButton(
+            #     "download_table_ignition",
+            #     HTML(
+            #       "CSV<sup class='helpTitle'
+            # title='Download table in CSV file format'>?</sup>"
+            #     ),
+            #     icon = icon("download"),
+            #     class = "btn-sm" 
+            #   ),
               
               downloadButton(
                 "download_table_ignition_shapefile",
