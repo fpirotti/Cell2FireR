@@ -2,7 +2,7 @@
 pkgs <- c("terra", "DT", "remotes", "sf", "httr", "shiny", "leaflet", "shinyjs", 
           "processx", "dplyr", "spatialEco",
           "tools", "shinydashboard", "shinyvalidate", "bcrypt", 
-          "xml2", "future", "data.table",
+          "xml2", "future", "data.table", "jsonlite",
           "promises", "stringr",  "leafem", "cli", "shinydashboardPlus",
           "knitr", "anytime", "lubridate",
           "htmlwidgets")

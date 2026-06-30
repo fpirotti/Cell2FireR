@@ -1937,12 +1937,16 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
              content = function(file) {
                req(input$inputfolder)
                ff <- list.files(input$inputfolder, full.names = T, pattern="\\.tif$")
-               validate(
-                 need(
-                   length(ff) >= 8, 
-                   paste0("Download aborted: Found only ", length(ff), " raster files. At least 8 are needed for parsing a landscape file.")
+               if (length(ff) < 8) {
+                 showNotification(
+                   paste0(
+                     "Download aborted: Found only ",
+                     length(ff),
+                     " raster files. At least 8 are needed for parsing a landscape file."
+                   ), 
+                   type = "error",duration = 20
                  )
-               )
+               }
               
                ls <- which( names(rasters) %in% 
                               landscapeFlamMap )
@@ -1998,12 +2002,16 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
     content = function(file) {
       req(input$inputfolder)
       ff <- list.files(input$inputfolder, full.names = T, pattern="\\.tif$")
-      validate(
-        need(
-          length(ff) >= 8, 
-          paste0("Download aborted: Found only ", length(ff), " raster files. At least 8 are needed for parsing a landscape file.")
+      if (length(ff) < 2) {
+        showNotification(
+          paste0(
+            "Download aborted: Found only ",
+            length(ff),
+            " raster files. At least 2 are needed for parsing a landscape ForeFire file."
+          ),
+          type = "error",duration = 20
         )
-      )
+      }
       
       ls <- which( names(rasters) %in% 
                      landscapeForeFire )
@@ -2013,8 +2021,8 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
                           duration=10, id="flammap" )
         return(invisible())
       } 
-      
-      if(!file.exists(file.path(input$inputfolder, "output", "landscapeForeFire.tif" ))){
+      outLandscapeFile <- file.path(input$inputfolder, "output", "ForeFireLandscape.nc" )
+      if(!file.exists(outLandscapeFile)){
         showNotification( "Creating and compressing stack of landscape file",
                           duration=10, id="flammap" )
         stack <- terra::rast( unlist(rasters[c("FUEL","ELEVATION")]) )
@@ -2022,17 +2030,62 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
  
         showNotification( "Saving landscape file for ForeFire in NetCDF",
                           duration=10, id="flammap" )
-        writeRaster(stack, 
-                    filename = 
-                      file.path(input$inputfolder, "output", "landscapeForeFire.nc" )
+        terra::writeCDF(stack, varname = "landscape",
+                    overwrite = TRUE, split=T,
+                    filename =outLandscapeFile 
+                      
         )
-        
-      } 
+        file.copy("templates/fuelForeFire.csv",
+                  file.path(input$inputfolder, "output", "fuels.csv" ) )
+
+        file.copy("templates/ForeFireParams.ff",
+                  file.path(input$inputfolder, "output", "params.ff" ) )
+      }
+ 
       
+      wt <- weatherDataTable()
+      
+      iso_string <- strftime(anytime::anytime(wt$datetime[[1]]), 
+                             format = "%Y-%m-%dT%H:%M:%SZ" )
+      
+      fp <- file(file.path(input$inputfolder, "output", "run.ff" ), "wt" )
+      writeLines("include[params.ff]", fp)
+      writeLines(sprintf("loadData[%s;%s]",
+                         basename(outLandscapeFile),
+                         iso_string), fp)
+       
+      ign <- ignitionPointsCoords()
+      writeLines(sprintf("startFire[lonlat=(%.6f,%.6f);t=0]",
+                          ign$X, ign$Y), fp)
+      
+      for(i in 1:nrow(wt)){
+        spd <- wt[i,"WS"]
+        dir <- wt[i,"WD"]
+        
+        writeLines(
+          sprintf("trigger[wind;vel=(%.5f,%.5f,0.)]@t=%d",
+                  wt[i,"WS"]*cos(wt[i,"WD"]*pi/180),
+                  wt[i,"WS"]*sin(wt[i,"WD"]*pi/180),
+                  (i-1)*3600),
+          fp
+        )
+      }
+      
+      writeLines(sprintf("step[dt=%d]",(i-1)*3600), fp)
+      writeLines("print[final_front.geojson]", fp)
+      flush(fp) 
+      close(fp)
+      # file.copy(file.path(input$inputfolder, "output", "landscapeForeFire.nc" ), file)
       showNotification( "Compressing stack of landscape file",
                         duration=10, id="flammap" )
-      zip(file, 
-          file.path(input$inputfolder, "output", "landscapeForeFire.nc" ),
+
+      zip(file,
+          c(input$chooseWeatherFile,
+            file.path(input$inputfolder, "output", "landscapeForeFire.nc" ),
+            file.path(input$inputfolder, "output", "fuels.csv" ) ,
+            file.path(input$inputfolder, "output", "run.ff" ),
+            file.path(input$inputfolder, "output", "params.ff" )
+            ),
           flags = "-r9Xj")
     }
   )

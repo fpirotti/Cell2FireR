@@ -119,10 +119,12 @@ but elevation raster is - I will create it for you....", tt) )
     # If it's a dry run, run_cell2fire returns the command-line arguments.
     # We can print these to the log interface just like the original script.
     if (dry) {  
-      shinyjs::runjs(paste0("$('#code1').text('", paste(sim_result, collapse = " "),
-                     "')") ) 
+      shinyjs::runjs(paste0("$('#code1').text(", 
+                            jsonlite::toJSON(paste(sim_result, collapse = " "), auto_unbox = TRUE) ,
+                     ")") ) 
       showNotification( 
-        text = paste("===== DRY RUN OF SIMULATION ENDED =====")
+        text = paste(jsonlite::toJSON(paste(sim_result, collapse = " "), auto_unbox = TRUE), 
+                     "===== DRY RUN OF SIMULATION ENDED =====")
       )
       return(NULL)
     }  

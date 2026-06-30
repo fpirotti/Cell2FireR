@@ -15,7 +15,8 @@ Imports:
     dplyr,
     lubridate,
     processx,
-    sf,
+    sf, 
+    jsonlite,
     terra,
     utils
 Suggests:

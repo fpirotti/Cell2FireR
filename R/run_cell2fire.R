@@ -176,7 +176,7 @@ run_cell2fire <- function(
         message("No Weather file found or selected. Using a generic weather file (20 degrees Celsius, 20 km/h wind, south -> north).")
         wea_file <- file.path(template_dir, "Weather.csv")
       }  
-      write.csv(parse_weather_for_cell2fire(wea_file, simulator), file.path(instance_dir, "Weather.csv"),
+      if (!dry)  write.csv(parse_weather_for_cell2fire(wea_file, simulator), file.path(instance_dir, "Weather.csv"),
                 row.names = F, quote = FALSE) 
     } else { 
       wea_dir <- input_folder

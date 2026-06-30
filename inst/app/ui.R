@@ -586,7 +586,7 @@ as landscape file in FlamMap software.<hr><table style=\"width:100%; border-coll
             label =tagList(
               tags$img(
                 src = "forefire.png", 
-                # height = "20px", 
+                 height = "40px", 
                 style = "vertical-align: middle; margin-right: 5px;"
               ), "ForeFire" 
             ), 
