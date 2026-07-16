@@ -17,10 +17,13 @@ MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.or
 
 # Cell2FireR: R bindings and platform for Fire Spread Simulations using Cell2Fire
 
-Cell2FireR not only provides a way to load and validate land-cover data
-for fire simulation using Cell2Fire directly on the portal, but also
-provides tools to extract data in formats reay for running FARSITE and
-ForeFire software which can be locally processed.
+Cell2FireR not only provides a bindings to Cell2Fire, but also provides
+a portal with tools to load and validate weather/land-cover data,
+manually insert ignition points and run fire simulation using Cell2Fire
+directly on the portal.
+
+It also provides tools to extract aligned data formatted correctly for
+running FARSITE and ForeFire software locally.
 
 ![](images/clipboard-487320565.png)
 
