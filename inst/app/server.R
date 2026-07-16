@@ -1232,6 +1232,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
         "========================================"
       )
     )
+    
     outfolder <<- file.path(input$inputfolder, "output")
     dir.create(outfolder, recursive = TRUE, showWarnings = FALSE)
     
@@ -1415,9 +1416,11 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
       dfl[na.omit(names(dflt))] <- dflt[na.omit(names(dflt))]
     }
     
-    if (shiny::isTruthy(input$WMSQueryReturned)) {
+    if (shiny::isTruthy(input$WMSQueryReturned) &&
+        shiny::isTruthy(input$WMSQueryReturned$datast)) {
       outp <- "EFFIS"
  
+      
       doc <- xml2::read_html(input$WMSQueryReturned$datast)
       rows <- xml2::xml_find_all(doc, ".//tr")
       kv_list <- lapply(rows, function(row) {
@@ -1437,7 +1440,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
       names(dflt) <- inside_text
       dfl[na.omit(names(dflt))] <- dflt[na.omit(names(dflt))]
     }
-    print(outp)
+ 
  
     weatherDataTable(as.data.frame(dfl, stringsAsFactors = FALSE))
   }, ignoreInit = T)
@@ -2026,15 +2029,24 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
         showNotification( "Creating and compressing stack of landscape file",
                           duration=10, id="flammap" )
         stack <- terra::rast( unlist(rasters[c("FUEL","ELEVATION")]) )
-        names(stack)<- c("fuel","elevation")   
+        names(stack)<- c("fuel","altitude")   
  
+        createNetCDF4ForeFire(stack$fuel, stack$altitude,
+                              outLandscapeFile )
+        
         showNotification( "Saving landscape file for ForeFire in NetCDF",
                           duration=10, id="flammap" )
-        terra::writeCDF(stack, varname = "landscape",
-                    overwrite = TRUE, split=T,
-                    filename =outLandscapeFile 
-                      
-        )
+      
+       
+        #  library(ncdf4)
+        # nc1 <- ncdf4::nc_open("/archivio/shared/R/Cell2FireR/inst/app/data/TC03_CZ_wildfire/output/data.nc")
+        # print(nc1) # Look for the "variables" section
+        # nc_close(nc1)
+        # nc2 <- ncdf4::nc_open("/archivio/shared/R/Cell2FireR/inst/app/data/TC03_CZ_wildfire/output/ForeFireLandscape.nc")
+        # print(nc2) # Look for the "variables" section
+        #   nc_close(nc2)
+
+ 
         file.copy("templates/fuelForeFire.csv",
                   file.path(input$inputfolder, "output", "fuels.csv" ) )
 
@@ -2055,7 +2067,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
                          iso_string), fp)
        
       ign <- ignitionPointsCoords()
-      writeLines(sprintf("startFire[lonlat=(%.6f,%.6f);t=0]",
+      writeLines(sprintf("startFire[lonlat=(%.6f,%.6f,0.);t=0]",
                           ign$X, ign$Y), fp)
       
       for(i in 1:nrow(wt)){
@@ -2069,19 +2081,23 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
                   (i-1)*3600),
           fp
         )
+        
+        writeLines("step[dt=3600]", fp)
+        writeLines( sprintf("print[final_front%002dh.json]@t=%d", i, (i)*3600), fp)
+     
       }
       
-      writeLines(sprintf("step[dt=%d]",(i-1)*3600), fp)
-      writeLines("print[final_front.geojson]", fp)
+      writeLines("print[final_front.json]", fp)
       flush(fp) 
       close(fp)
       # file.copy(file.path(input$inputfolder, "output", "landscapeForeFire.nc" ), file)
       showNotification( "Compressing stack of landscape file",
                         duration=10, id="flammap" )
 
+      # runForeFire()
       zip(file,
           c(input$chooseWeatherFile,
-            file.path(input$inputfolder, "output", "landscapeForeFire.nc" ),
+            outLandscapeFile,
             file.path(input$inputfolder, "output", "fuels.csv" ) ,
             file.path(input$inputfolder, "output", "run.ff" ),
             file.path(input$inputfolder, "output", "params.ff" )

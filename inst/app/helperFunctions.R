@@ -195,3 +195,293 @@ checkAPI <- function(url){
   httr::status_code(res)
 }
 
+
+runForeFire <- function(outfolder){
+  library(viridisLite)
+  wdc <- getwd()
+  outfolder<-"inst/app/data/TC03_CZ_wildfire/output"  
+  setwd(outfolder)
+  
+  # Define parameter values
+  params <- list(
+    perimeterResolution = c(1,2,3),
+    spatialIncrement = c(0.2,0.5,1),
+    propagationSpeedAdjustmentFactor = c(0.05, 0.10),
+    windReductionFactor = c(0.1, 0.2, 0.3, 0.4)
+  )
+  
+  
+  library(glue)
+  # Create all combinations
+  params <- expand.grid(params, KEEP.OUT.ATTRS = FALSE)
+  wdcPreprocessing <- getwd()
+  times <- list()
+  
+  dt2f <- terra::rast("../fuel.tif")
+  for(i in seq_len(nrow(params))) { 
+    setwd(wdcPreprocessing)
+    outdir <- sprintf("runs/run_%03d", i)
+    dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+    print(p$perimeterResolution)
+    # Output directory for this run
+    setwd(outdir)
+    p <- params[i,]
+    # Create params.ff
+    writeLines(
+      c(
+        glue("setParameter[perimeterResolution={p$perimeterResolution}]"),
+        glue("setParameter[spatialIncrement={p$spatialIncrement}]"),
+        glue("setParameter[propagationSpeedAdjustmentFactor={p$propagationSpeedAdjustmentFactor}]"),
+        glue("setParameter[windReductionFactor={p$windReductionFactor}]")
+      ),
+      "params.ff"
+    )
+    
+    # lines <- readLines("../../run.ff")
+    nm <- sprintf("%04d_pR%04d_sInc%04d_pSAF%04d_wRF%04d",
+            i, p$perimeterResolution*100,
+            p$spatialIncrement*100,
+            p$propagationSpeedAdjustmentFactor*100,
+            p$windReductionFactor*100)
+    # lines[15] <-  sprintf("plot[parameter=speed;filename=../%04d_pR%04d_sInc%04d_pSAF%04d_wRF%04d.png;opt:area=active;opt:cmap=turbo]",
+    #                       i, p$perimeterResolution*100,
+    #                       p$spatialIncrement*100,
+    #                       p$propagationSpeedAdjustmentFactor*100,
+    #                       p$windReductionFactor*100)
+    # 
+    # writeLines(lines, "../../run.ff")
+    # Run ForeFire
+    st <- system.time({ 
+      system2(
+          "/archivio/software/forefire/bin/forefire",
+          args = c(
+            "-i", "../../run.ff"
+            # add your other arguments here
+          )
+        )
+    })
+    fn <- terra::rast("ForeFire.0.nc")
+    fn[fn< -10]<-NA
+    fn <- fn/60
+    terra::ext(fn) <- terra::ext(dt2f)
+    fn <- flip(fn, direction = "vertical")
+    crs(fn) <- crs(dt2f)
+    js <- sf::read_sf("final_front01h.json") |> sf::st_transform(terra::crs(fn))
+    
+    library(ggplot2)
+    library(tidyterra)
+    
+
+    png(sprintf("../outputs/%s.png",nm), width = 1000, height = 1000, res=200)
+    p <- ggplot() +
+      geom_spatraster(data = fn) +
+      scale_fill_gradientn(
+        colours = turbo(256),
+        na.value = "transparent",
+        name = "Fire arrival \ntime (minutes)"
+      ) +
+      labs(
+        title = "Fire simulation",
+        subtitle = sprintf("runtime=%.2f pRes.=%.1f, spatInc=%.1f,
+propSpeedAdjF=%.1f, windRedF.=%.1f", st[[3]], p$perimeterResolution,
+                           p$spatialIncrement,
+                           p$propagationSpeedAdjustmentFactor,
+                           p$windReductionFactor),
+        x = "Longitude",
+        y = "Latitude"
+      ) + coord_sf(  ) +   
+      theme_bw()
+    print(p)
+    dev.off()
+    times[[nm]]<- st[[3]]
+  }
+  
+  params$processingTime <- unlist(unname(times))
+  
+  # ext(dt2) <- ext(dt2f) 
+  # crs(dt2) <- crs(dt2f)
+
+  system("/archivio/software/forefire/bin/forefire -i run.ff")
+  
+  # 1. Elenca tutti i file GeoJSON nella cartella
+  geojson_files <- list.files( 
+                              pattern = "\\.json$", 
+                              full.names = TRUE)
+  
+  # 2. Definisci il percorso del GeoPackage di output
+  gpkg_output <- "output_aggregato.gpkg"
+  
+  layer_unico <- map(geojson_files, function(file) {
+    df <- st_read(file, quiet = TRUE)
+    # Forza tutte le geometrie a POLYGON/MULTIPOLYGON per sicurezza
+    df <- st_cast(df, "MULTIPOLYGON") 
+    # Uniforma il CRS a WGS84 (modifica 4326 se usi un altro CRS, es. 3003 o 32632)
+    df <- st_transform(df, 4326)
+    return(df)
+  }) %>% 
+    list_rbind() %>%  
+    st_as_sf()     # Unisce i passaggi in un unico dataframe
+  # plot(dt2$`fuel_ft=1_fz=1`)
+  library(sf)
+  library(terra)
+ 
+  js <- sf::read_sf(geojson_files[[length(geojson_files)]]) |> sf::st_transform(crs(dt2f))
+  plot(  js, col="#ff000044" )
+  # js <- sf::read_sf("final_front11h.json") |> sf::st_transform(crs(dt2f))
+  # plot(  js, col="#ff000044", add=T )
+  # plot(  js, col="#ff000044"  )
+  file_output <- "output_poligoni.gpkg"
+  if (file.exists(file_output)) file.remove(file_output)
+  
+  st_write(layer_unico, dsn = file_output, layer = "tutti_i_poligoni")
+  setwd(wdc)
+}
+ 
+createNetCDF4ForeFire <- function(fuel_raster,  elev_raster, output_file){
+  # 
+  # fuel_raster<-terra::rast("../fuel.tif")
+  # elev_raster<-terra::rast("../dem.tif")
+  # output_file <- "ForeFireLandscape.nc"
+  
+  size_fx <- ncol(fuel_raster); size_fy <- nrow(fuel_raster)
+  size_nx <- ncol(elev_raster); size_ny <- nrow(elev_raster)
+  
+ 
+
+  # 1. Convert the raster's extent into a spatial polygon using its current CRS
+  poly <- as.polygons(terra::ext(fuel_raster), crs=crs(fuel_raster)) 
+  poly_latlon <- project(poly, "EPSG:4326") 
+  ext_latlon <- ext(poly_latlon) 
+  bounds <- as.vector(ext_latlon)
+  
+  west  <- bounds["xmin"]
+  south <- bounds["ymin"]
+  east  <- bounds["xmax"]
+  north <- bounds["ymax"]
+   
+  # -------------------------------------------------------------
+  # 2. DEFINE THE 12 TARGET DIMENSIONS (WITHOUT DIMVARS)
+  # -------------------------------------------------------------
+  dim_ft <- ncdim_def("ft", "", 1:1, create_dimvar=FALSE)
+  dim_fz <- ncdim_def("fz", "", 1:1, create_dimvar=FALSE)
+  dim_fy <- ncdim_def("fy", "", 1:size_fy, create_dimvar=FALSE)
+  dim_fx <- ncdim_def("fx", "", 1:size_fx, create_dimvar=FALSE)
+  
+  # dim_wdim <- ncdim_def("wind_dimensions", "", 1:2, create_dimvar=FALSE)
+  # dim_wdir <- ncdim_def("wind_directions", "", 1:2, create_dimvar=FALSE)
+  # dim_wrows <- ncdim_def("wind_rows", "", 1:160, create_dimvar=FALSE)
+  # dim_wcols <- ncdim_def("wind_columns", "", 1:160, create_dimvar=FALSE)
+  
+  dim_nt <- ncdim_def("nt", "", 1:1, create_dimvar=FALSE)
+  dim_nz <- ncdim_def("nz", "", 1:1, create_dimvar=FALSE)
+  dim_ny <- ncdim_def("ny", "", 1:size_ny, create_dimvar=FALSE)
+  dim_nx <- ncdim_def("nx", "", 1:size_nx, create_dimvar=FALSE)
+  
+  # -------------------------------------------------------------
+  # 3. DEFINE THE 4 VARIABLES WITH EXACT PRECISION & CHUNKING
+  # -------------------------------------------------------------
+  # A. domain variable (Scalar string/character array)
+  # dimnchar <- ncdim_def("nchar", "", 1:254, create_dimvar=FALSE )
+  var_domain <- ncvar_def("domain", "", list() )
+  
+  # 1. DEFINE VARIABLES WITH REVERSED DIMENSION LISTS IN R
+  var_fuel <- ncvar_def(
+    name = "fuel", 
+    units = "", 
+    dim = list(dim_fx, dim_fy, dim_fz, dim_ft), # <--- REVERSED HERE
+    prec = "short",
+    shuffle = TRUE, 
+    compression = 5
+  )
+  
+  var_altitude <- ncvar_def(
+    name = "altitude", 
+    units = "", 
+    dim = list(dim_nx, dim_ny, dim_nz, dim_nt), # <--- REVERSED HERE
+    prec = "short",
+    shuffle = TRUE, 
+    compression = 5
+  )
+  
+  # C. wind variable: float[wind_columns, wind_rows, wind_directions, wind_dimensions]
+  # var_wind <- ncvar_def(
+  #   name = "wind",
+  #   units = "",
+  #   dim = list(dim_wcols, dim_wrows, dim_wdir, dim_wdim),
+  #   prec = "float",
+  #   missval = NaN,
+  #   chunksizes = c(160, 160, 2, 2),
+  #   shuffle = TRUE,
+  #   compression = 5
+  # )
+ 
+  # -------------------------------------------------------------
+  # 4. CREATE FILE AND WRITE ATTRIBUTES & ARRAYS
+  # -------------------------------------------------------------
+  nc <- nc_create(output_file, vars=list(var_domain, 
+                                         var_fuel, 
+                                          # var_wind,
+                                         var_altitude), force_v4=TRUE)
+ 
+  # --- Write Domain Attributes ---
+  ncatt_put(nc, "domain", "SWx", 0, prec="float")
+  ncatt_put(nc, "domain", "SWy", 0, prec="float")
+  ncatt_put(nc, "domain", "Lx",   size_fx , prec="float")
+  ncatt_put(nc, "domain", "Ly", size_fy , prec="float")
+  
+  bbox_str <- sprintf("%.16f,%.16f,%.16f,%.16f", west, south, east, north)
+  ncatt_put(nc, "domain", "BBoxWSEN", bbox_str, prec="text")
+ 
+  ncatt_put(nc, "domain", "Lz", 0, prec="float")
+  ncatt_put(nc, "domain", "t0", 0, prec="float") 
+  ncatt_put(nc, "domain", "Lt", float::Machine_float$float.xmax, prec = "float") 
+ 
+  ncatt_put(nc, "domain", "SWz", 0, prec="float")
+  ncatt_put(nc, "domain", "type", "domain", prec="text")
+  
+  wsenlbrt_str <- sprintf("%.16f,%.16f,%.16f,%.16f,0.0,0.0,%d.0,%d.0", 
+                          west, south, east, north, size_fx, size_fy)
+  ncatt_put(nc, "domain", "WSENLBRT", wsenlbrt_str, prec="text")
+  
+  # --- Write Type Metadata Attributes ---
+  ncatt_put(nc, "fuel", "type", "fuel", prec="text")
+  # ncatt_put(nc, "wind", "type", "wind", prec="text")
+  ncatt_put(nc, "altitude", "type", "data", prec="text")
+  
+  # --- Write Data Payloads ---
+  # --- 1. Process Fuel Data ---
+  fuel_mat <- as.matrix(fuel_raster, wide=TRUE)
+  fuel_mat[is.na(fuel_mat)] <- 99
+  
+  # Flip the rows if needed for your spatial orientation
+  fuel_mat <- fuel_mat[nrow(fuel_mat):1, ] 
+  
+  # Wrap natively into R array matching [Y, X, Z, T] mapping
+  # Indices: 1 = Y (size_fy), 2 = X (size_fx), 3 = Z (1), 4 = T (1)
+  fuel_array <- array(fuel_mat, dim=c(size_fy, size_fx, 1, 1))
+  
+  # We want the data ordered to match our R dim list: list(dim_fx, dim_fy, dim_fz, dim_ft)
+  # This means: X (2), Y (1), Z (3), T (4)
+  fuel_ready <- aperm(fuel_array, c(2, 1, 3, 4))
+  # fuel_ready[] <- 104
+  ncvar_put(nc, var_fuel, fuel_ready)
+  
+  
+  # --- 2. Process Altitude Data ---
+  elev_mat <- as.matrix(elev_raster, wide=TRUE)
+  elev_mat[is.na(elev_mat)] <- mean(elev_mat, na.rm=TRUE)
+  elev_mat <- elev_mat[nrow(elev_mat):1, ]
+  
+  elev_array <- array(elev_mat, dim=c(size_ny, size_nx, 1, 1))
+  
+  # Match our R dim list: list(dim_nx, dim_ny, dim_nz, dim_nt)
+  # This means: X (2), Y (1), Z (3), T (4)
+  altitude_ready <- aperm(elev_array, c(2, 1, 3, 4))
+  # altitude_ready[]<-100
+  ncvar_put(nc, var_altitude, altitude_ready)
+  # -------------------------------------------------------------
+  # 5. CLOSE FILE
+  # -------------------------------------------------------------
+  nc_close(nc)
+  print("Target NetCDF file matching specifications built successfully!")
+}

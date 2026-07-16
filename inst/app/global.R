@@ -1,8 +1,8 @@
 ## make sure leafem is version 0.2.5 or more!
 pkgs <- c("terra", "DT", "remotes", "sf", "httr", "shiny", "leaflet", "shinyjs", 
-          "processx", "dplyr", "spatialEco",
+          "processx", "dplyr", "spatialEco", "float", "purrr",
           "tools", "shinydashboard", "shinyvalidate", "bcrypt", 
-          "xml2", "future", "data.table", "jsonlite",
+          "xml2", "future", "data.table", "jsonlite", "ncdf4",
           "promises", "stringr",  "leafem", "cli", "shinydashboardPlus",
           "knitr", "anytime", "lubridate",
           "htmlwidgets")
