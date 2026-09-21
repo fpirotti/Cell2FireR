@@ -4,7 +4,7 @@ pkgs <- c("terra", "DT", "remotes", "sf", "httr", "shiny", "leaflet", "shinyjs",
           "tools", "shinydashboard", "shinyvalidate", "bcrypt", 
           "xml2", "future", "data.table", "jsonlite", "ncdf4",
           "promises", "stringr",  "leafem", "cli", "shinydashboardPlus",
-          "knitr", "anytime", "lubridate",
+          "knitr", "anytime", "lubridate", "stars",
           "htmlwidgets")
  
 api.openMeteo <- ""

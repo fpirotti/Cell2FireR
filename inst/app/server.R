@@ -746,7 +746,7 @@ The system will try to align the landscape stack. overwriting the misaligned ras
         if(length(ls)!= 8){
           
           showNotification(paste(setdiff(landscapeFlamMap, names(rasters)), 
-                                 collapse = " - "), " missing: landscape file cannot be created.",
+                                 collapse = " - "), " missing: landscape file for FLAMMAP not complete",
                            duration=22, type="warning" )
           
         } else {

@@ -8,6 +8,7 @@
 #' @returns TRUE or FALSE
 #'
 #' @examples
+#' # no example
 is.missing  <- function(x, checkPath=T){
   if (is.null(x)) 
     return(TRUE)
