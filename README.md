@@ -25,7 +25,7 @@ directly on the portal.
 It also provides tools to extract aligned data formatted correctly for
 running FARSITE and ForeFire software locally.
 
-![](images/clipboard-487320565.png)
+![](man/images/clipboard-487320565.png)
 
 ## Installation
 
@@ -81,7 +81,7 @@ System (CRS) of the fuel raster.
 ### Core Inputs
 
 | Parameter | Description |
-|:---|:---|
+|:-----------------------------------|:-----------------------------------|
 | `fuel` | **Required**. Path to the fuel model raster. |
 | `fuel_model` | **Required**. String specifying the model logic. It can be provide either by string or single character according to the lookup table below. "0. Scott & Burgan" = "S", "1. Kitral" = "K", "2. Canada FBP" = "C", "3. Portugal" = "P" also an heuristic check for key words is done to look for the fuel model to use. |
 | `out_folder` | Base directory where simulation instances will be stored. |
