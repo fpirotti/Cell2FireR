@@ -30,9 +30,7 @@ c2f_bin_pathEnv <- function() {
     if(ver==verNow){
       return()
     }
-    packageStartupMessage(
-      paste0("Found new version of package... installing cell2fire")
-    )
+    packageStartupMessage( "Found new version of package... installing cell2fire"  )
   } 
 
   ver <- verNow

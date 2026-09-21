@@ -1,5 +1,5 @@
 #' Run Cell2Fire Simulation
-#'
+#' 
 #' @param fuel Path to fuel raster.
 #' @param fuel_model Character string specifying the fuel model (e.g., "0. Scott & Burgan").
 #' @param input_folder Directory containing input files (like weathers).
@@ -38,6 +38,7 @@
 #' @field process A \code{processx::process} object.
 #' @field command Character string. Path to the binary.
 #' @field args Character vector. The CLI arguments used.
+#' @importFrom utils write.csv
 #' @export
 run_cell2fire <- function(
     fuel, fuel_model, input_folder, out_folder, 

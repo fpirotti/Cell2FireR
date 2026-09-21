@@ -17,3 +17,6 @@ TRUE or FALSE
 \description{
 Checks for validity of variable and path
 }
+\examples{
+# no example
+}
