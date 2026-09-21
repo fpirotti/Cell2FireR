@@ -81,7 +81,7 @@ System (CRS) of the fuel raster.
 ### Core Inputs
 
 | Parameter | Description |
-|:-----------------------------------|:-----------------------------------|
+|:---|:---|
 | `fuel` | **Required**. Path to the fuel model raster. |
 | `fuel_model` | **Required**. String specifying the model logic. It can be provide either by string or single character according to the lookup table below. "0. Scott & Burgan" = "S", "1. Kitral" = "K", "2. Canada FBP" = "C", "3. Portugal" = "P" also an heuristic check for key words is done to look for the fuel model to use. |
 | `out_folder` | Base directory where simulation instances will be stored. |
@@ -229,7 +229,6 @@ process_obj <- run_cell2fire(
 # You can now monitor `process_obj` using processx methods like:
 process_obj$process$wait()
 process_obj$process$read_output_lines()
-
 ```
 
 For the full list of arguments and their explanation use:

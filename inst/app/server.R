@@ -690,7 +690,22 @@ The system will try to align the landscape stack. overwriting the misaligned ras
           class = 'opacity-slider'
         )
         
-        view_settings[[layerName]] <- list(coords = as.numeric(st_transform(st_bbox(r2), 4326)))
+        bb <- st_bbox(r2)
+        
+        pts <- st_transform(
+          st_sfc(
+            st_point(c(bb["xmin"], bb["ymin"])),
+            st_point(c(bb["xmin"], bb["ymax"])),
+            st_point(c(bb["xmax"], bb["ymin"])),
+            st_point(c(bb["xmax"], bb["ymax"])),
+            crs = st_crs(r2)
+          ),
+          4326
+        )
+        
+        
+        
+        view_settings[[layerName]] <- list(coords = as.numeric(st_bbox(pts))) #list(coords = as.numeric(st_transform(st_bbox(r2), 4326)))
         
         leaflet::leafletProxy("map") |>
           leafem::addGeoRaster(
