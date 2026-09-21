@@ -91,7 +91,7 @@ If the 'fuels' raster file is in `tif` format, then it assumes all other
 rasters are also in that format. Otherwise, it assumes `ascii` format.
 
 -   elevation: terrain elevation [m]
--   saz: slope azimuth
+-   saz: terrain azimuth
 -   slope: terrain slope
 -   cur: curing level
 -   cbd: canopy bulk density [kg/m3]
