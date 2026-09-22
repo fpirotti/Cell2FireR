@@ -35,7 +35,7 @@ landscapeFlamMap <- c("ELEVATION", "SLOPE", "SAZ",
 landscapeForeFire <- c("FUEL", "ELEVATION")
 for (p in pkgs) {
   if (!requireNamespace(p, quietly = TRUE)) {
-    warn("Package ", p, " not found... installing it.")
+    warning("Package ", p, " not found... installing it.")
     install.packages(p)
   }
   library(p, character.only = TRUE)
