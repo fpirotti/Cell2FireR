@@ -186,7 +186,7 @@ createLeaflet <- function(){
     )  |>
     addProviderTiles("OpenStreetMap", group =  base_layers$osm,
                      options=providerTileOptions(zIndex = 1) ) |>
-    addProviderTiles("CartoDB.Positron", group =  base_layers$light,
+    addProviderTiles("OpenTopoMap", group =  base_layers$light,
                      options=providerTileOptions(zIndex = 1)) |>
     addProviderTiles("Esri.WorldImagery", group =  base_layers$satellite,
                      options=providerTileOptions(zIndex = 1)) |>
@@ -317,20 +317,14 @@ createLeaflet <- function(){
 
 mymap <- createLeaflet()
 isScottBurgan <- function(r){
-  rs <- terra::unique((r[[1]]))
-  if( sum(c(91,
-            92,
-            93,
-            98,
-            99)%in%rs[,1])>0 ){
+
+  rs <- as.integer(terra::unique((r[[1]]))[[1]])
+  if( sum( rs %in% scott_burgan_models)==length(rs) ){
     ## it is probably Scott&Burgan
     return(T)
   }
 
-  if(  sum(rs[,1] > 190 ) > 0 ){
-    ## it is not Scott&Burgan
     return(F)
-  }
 }
 ## ignition icon ----
 ignitionIcon <- leaflet::makeAwesomeIcon(

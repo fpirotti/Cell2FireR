@@ -214,17 +214,21 @@ be compatible with the model used!'>?</sup>"
               ),
               span("|", style =
                      "color:black;"),
+              
+   
+              
               div( 
                 style = "margin-bottom:-15px",
                 shinyWidgets::pickerInput(
                   "chooseIgnitionFile",
-                  HTML(
-                    "<sup class='helpTitle'
-            title='Select an ignition file to modify - this layer can be used as <u>ignitions points</u> input argument. To add rows, use the button <span>🔥 </span> in the map, coordinates will be converted to Ncell values.'>?</sup>"
-                  ),
+                  label=NULL,
                   width = "100px",
                   choices = c()
                 )
+              ),
+              HTML(
+                "<sup class='helpTitle'
+            title='Select an ignition file to modify - this layer can be used as <u>ignitions points</u> input argument. To add rows, use the button <span>🔥 </span> in the map, coordinates will be converted to Ncell values.'>?</sup>"
               ),
               actionButton(
                 "save_table_ignition", 

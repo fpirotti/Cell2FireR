@@ -148,7 +148,7 @@ processSimulationOutputFolder <- function(resDir){
 }
 
 killSimProcess <- function(force=F, message=""){
-  browser()
+ 
   if(nchar(message)>0) message <- paste0("<br><b>", message, "</b>")
   if(exists("simProcess") && !is.null(simProcess)) simProcess$process$kill()
   updateActionButton(inputId = "runsim",label = paste("🔥 Run ", input$simulator)  )

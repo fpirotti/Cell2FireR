@@ -55,7 +55,9 @@ proc <- function(dry = TRUE) {
                    max = 4, {
                      
       for(tt in names(terrain)){
+ 
         pout <- file.path(input$inputfolder,   sprintf("%s.tif", tt) )
+        print(pout)
         if(!file.exists(terrain[[tt]]) && !file.exists(pout)){
         
         incProgress(1, sprintf("%s raster NOT present, 
@@ -79,8 +81,7 @@ but elevation raster is - I will create it for you....", tt) )
       # We map the Shiny input$ variables directly to the function arguments
       if(!dry) runjs("startSimlog();")
      
-        
-    
+         
       sim_result <- run_cell2fire(
         fuel = input$FUEL,
         fuel_model = input$FUEL_MODEL,

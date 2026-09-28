@@ -289,6 +289,8 @@ Work in progress....",
     names(ign) <- basename(ign)
     
     
+    
+    
     if (length(ign) > 0) {
       checkIgnitionFile(ign[[length(ign)]])
       shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile", choices = ign)
@@ -300,6 +302,8 @@ Work in progress....",
                                choices = ign,
                                selected = sel)
     } else {
+      
+      showNotification("No ignitions found, make sure you add an ignition point.",  duration = 19)
       shinyWidgets::updatePickerInput(inputId = "chooseIgnitionFile", choices = c())
       shiny::updateSelectInput(inputId = "IGNIPOINT", choices = c())
     }
@@ -1768,7 +1772,7 @@ Simulation output?? It cannot be undone!<br><u><b>%s</b></u>",
   
   observeEvent(input$save_table_ignition, {
     if (!isTruthy(input$chooseIgnitionFile)) {
-      save_table_weather_final(F)
+      save_table_ignition_final(F)
     } else {
       showModal(md_overwrite_ignition) 
     }
